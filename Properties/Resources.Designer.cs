@@ -124,6 +124,33 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Show window ähnelt.
+        /// </summary>
+        internal static string ShowWindow {
+            get {
+                return ResourceManager.GetString("ShowWindow", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Speech mode activated ähnelt.
+        /// </summary>
+        internal static string SpeechModeActivated {
+            get {
+                return ResourceManager.GetString("SpeechModeActivated", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Speech mode button not found ähnelt.
+        /// </summary>
+        internal static string SpeechModeButtonNotFound {
+            get {
+                return ResourceManager.GetString("SpeechModeButtonNotFound", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Sucht eine lokalisierte Ressource vom Typ System.Drawing.Icon ähnlich wie (Symbol).
         /// </summary>
         internal static System.Drawing.Icon wrok {

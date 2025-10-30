@@ -138,4 +138,13 @@
   <data name="Account" xml:space="preserve">
     <value>Konto</value>
   </data>
+  <data name="ShowWindow" xml:space="preserve">
+    <value>Fenster anzeigen</value>
+  </data>
+  <data name="SpeechModeActivated" xml:space="preserve">
+    <value>Sprachmodus aktiviert</value>
+  </data>
+  <data name="SpeechModeButtonNotFound" xml:space="preserve">
+    <value>Schaltfläche „Sprachmodus“ nicht gefunden</value>
+  </data>
 </root>

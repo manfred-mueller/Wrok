@@ -142,4 +142,13 @@
   <data name="Billing" xml:space="preserve">
     <value>Billing</value>
   </data>
+  <data name="ShowWindow" xml:space="preserve">
+    <value>Show window</value>
+  </data>
+  <data name="SpeechModeActivated" xml:space="preserve">
+    <value>Speech mode activated</value>
+  </data>
+  <data name="SpeechModeButtonNotFound" xml:space="preserve">
+    <value>Speech mode button not found</value>
+  </data>
 </root>

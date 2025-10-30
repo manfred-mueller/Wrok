@@ -1,7 +1,5 @@
-using Microsoft.Web.WebView2.WinForms;
-using System;
-using System.Drawing;
-using System.Windows.Forms;
+﻿using Microsoft.Web.WebView2.WinForms;
+using System.Runtime.InteropServices;
 
 namespace Wrok
 {
@@ -22,6 +20,20 @@ namespace Wrok
             (Properties.Resources.Data,        "?_s=data"),
             (Properties.Resources.Billing,     "?_s=billing")
         };
+
+        // --- Hotkey: Win32 RegisterHotKey ---
+        private const int HOTKEY_ID = 0x9000;
+        private const int WM_HOTKEY = 0x0312;
+        private const uint MOD_ALT = 0x0001;
+        private const uint MOD_CONTROL = 0x0002;
+        private const uint MOD_SHIFT = 0x0004;
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+        // ---------------------------------------
 
         public MainForm()
         {
@@ -50,6 +62,22 @@ namespace Wrok
             };
             this.Controls.Add(webView);
 
+            webView.PreviewKeyDown += (s, e) =>
+            {
+                // Prüfen, ob Ctrl + Shift gleichzeitig gedrückt sind
+                if ((ModifierKeys & (Keys.Control | Keys.Shift)) == (Keys.Control | Keys.Shift))
+                {
+                    this.WindowState = FormWindowState.Minimized;
+
+                    // Optional: Falls du es komplett "ausblenden" willst
+                    this.ShowInTaskbar = false;
+                    this.Opacity = 0;
+
+                    // Damit das Event nicht weitergereicht wird
+                    e.IsInputKey = true;
+                }
+            };
+            
             await webView.EnsureCoreWebView2Async(null);
             webView.CoreWebView2.Navigate("https://grok.com");
 
@@ -67,9 +95,9 @@ namespace Wrok
                                              b.getAttribute('aria-label')?.includes('voice'));
                         if (voiceBtn) {
                             voiceBtn.click();
-                            console.log('Sprachmodus aktiviert');
+                            console.log(Properties.Resources.SpeechModeActivated);
                         } else {
-                            console.warn('Sprachmodus-Button nicht gefunden');
+                            console.warn(Properties.Resources.SpeechModeButtonNotFound);
                         }
                     ";
                     await webView.CoreWebView2.ExecuteScriptAsync(script);
@@ -79,32 +107,45 @@ namespace Wrok
         private void InitializeTrayIcon()
         {
             trayMenu = new ContextMenuStrip();
-
-            // Exit
-            trayMenu.Items.Add(Properties.Resources.Exit, null, (s, e) => Application.Exit());
-
+            trayMenu.Items.Add(Properties.Resources.ShowWindow, null, (s, e) => Reactivate());
+            
             trayMenu.Items.Add(new ToolStripSeparator());
 
-            // Dynamische Buttons f�r jede URL
+            // Dynamische Buttons für jede URL
             foreach (var page in menuPages)
             {
                 var item = trayMenu.Items.Add(page.name);
                 item.Click += (s, e) => LoadUrl(baseUrl + page.url);
             }
+            // Exit
+
+            trayMenu.Items.Add(new ToolStripSeparator());
+            trayMenu.Items.Add(Properties.Resources.Exit, null, (s, e) => Application.Exit());
+
 
             trayIcon = new NotifyIcon
             {
                 Icon = Properties.Resources.wrok,
-                Text = "Wrok - Grok Einstellungen",
+                Text = "Wrok",
                 ContextMenuStrip = trayMenu,
                 Visible = true
             };
 
-            trayIcon.DoubleClick += (s, e) => LoadUrl(baseUrl);
+            trayIcon.DoubleClick += (s, e) => Reactivate();
         }
 
+        private void Reactivate()
+        {
+            this.Show();
+            this.WindowState = FormWindowState.Normal;
+            this.Opacity = 1.0;
+            this.ShowInTaskbar = true;
+            this.BringToFront();
+            this.Activate();
+        }
         private void LoadUrl(string url)
         {
+            this.Show();
             this.WindowState = FormWindowState.Normal;
             this.Opacity = 1.0;
             this.ShowInTaskbar = true;
@@ -117,9 +158,42 @@ namespace Wrok
             if (e.CloseReason == CloseReason.UserClosing)
             {
                 e.Cancel = true;
-                this.Hide();
+                this.WindowState = FormWindowState.Minimized;
+                this.Opacity = 0;
+                this.ShowInTaskbar = false;
             }
             base.OnFormClosing(e);
+        }
+
+        // Register Hotkey, sobald Handle vorhanden
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+
+
+            // Beispiel: Ctrl + Shift + Space
+            RegisterHotKey(this.Handle, HOTKEY_ID, MOD_CONTROL | MOD_SHIFT, (uint)Keys.Space);
+            // Bei Bedarf andere Modifier/Key verwenden (z.B. MOD_ALT | (uint)Keys.F12)
+        }
+
+        // Unregister Hotkey beim Zerstören des Handles
+        protected override void OnHandleDestroyed(EventArgs e)
+        {
+            UnregisterHotKey(this.Handle, HOTKEY_ID);
+            base.OnHandleDestroyed(e);
+        }
+
+        // Hotkey-Ereignis abfangen
+        protected override void WndProc(ref Message m)
+        {
+            if (m.Msg == WM_HOTKEY && m.WParam.ToInt32() == HOTKEY_ID)
+            {
+                // Minimieren + in Tray versetzen
+                this.WindowState = FormWindowState.Minimized;
+                this.ShowInTaskbar = false;
+                this.Opacity = 0;
+            }
+            base.WndProc(ref m);
         }
 
         private void MainForm_Load(object sender, EventArgs e) { }
