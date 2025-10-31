@@ -1,26 +1,23 @@
-# !\[wrok screenshot](Screenshot.png?raw=true "Wrok screenshot")
+!\[wrok screenshot](Screenshot.png?raw=true "Wrok screenshot")
 
-# 
 
-# Wrok ist ein Webview2 basierter Grok®-Client.
+Wrok ist ein Webview2 basierter Grok®-Client.
 
-# 
 
-# Er arbeitet ohne Api-Zugriff und bietet folgende Funktionen:
+Er arbeitet ohne Api-Zugriff und bietet folgende Funktionen:
 
-# \- Zugriff auf Grok®-Einstellungen
+\- Zugriff auf Grok®-Einstellungen
 
-# \- 'Boss-Taste' Strg-Shift-Leertaste
+\- 'Boss-Taste' Strg-Shift-Leertaste
 
-# \- Fensterminimierung nach Inaktivitäts-Zeitraum
+\- Fensterminimierung nach Inaktivitäts-Zeitraum
 
-# \- Speichern von Fenster-Größe und -Position
+\- Speichern von Fenster-Größe und -Position
 
-# 
 
-# NASS e.K. und Wrok sind in keinster Weise mit Grok™ oder X® verbunden. Alle in dieser Software verwendeten Markennamen und Bezeichnungen sind eingetragene Warenzeichen und Marken der jeweiligen Eigentümer und dienen nur der Beschreibung.
+NASS e.K. und Wrok sind in keinster Weise mit Grok™ oder X® verbunden. Alle in dieser Software verwendeten Markennamen und Bezeichnungen sind eingetragene Warenzeichen und Marken der jeweiligen Eigentümer und dienen nur der Beschreibung.
 
-# 
+ 
 
 Wrok is a WebView2-based Grok® client.
 
