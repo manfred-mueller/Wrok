@@ -61,47 +61,20 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Account ähnelt.
+        ///   Sucht eine lokalisierte Zeichenfolge, die   {0} (deactivated) ähnelt.
         /// </summary>
-        internal static string Account {
+        internal static string _0Deactivated {
             get {
-                return ResourceManager.GetString("Account", resourceCulture);
+                return ResourceManager.GetString("_0Deactivated", resourceCulture);
             }
         }
         
         /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Appearance ähnelt.
+        ///   Sucht eine lokalisierte Zeichenfolge, die {0} seconds ähnelt.
         /// </summary>
-        internal static string Appearance {
+        internal static string _0Seconds {
             get {
-                return ResourceManager.GetString("Appearance", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Behavior ähnelt.
-        /// </summary>
-        internal static string Behavior {
-            get {
-                return ResourceManager.GetString("Behavior", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Billing ähnelt.
-        /// </summary>
-        internal static string Billing {
-            get {
-                return ResourceManager.GetString("Billing", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Data ähnelt.
-        /// </summary>
-        internal static string Data {
-            get {
-                return ResourceManager.GetString("Data", resourceCulture);
+                return ResourceManager.GetString("_0Seconds", resourceCulture);
             }
         }
         
@@ -115,11 +88,57 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Inaktivity ähnelt.
+        /// </summary>
+        internal static string Inaktivity {
+            get {
+                return ResourceManager.GetString("Inaktivity", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die None ähnelt.
+        /// </summary>
+        internal static string None {
+            get {
+                return ResourceManager.GetString("None", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Ressource vom Typ System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap nonet {
+            get {
+                object obj = ResourceManager.GetObject("nonet", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die Personality ähnelt.
         /// </summary>
         internal static string Personality {
             get {
                 return ResourceManager.GetString("Personality", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Reload window ähnelt.
+        /// </summary>
+        internal static string Reload {
+            get {
+                return ResourceManager.GetString("Reload", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Settings ähnelt.
+        /// </summary>
+        internal static string Settings {
+            get {
+                return ResourceManager.GetString("Settings", resourceCulture);
             }
         }
         

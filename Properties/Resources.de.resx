@@ -117,26 +117,11 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="Personality" xml:space="preserve">
-    <value>Personalisieren</value>
-  </data>
   <data name="Exit" xml:space="preserve">
     <value>Beenden</value>
   </data>
-  <data name="Data" xml:space="preserve">
-    <value>Daten</value>
-  </data>
-  <data name="Billing" xml:space="preserve">
-    <value>Abrechnung</value>
-  </data>
-  <data name="Behavior" xml:space="preserve">
-    <value>Verhalten</value>
-  </data>
-  <data name="Appearance" xml:space="preserve">
-    <value>Aussehen</value>
-  </data>
-  <data name="Account" xml:space="preserve">
-    <value>Konto</value>
+  <data name="Personality" xml:space="preserve">
+    <value>Personalisieren</value>
   </data>
   <data name="ShowWindow" xml:space="preserve">
     <value>Fenster anzeigen</value>
@@ -146,5 +131,27 @@
   </data>
   <data name="SpeechModeButtonNotFound" xml:space="preserve">
     <value>Schaltfläche „Sprachmodus“ nicht gefunden</value>
+  </data>
+  <data name="None" xml:space="preserve">
+    <value>Keine</value>
+  </data>
+  <data name="Inaktivity" xml:space="preserve">
+    <value>Inaktivität</value>
+  </data>
+  <data name="_0Seconds" xml:space="preserve">
+    <value>{0} Sekunden</value>
+  </data>
+  <data name="Settings" xml:space="preserve">
+    <value>Einstellungen</value>
+  </data>
+  <data name="Reload" xml:space="preserve">
+    <value>Fenster aktualisieren</value>
+  </data>
+  <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
+  <data name="nonet" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
+  <data name="_0Deactivated" xml:space="preserve">
+    <value>  {0} (deaktiviert)</value>
   </data>
 </root>

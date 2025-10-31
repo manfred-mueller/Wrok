@@ -124,23 +124,8 @@
   <data name="Exit" xml:space="preserve">
     <value>Exit</value>
   </data>
-  <data name="Account" xml:space="preserve">
-    <value>Account</value>
-  </data>
-  <data name="Appearance" xml:space="preserve">
-    <value>Appearance</value>
-  </data>
-  <data name="Behavior" xml:space="preserve">
-    <value>Behavior</value>
-  </data>
   <data name="Personality" xml:space="preserve">
     <value>Personality</value>
-  </data>
-  <data name="Data" xml:space="preserve">
-    <value>Data</value>
-  </data>
-  <data name="Billing" xml:space="preserve">
-    <value>Billing</value>
   </data>
   <data name="ShowWindow" xml:space="preserve">
     <value>Show window</value>
@@ -150,5 +135,26 @@
   </data>
   <data name="SpeechModeButtonNotFound" xml:space="preserve">
     <value>Speech mode button not found</value>
+  </data>
+  <data name="None" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="Inaktivity" xml:space="preserve">
+    <value>Inaktivity</value>
+  </data>
+  <data name="_0Seconds" xml:space="preserve">
+    <value>{0} seconds</value>
+  </data>
+  <data name="Settings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="Reload" xml:space="preserve">
+    <value>Reload window</value>
+  </data>
+  <data name="nonet" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\nonet.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="_0Deactivated" xml:space="preserve">
+    <value>  {0} (deactivated)</value>
   </data>
 </root>
