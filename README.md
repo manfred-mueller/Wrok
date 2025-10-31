@@ -1,4 +1,4 @@
-# !\[wrok screenshot](/Screenshot.png?raw=true "Wrok screenshot")
+# !\[wrok screenshot](Screenshot.png?raw=true "Wrok screenshot")
 
 # 
 
