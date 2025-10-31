@@ -1,7 +1,7 @@
-![wrok screenshot](/Screenshot.png?raw=true "Wrok screenshot")
+![wrok screenshot](/Screenshot.png?raw=true =250x "Wrok screenshot")
 
 
-Wrok ist ein Webview2 basierter Grok®-Client.
+Wrok ist ein Webview2 basierter Grok™-Client.
 
 
 Er arbeitet ohne Api-Zugriff und bietet folgende Funktionen:
@@ -19,7 +19,7 @@ NASS e.K. und Wrok sind in keinster Weise mit Grok™ oder X® verbunden. Alle i
 
  
 
-Wrok is a WebView2-based Grok® client.
+Wrok is a WebView2-based Grok™ client.
 
 
 
