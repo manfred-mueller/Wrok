@@ -1,10 +1,5 @@
 ﻿using Microsoft.Web.WebView2.WinForms;
 using System.Runtime.InteropServices;
-using System.Drawing; // für Point/Size/Rectangle/Screen
-using System.Net.Http;
-using System.IO;
-using System.Text;
-using System.Threading.Tasks;
 using System.Drawing.Imaging;
 
 namespace Wrok
