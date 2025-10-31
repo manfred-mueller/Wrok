@@ -20,7 +20,6 @@ namespace Wrok
         // --- Hotkey: Win32 RegisterHotKey ---
         private const int HOTKEY_ID = 0x9000;
         private const int WM_HOTKEY = 0x0312;
-        private const uint MOD_ALT = 0x0001;
         private const uint MOD_CONTROL = 0x0002;
         private const uint MOD_SHIFT = 0x0004;
 
