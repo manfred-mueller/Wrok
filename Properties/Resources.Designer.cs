@@ -172,10 +172,29 @@ namespace Wrok.Properties {
         /// <summary>
         ///   Sucht eine lokalisierte Ressource vom Typ System.Drawing.Icon ähnlich wie (Symbol).
         /// </summary>
-        internal static System.Drawing.Icon wrok {
+        internal static System.Drawing.Icon wrok_black {
             get {
-                object obj = ResourceManager.GetObject("wrok", resourceCulture);
+                object obj = ResourceManager.GetObject("wrok_black", resourceCulture);
                 return ((System.Drawing.Icon)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Ressource vom Typ System.Drawing.Icon ähnlich wie (Symbol).
+        /// </summary>
+        internal static System.Drawing.Icon wrok_white {
+            get {
+                object obj = ResourceManager.GetObject("wrok_white", resourceCulture);
+                return ((System.Drawing.Icon)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Wrok - click to open ähnelt.
+        /// </summary>
+        internal static string WrokClickToOpen {
+            get {
+                return ResourceManager.GetString("WrokClickToOpen", resourceCulture);
             }
         }
     }

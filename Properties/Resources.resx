@@ -117,10 +117,6 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
-  <data name="wrok" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\wrok.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
-  </data>
   <data name="Exit" xml:space="preserve">
     <value>Exit</value>
   </data>
@@ -151,10 +147,20 @@
   <data name="Reload" xml:space="preserve">
     <value>Reload window</value>
   </data>
+  <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
   <data name="nonet" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\nonet.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="_0Deactivated" xml:space="preserve">
     <value>  {0} (deactivated)</value>
+  </data>
+  <data name="WrokClickToOpen" xml:space="preserve">
+    <value>Wrok - click to open</value>
+  </data>
+  <data name="wrok_black" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\wrok_black.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
+  <data name="wrok_white" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\wrok_white.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
 </root>

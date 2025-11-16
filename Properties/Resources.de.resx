@@ -154,4 +154,13 @@
   <data name="_0Deactivated" xml:space="preserve">
     <value>  {0} (deaktiviert)</value>
   </data>
+  <data name="WrokClickToOpen" xml:space="preserve">
+    <value>Wrok – zum Öffnen klicken</value>
+  </data>
+  <data name="wrok_black" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
+  <data name="wrok_white" type="System.Resources.ResXNullRef, System.Windows.Forms">
+    <value />
+  </data>
 </root>

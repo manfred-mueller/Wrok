@@ -1,4 +1,4 @@
-// Auto-generated Settings-Designer (manuell hinzugefügt, einfach gehalten)
+ï»¿// Auto-generated Settings-Designer (manuell hinzugef gt, einfach gehalten)
 using System.Configuration;
 
 namespace Wrok.Properties
@@ -22,7 +22,7 @@ namespace Wrok.Properties
             set { this["InactivityTimeoutSeconds"] = value; }
         }
 
-        // Fenster-Position/Größe speichern
+        // Fenster-Position/Gr  e speichern
         [UserScopedSetting()]
         [DefaultSettingValue("0")]
         public int WindowTop
