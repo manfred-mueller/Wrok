@@ -1,8 +1,4 @@
-![wrok screenshot](/Screenshot.png?raw=true "Wrok screenshot")
-
-![dunkles wrok icon](/wrok_black.ico?raw=true "Dunkles Wrok-Symbol")
-
-![helles wrok icon](/wrok_white,ico?raw=true "Helles Wrok-Symbol")
+![wrok screenshot](/Screenshot.png?raw=true "Wrok screenshot") ![dunkles wrok icon](/wrok_black.ico?raw=true "Dunkles Wrok-Symbol")
 
 
 Wrok ist ein Webview2 basierter Grok™-Client.
