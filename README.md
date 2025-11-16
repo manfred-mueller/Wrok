@@ -1,4 +1,4 @@
-![wrok screenshot](/Screenshot.png?raw=true "Wrok screenshot") ![dunkles wrok icon](/wrok_black.ico?raw=true "Dunkles Wrok-Symbol")
+![dunkles wrok icon](/wrok_black.ico?raw=true "Dunkles Wrok-Symbol")
 
 
 Wrok ist ein Webview2 basierter Grok™-Client.
@@ -43,3 +43,4 @@ It operates without API access and offers the following features:
 
 NASS e.K. and Wrok are in no way affiliated with Grok™ or X®. All brand names and designations used in this software are registered trademarks and brands of their respective owners and are used for descriptive purposes only.
 
+![wrok screenshot](/Screenshot.png?raw=true "Wrok screenshot") 
