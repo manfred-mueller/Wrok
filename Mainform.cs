@@ -46,6 +46,10 @@ namespace Wrok
         private readonly int[] inactivityOptions = new[] { 0, 30, 60, 90 };
         // ------------------------
 
+        // Ergänzte Felder für Activity-Tracking
+        private DateTime _lastActivity = DateTime.UtcNow;
+        private readonly object _activityLock = new object();
+
         public MainForm()
         {
             InitializeComponent();
@@ -56,16 +60,44 @@ namespace Wrok
 
             LoadWindowSettings();
 
-            // Inaktivitäts-Einstellung aus den Einstellungen lesen
+            // Prüfe, ob die Anwendung zum ersten Mal gestartet wird (Marker-Datei in LocalAppData).
+            // Nur beim Erststart den Inactivity-Timer standardmäßig deaktivieren.
+            var markerDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Wrok");
+            var firstRunMarker = Path.Combine(markerDir, "firstrun.marker");
             var savedSeconds = Properties.Settings.Default.InactivityTimeoutSeconds;
-            if (savedSeconds > 0)
+            bool isFirstRun = false;
+            try
             {
-                inactivityTimeout = TimeSpan.FromSeconds(savedSeconds);
-                inactivityEnabled = true;
+                if (!Directory.Exists(markerDir))
+                    Directory.CreateDirectory(markerDir);
+
+                isFirstRun = !File.Exists(firstRunMarker);
+            }
+            catch
+            {
+                // Probleme mit Dateizugriff -> nicht FirstRun annehmen
+                isFirstRun = false;
+            }
+
+            if (isFirstRun)
+            {
+                // Erster Start: Inaktivität deaktivieren und Marker anlegen
+                inactivityTimeout = TimeSpan.Zero;
+                inactivityEnabled = false;
+                try { File.WriteAllText(firstRunMarker, DateTime.UtcNow.ToString("o")); } catch { }
             }
             else
             {
-                inactivityEnabled = false;
+                // Nicht erster Start: gespeicherte Einstellung verwenden
+                if (savedSeconds > 0)
+                {
+                    inactivityTimeout = TimeSpan.FromSeconds(savedSeconds);
+                    inactivityEnabled = true;
+                }
+                else
+                {
+                    inactivityEnabled = false;
+                }
             }
 
             InitializeWebView();
@@ -613,11 +645,17 @@ namespace Wrok
             }
 
             inactivityTimer = new System.Windows.Forms.Timer();
-            inactivityTimer.Interval = (int)Math.Min(inactivityTimeout.TotalMilliseconds, int.MaxValue);
+            // Wenn Timeout == 0 (deaktiviert) verwende einen sicheren Standardintervall,
+            // der später nicht gestartet wird, solange inactivityEnabled == false.
+            var intervalMs = inactivityTimeout.TotalMilliseconds > 0
+                ? (int)Math.Min(inactivityTimeout.TotalMilliseconds, int.MaxValue)
+                : 60_000; // 60s placeholder, wird nicht automatisch gestartet wenn disabled
+            inactivityTimer.Interval = intervalMs;
             inactivityTimer.Tick += InactivityTimer_Tick;
 
             if (inactivityEnabled && inactivityTimeout.TotalMilliseconds > 0)
             {
+                lock (_activityLock) { _lastActivity = DateTime.UtcNow; }
                 inactivityTimer.Start();
             }
             else
@@ -628,7 +666,34 @@ namespace Wrok
 
         private void InactivityTimer_Tick(object? sender, EventArgs e)
         {
-            inactivityTimer?.Stop();
+            // Schütze gegen Rennbedingungen mit lastActivity
+            if (inactivityTimer == null) return;
+            if (!inactivityEnabled) return;
+            if (inactivityTimeout.TotalMilliseconds <= 0) return;
+
+            lock (_activityLock)
+            {
+                var elapsed = DateTime.UtcNow - _lastActivity;
+                // Falls kürzlich Aktivität registriert wurde, Timer neu starten
+                if (elapsed < inactivityTimeout)
+                {
+                    try
+                    {
+                        inactivityTimer.Stop();
+                        inactivityTimer.Start();
+                    }
+                    catch { }
+                    return;
+                }
+            }
+
+            // Kein Activity-Update innerhalb des Timeouts -> minimieren
+            try
+            {
+                inactivityTimer.Stop();
+            }
+            catch { }
+
             MinimizeToTray();
         }
 
@@ -637,20 +702,16 @@ namespace Wrok
             if (!inactivityEnabled) return;
             if (inactivityTimer == null) return;
 
-            inactivityTimer.Stop();
-            inactivityTimer.Start();
-        }
-
-        // Minimiert das Fenster in die Tray-Leiste (sichtbar=false, Opacity=0)
-        private void MinimizeToTray()
-        {
-            SaveWindowSettings();
-
-            if (this.WindowState == FormWindowState.Minimized) return;
-
-            this.WindowState = FormWindowState.Minimized;
-            this.ShowInTaskbar = false;
-            this.Opacity = 0;
+            lock (_activityLock)
+            {
+                _lastActivity = DateTime.UtcNow;
+                try
+                {
+                    inactivityTimer.Stop();
+                    inactivityTimer.Start();
+                }
+                catch { }
+            }
         }
 
         public void SetInactivityTimeout(TimeSpan timeout)
@@ -658,7 +719,8 @@ namespace Wrok
             inactivityTimeout = timeout;
             if (inactivityTimer != null)
             {
-                inactivityTimer.Interval = (int)Math.Min(inactivityTimeout.TotalMilliseconds, int.MaxValue);
+                inactivityTimer.Interval = (int)Math.Min(Math.Max(1, inactivityTimeout.TotalMilliseconds), int.MaxValue);
+                lock (_activityLock) { _lastActivity = DateTime.UtcNow; }
                 ResetInactivityTimer();
             }
         }
@@ -667,7 +729,16 @@ namespace Wrok
         {
             inactivityEnabled = enabled;
             if (inactivityTimer == null) return;
-            if (enabled) inactivityTimer.Start(); else inactivityTimer.Stop();
+
+            if (enabled)
+            {
+                lock (_activityLock) { _lastActivity = DateTime.UtcNow; }
+                inactivityTimer.Start();
+            }
+            else
+            {
+                try { inactivityTimer.Stop(); } catch { }
+            }
         }
 
         // Message-Filter, der UI-Aktivität erkennt und damit den Inactivity-Timer zurücksetzt.
@@ -898,6 +969,16 @@ namespace Wrok
                 }
             }
             catch { }
+        }
+
+        /// <summary>
+        /// Minimiert das Fenster in das Tray.
+        /// </summary>
+        private void MinimizeToTray()
+        {
+            this.WindowState = FormWindowState.Minimized;
+            this.Opacity = 0;
+            this.ShowInTaskbar = false;
         }
     }
 }
