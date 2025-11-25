@@ -24,7 +24,7 @@ namespace Wrok
         private NotifyIcon? trayIcon;
         private ContextMenuStrip? trayMenu;
 
-        // Basis-URL und Menüeinträge für das Tray-Menü
+        // Basis-URL und MenÃ¼eintrÃ¤ge fÃ¼r das Tray-MenÃ¼
         private readonly string baseUrl = "https://grok.com";
         private readonly (string name, string url)[] menuPages = new[]
         {
@@ -53,7 +53,7 @@ namespace Wrok
         private readonly int[] inactivityOptions = new[] { 0, 30, 60, 90 };
         // ------------------------
 
-        // Ergänzte Felder für Activity-Tracking
+        // ErgÃ¤nzte Felder fÃ¼r Activity-Tracking
         private DateTime _lastActivity = DateTime.UtcNow;
         private readonly object _activityLock = new object();
 
@@ -67,8 +67,8 @@ namespace Wrok
 
             LoadWindowSettings();
 
-            // Prüfe, ob die Anwendung zum ersten Mal gestartet wird (Marker-Datei in LocalAppData).
-            // Nur beim Erststart den Inactivity-Timer standardmäßig deaktivieren.
+            // PrÃ¼fe, ob die Anwendung zum ersten Mal gestartet wird (Marker-Datei in LocalAppData).
+            // Nur beim Erststart den Inactivity-Timer standardmÃ¤ÃŸig deaktivieren.
             var markerDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Wrok");
             var firstRunMarker = Path.Combine(markerDir, "firstrun.marker");
             var savedSeconds = Properties.Settings.Default.InactivityTimeoutSeconds;
@@ -82,14 +82,14 @@ namespace Wrok
             }
             catch (Exception ex)
             {
-                Log(ex, "Prüfen/Erstellen firstrun.marker");
+                Log(ex, "PrÃ¼fen/Erstellen firstrun.marker");
                 // Probleme mit Dateizugriff -> nicht FirstRun annehmen
                 isFirstRun = false;
             }
 
             if (isFirstRun)
             {
-                // Erster Start: Inaktivität deaktivieren und Marker anlegen
+                // Erster Start: InaktivitÃ¤t deaktivieren und Marker anlegen
                 inactivityTimeout = TimeSpan.Zero;
                 inactivityEnabled = false;
                 try { File.WriteAllText(firstRunMarker, DateTime.UtcNow.ToString("o")); } catch (Exception ex) { Log(ex, "Write firstrun.marker"); }
@@ -114,7 +114,7 @@ namespace Wrok
             // Lade die Seite im Hintergrund beim Start, aber ohne das Fenster sichtbar zu machen
             try { LoadUrl(baseUrl, bringToFront: false); } catch (Exception ex) { Log(ex, "Initial LoadUrl"); }
 
-            // Form-Events für WindowState/Position speichern
+            // Form-Events fÃ¼r WindowState/Position speichern
             this.Resize += MainForm_Resize;
             this.ResizeEnd += MainForm_ResizeEnd;
             this.Move += MainForm_Move;
@@ -132,7 +132,7 @@ namespace Wrok
             this.Visible = false;
         }
 
-        // Lade gespeicherte Fensterposition/-größe und stelle sicher, dass die Position auf einem Bildschirm liegt.
+        // Lade gespeicherte Fensterposition/-grÃ¶ÃŸe und stelle sicher, dass die Position auf einem Bildschirm liegt.
         private void LoadWindowSettings()
         {
             var s = Properties.Settings.Default;
@@ -168,7 +168,7 @@ namespace Wrok
             }
         }
 
-        // Speichert aktuelle Fenstergeometrie in den Settings (mit Schutz vor ungültigen Werten)
+        // Speichert aktuelle Fenstergeometrie in den Settings (mit Schutz vor ungÃ¼ltigen Werten)
         private void SaveWindowSettings()
         {
             try
@@ -222,9 +222,9 @@ namespace Wrok
 
         /// <summary>
         /// WebView2 initialisieren und feste Runtime nutzen.
-        /// - WebView wird dem Form hinzugefügt.
+        /// - WebView wird dem Form hinzugefÃ¼gt.
         /// - CoreWebView2Environment mit lokalem Runtime-Ordner wird versucht, ansonsten Standard-Environment.
-        /// - NavigationCompleted wird benutzt, um nach erfolgreichem Laden Aktionen auszuführen.
+        /// - NavigationCompleted wird benutzt, um nach erfolgreichem Laden Aktionen auszufÃ¼hren.
         /// </summary>
         private async void InitializeWebView()
         {
@@ -234,7 +234,7 @@ namespace Wrok
             };
             this.Controls.Add(webView);
 
-            // Kurze Hotkey-ähnliche Aktion im WebView (Strg+Shift minimiert)
+            // Kurze Hotkey-Ã¤hnliche Aktion im WebView (Strg+Shift minimiert)
             webView.PreviewKeyDown += (s, e) =>
             {
                 if ((ModifierKeys & (Keys.Control | Keys.Shift)) == (Keys.Control | Keys.Shift))
@@ -292,7 +292,7 @@ namespace Wrok
                 catch (Exception ex)
                 {
                     Log(ex, "EnsureCoreWebView2Async(env) failed");
-                    // EnsureCoreWebView2 schlug fehl — weiter versuchen mit null
+                    // EnsureCoreWebView2 schlug fehl Â— weiter versuchen mit null
                 }
             }
             else
@@ -329,13 +329,13 @@ namespace Wrok
                         try { await webView.CoreWebView2.ExecuteScriptAsync(script); } catch (Exception ex) { Log(ex, "ExecuteScriptAsync"); }
                     }
 
-                    // Aktivität nach Navigation zurücksetzen
+                    // AktivitÃ¤t nach Navigation zurÃ¼cksetzen
                     ResetInactivityTimer();
                 };
             }
         }
 
-        // Erzeugt das Tray-Icon + Kontextmenü
+        // Erzeugt das Tray-Icon + KontextmenÃ¼
         private void InitializeTrayIcon()
         {
             trayMenu = new ContextMenuStrip();
@@ -429,7 +429,7 @@ namespace Wrok
             }
         }
 
-        // Macht das Fenster sichtbar und ggf. lädt den Web-Inhalt
+        // Macht das Fenster sichtbar und ggf. lÃ¤dt den Web-Inhalt
         private void Reactivate()
         {
             LoadWindowSettings();
@@ -479,7 +479,7 @@ namespace Wrok
             }
         }
 
-        // Lädt die URL und zeigt optional das Fenster (bringToFront).
+        // LÃ¤dt die URL und zeigt optional das Fenster (bringToFront).
         private async void LoadUrl(string url, bool bringToFront = true)
         {
             try
@@ -527,7 +527,7 @@ namespace Wrok
 
             if (!bringToFront) return;
 
-            // Nur wenn explizit erwünscht: Fenster sichtbar machen / in den Vordergrund bringen
+            // Nur wenn explizit erwÃ¼nscht: Fenster sichtbar machen / in den Vordergrund bringen
             this.Show();
             this.WindowState = Properties.Settings.Default.IsMaximized ? FormWindowState.Maximized : FormWindowState.Normal;
             this.Opacity = 1.0;
@@ -538,7 +538,7 @@ namespace Wrok
             ResetInactivityTimer();
         }
 
-        // Prüft Internetverbindung durch Requests an bekannte Endpoints.
+        // PrÃ¼ft Internetverbindung durch Requests an bekannte Endpoints.
         private async Task<bool> HasInternetConnectionAsync(int attempts = 2, int timeoutSeconds = 4)
         {
             try
@@ -559,7 +559,7 @@ namespace Wrok
             };
 
             var client = _httpClient;
-            // Verwende CancellationTokenSource pro Request anstelle globaler Timeout-Änderung.
+            // Verwende CancellationTokenSource pro Request anstelle globaler Timeout-Ã„nderung.
             for (int attempt = 0; attempt < Math.Max(1, attempts); attempt++)
             {
                 foreach (var u in urls)
@@ -615,7 +615,6 @@ namespace Wrok
             SystemEvents.UserPreferenceChanged += SystemEvents_UserPreferenceChanged;
             base.OnHandleCreated(e);
 
-            // Registrierung prüfen (3. Verbesserung)
             try
             {
                 bool registered = RegisterHotKey(this.Handle, HOTKEY_ID, MOD_CONTROL | MOD_SHIFT, (uint)Keys.Space);
@@ -630,14 +629,10 @@ namespace Wrok
                 Log(ex, "RegisterHotKey threw");
             }
 
-            if (activityFilter == null)
-            {
-                activityFilter = new ActivityMessageFilter(this);
-                Application.AddMessageFilter(activityFilter);
-            }
-
-            // Titelleiste initial an das aktuelle Theme anpassen
             SetTitleBarDarkMode(IsDarkMode());
+
+            // ðŸ’¡ Wichtig, wenn Tray-Icon mal woanders disposed wÃ¼rde
+            EnsureTrayIconVisible();
         }
 
         protected override void OnHandleDestroyed(EventArgs e)
@@ -651,21 +646,18 @@ namespace Wrok
                 Log(ex, "UnregisterHotKey");
             }
 
-            if (activityFilter != null)
-            {
-                try { Application.RemoveMessageFilter(activityFilter); } catch (Exception ex) { Log(ex, "RemoveMessageFilter"); }
-                activityFilter = null;
-            }
-
             SystemEvents.UserPreferenceChanged -= SystemEvents_UserPreferenceChanged;
 
-            // Tray-Icon sauber entsorgen (4. Verbesserung)
-            DisposeTrayIcon();
+            // Nur wenn das Handle nicht neu erstellt wird -> wirklich "Ende" des Fensters
+            if (!this.RecreatingHandle)
+            {
+                DisposeTrayIcon();
+            }
 
             base.OnHandleDestroyed(e);
         }
 
-        // Zusätzliche Windows-Messages, die Theme-Änderungen signalisieren können.
+        // ZusÃ¤tzliche Windows-Messages, die Theme-Ã„nderungen signalisieren kÃ¶nnen.
         private const int WM_THEMECHANGED = 0x031A;
         private const int WM_SETTINGCHANGE = 0x001A;
 
@@ -715,7 +707,7 @@ namespace Wrok
 
             inactivityTimer = new System.Windows.Forms.Timer();
             // Wenn Timeout == 0 (deaktiviert) verwende einen sicheren Standardintervall,
-            // der später nicht gestartet wird, solange inactivityEnabled == false.
+            // der spÃ¤ter nicht gestartet wird, solange inactivityEnabled == false.
             var intervalMs = inactivityTimeout.TotalMilliseconds > 0
                 ? (int)Math.Min(inactivityTimeout.TotalMilliseconds, int.MaxValue)
                 : 60_000; // 60s placeholder, wird nicht automatisch gestartet wenn disabled
@@ -735,7 +727,7 @@ namespace Wrok
 
         private void InactivityTimer_Tick(object? sender, EventArgs e)
         {
-            // Schütze gegen Rennbedingungen mit lastActivity
+            // SchÃ¼tze gegen Rennbedingungen mit lastActivity
             if (inactivityTimer == null) return;
             if (!inactivityEnabled) return;
             if (inactivityTimeout.TotalMilliseconds <= 0) return;
@@ -743,7 +735,7 @@ namespace Wrok
             lock (_activityLock)
             {
                 var elapsed = DateTime.UtcNow - _lastActivity;
-                // Falls kürzlich Aktivität registriert wurde, Timer neu starten
+                // Falls kÃ¼rzlich AktivitÃ¤t registriert wurde, Timer neu starten
                 if (elapsed < inactivityTimeout)
                 {
                     try
@@ -810,7 +802,7 @@ namespace Wrok
             }
         }
 
-        // Message-Filter, der UI-Aktivität erkennt und damit den Inactivity-Timer zurücksetzt.
+        // Message-Filter, der UI-AktivitÃ¤t erkennt und damit den Inactivity-Timer zurÃ¼cksetzt.
         private class ActivityMessageFilter : IMessageFilter
         {
             private readonly WeakReference<MainForm> _formRef;
@@ -848,7 +840,7 @@ namespace Wrok
             }
         }
 
-        // Menü-Handler: Inaktivitätsdauer einstellen und Settings speichern
+        // MenÃ¼-Handler: InaktivitÃ¤tsdauer einstellen und Settings speichern
         private void InactivityMenuItem_Click(object? sender, EventArgs e)
         {
             if (sender is not ToolStripMenuItem clicked) return;
@@ -928,7 +920,7 @@ namespace Wrok
             }
         }
 
-        // Hilfsfunktion: Bitmap in Base64 kodieren (für Embedded-HTML)
+        // Hilfsfunktion: Bitmap in Base64 kodieren (fÃ¼r Embedded-HTML)
         private string BitmapToBase64(Bitmap bmp)
         {
             try
@@ -956,7 +948,7 @@ namespace Wrok
             catch (Exception ex)
             {
                 Trace.WriteLine($"IsDarkMode fallback: {ex}");
-                return true; // Fallback: Dark Mode (häufiger Standard)
+                return true; // Fallback: Dark Mode (hÃ¤ufiger Standard)
             }
         }
 
@@ -990,7 +982,7 @@ namespace Wrok
                 {
                     var old = trayIcon.Icon;
 
-                    // Windows dazu bringen, die Änderung zu übernehmen
+                    // Windows dazu bringen, die Ã„nderung zu Ã¼bernehmen
                     trayIcon.Visible = false;
                     trayIcon.Icon = newIcon;
                     trayIcon.Visible = true;
@@ -1021,21 +1013,21 @@ namespace Wrok
             }
         }
 
-        // Ergänze neben den anderen DllImport-Deklarationen
+        // ErgÃ¤nze neben den anderen DllImport-Deklarationen
         [DllImport("dwmapi.dll", PreserveSig = true)]
         private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
 
-        // DWM-Attribute für immersive dark titlebar (verschiedene Windows-Builds)
+        // DWM-Attribute fÃ¼r immersive dark titlebar (verschiedene Windows-Builds)
         private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20; // neuer Windows 10/11 Wert
-        private const int DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1 = 19; // älterer Fall
+        private const int DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1 = 19; // Ã¤lterer Fall
 
-        // Setzt/entfernt den "immersive dark mode" für die native Titelleiste (wenn möglich).
+        // Setzt/entfernt den "immersive dark mode" fÃ¼r die native Titelleiste (wenn mÃ¶glich).
         private void SetTitleBarDarkMode(bool enabled)
         {
             try
             {
                 int val = enabled ? 1 : 0;
-                // Versuch mit neuem Attribut, falls Fehler dann mit älterem
+                // Versuch mit neuem Attribut, falls Fehler dann mit Ã¤lterem
                 int hr = DwmSetWindowAttribute(this.Handle, DWMWA_USE_IMMERSIVE_DARK_MODE, ref val, Marshal.SizeOf<int>());
                 if (hr != 0)
                 {
