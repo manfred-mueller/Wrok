@@ -56,4 +56,8 @@
     </None>
   </ItemGroup>
 
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="D:\Tools\sign.cmd $(TargetPath) &amp;&amp; iscc $(SolutionDir)InstallScript.iss &quot;/Ssigntool=D:\Tools\signtool.exe sign /a /n $qOpen Source Developer, Mueller Manfred$q /t http://time.certum.pl/ /fd sha256 /v $f&quot;" />
+  </Target>
+
 </Project>

@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Wrok"
-#define MyAppVersion "0.9.0"
+#define MyAppVersion "0.8.0"
 #define MyAppExeName MyAppName + ".exe"
 #define MyAppPublisher "NASS e.K."
 #define MyAppURL "https://www.nass-ek.de"
@@ -23,7 +23,7 @@ DisableProgramGroupPage=yes
 LicenseFile=D:\Dokumente\gpl_de.txt
 ArchitecturesInstallIn64BitMode=x64
 ArchitecturesAllowed=x64
-OutputDir=Program\bin\Release
+OutputDir=bin\x64\Release
 OutputBaseFilename={#MyAppName}-Setup-{#MyAppVersion}
 SetupIconFile=wrok_black.ico
 UninstallDisplayIcon={app}\{#MyAppExeName},0
@@ -34,7 +34,8 @@ Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
 ChangesAssociations=yes
-SignTool=Certum
+SignTool=signtool
+SignedUninstaller=yes
 
 [Languages]
 Name: "de"; MessagesFile: "compiler:Languages\German.isl"
