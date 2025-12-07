@@ -163,4 +163,49 @@
   <data name="wrok_white" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\wrok_white.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
+  <data name="ClearCache" xml:space="preserve">
+    <value>Clear cache</value>
+  </data>
+  <data name="ClearBrowsingData" xml:space="preserve">
+    <value>Clear browsing data</value>
+  </data>
+  <data name="ChooseWhatToBeDeleted" xml:space="preserve">
+    <value>Choose what to be deleted:</value>
+  </data>
+  <data name="ClearCacheOnly" xml:space="preserve">
+    <value>Clear Cache only</value>
+  </data>
+  <data name="DeleteAll" xml:space="preserve">
+    <value>Delete all</value>
+  </data>
+  <data name="CacheCleared" xml:space="preserve">
+    <value>Cache cleared</value>
+  </data>
+  <data name="PicturesScriptsAndOtherDataDeletedNYouAreStillLoggedIn" xml:space="preserve">
+    <value>Pictures, scripts and other data deleted.
+You are still logged in.</value>
+  </data>
+  <data name="CookiesLoginDataAndSettingsDeletedNYouAreLoggedOut" xml:space="preserve">
+    <value>Cookies, Login-Data and Settings deleted.
+You are logged out.</value>
+  </data>
+  <data name="Error" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="AllDataDeleted" xml:space="preserve">
+    <value>All data deleted</value>
+  </data>
+  <data name="ErrorWhileDeletingCacheN0" xml:space="preserve">
+    <value>Error while deleting cache:
+{0}</value>
+  </data>
+  <data name="WebView2NotInitializedYet" xml:space="preserve">
+    <value>WebView2 not initialized yet.</value>
+  </data>
+  <data name="DeleteCache" xml:space="preserve">
+    <value>Delete cache</value>
+  </data>
+  <data name="ClearCacheAsyncFailed" xml:space="preserve">
+    <value>ClearCacheAsync failed</value>
+  </data>
 </root>

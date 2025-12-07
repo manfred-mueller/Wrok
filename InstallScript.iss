@@ -9,8 +9,6 @@
 #define ProgramFiles GetEnv("ProgramFiles")
 
 [Setup]
-; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
-; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
 AppId={{A5101A1F-25B3-4297-B279-A34FE3354AA3}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
@@ -23,55 +21,89 @@ DisableDirPage=yes
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 LicenseFile=D:\Dokumente\gpl_de.txt
-;PrivilegesRequired=Highest  ; Admin-Rechte für Registry- und Installer-Aufrufe
 ArchitecturesInstallIn64BitMode=x64
 ArchitecturesAllowed=x64
 OutputDir=Program\bin\Release
 OutputBaseFilename={#MyAppName}-Setup-{#MyAppVersion}
-SetupIconFile=D:\Bilder\nass-ek.ico
+SetupIconFile=wrok_black.ico
 UninstallDisplayIcon={app}\{#MyAppExeName},0
-;Begin adjustments for showing the logo
 DisableWelcomePage=False
 WizardImageFile=D:\Bilder\wz_nass-ek.bmp
 WizardSmallImageFile=D:\Bilder\wz_leer_small.bmp
-;End adjustments for showing the logo
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
-ChangesAssociations = yes
+ChangesAssociations=yes
 SignTool=Certum
 
 [Languages]
 Name: "de"; MessagesFile: "compiler:Languages\German.isl"
 
 [Files]
-; App-Dateien (aus deinem Publish-Ordner)
-Source: "bin\Release\net8.0-windows\win-x64\Wrok.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "wrok.ico"; DestDir: "{app}"; Flags: ignoreversion
-
-; WebView2 Bootstrapper (für Offline-Installation)
-; Source: "MicrosoftEdgeWebView2RuntimeInstallerX64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall
+Source: "bin\x64\Release\net8.0-windows\Wrok.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "bin\x64\Release\net8.0-windows\Wrok.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "bin\x64\Release\net8.0-windows\Wrok.runtimeconfig.json"; DestDir: "{app}"; Flags: ignoreversion
+Source: "bin\x64\Release\net8.0-windows\runtimes\win-x64\native\WebView2Loader.dll"; DestDir: "{app}\runtimes\win-x64\native"; Flags: ignoreversion
+Source: "wrok_black.ico"; DestDir: "{app}"; Flags: ignoreversion
+Source: "wrok_white.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-; Desktop-Verknüpfung
-Name: "{autodesktop}\Wrok"; Filename: "{app}\Wrok.exe"; IconFilename: "{app}\wrok.ico"
+Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}";
+Name: "{autodesktop}\Wrok"; Filename: "{app}\Wrok.exe"; IconFilename: "{app}\wrok_black.ico"
 
 [Run]
-; Nach Installation: App starten (optional)
 Filename: "{app}\Wrok.exe"; Description: "{cm:LaunchProgram,Wrok}"; Flags: nowait postinstall skipifsilent
 
 [Code]
+
 var
   WebView2Installed: Boolean;
 
-// Funktion: Prüft, ob WebView2 Runtime installiert ist (für 64-bit und 32-bit Registry)
+const
+  OldUninstallKey =
+    'Software\Microsoft\Windows\CurrentVersion\Uninstall\{A5101A1F-25B3-4297-B279-A34FE3354AA3}_is1';
+
+function InitializeSetup(): Boolean;
+var
+  UninstPath: string;
+  ResultCode: Integer;
+begin
+  Result := True;
+
+  { Prüfe zuerst HKLM, dann HKCU, ob eine alte Wrok-Installation existiert }
+  if RegQueryStringValue(HKLM, OldUninstallKey, 'UninstallString', UninstPath) or
+     RegQueryStringValue(HKCU, OldUninstallKey, 'UninstallString', UninstPath) then
+  begin
+    Log('Vorherige Wrok-Installation gefunden. Starte Deinstallation: ' + UninstPath);
+
+    { Anführungszeichen entfernen, damit wir eigene Parameter anhängen können }
+    UninstPath := RemoveQuotes(UninstPath);
+
+    { Alte Version still deinstallieren }
+    if not Exec(UninstPath, '/SILENT /NORESTART', '', SW_SHOW,
+                ewWaitUntilTerminated, ResultCode) then
+    begin
+      Log('Fehler beim Starten des Uninstallers. Rückgabecode: ' + IntToStr(ResultCode));
+      { Wenn du im Fehlerfall abbrechen willst, kommentiere die nächste Zeile aus: }
+      { Result := False; }
+    end
+    else
+    begin
+      Log('Alte Wrok-Version deinstalliert. Rückgabecode: ' + IntToStr(ResultCode));
+    end;
+  end
+  else
+  begin
+    Log('Keine vorherige Wrok-Installation gefunden.');
+  end;
+end;
+
 function IsWebView2Installed(): Boolean;
 var
   Version: String;
 begin
   Result := False;
-  
-  // Prüfe HKLM (Machine-wide)
+
   if RegQueryStringValue(HKLM, 'SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}', 'pv', Version) then
   begin
     Log('WebView2 Version (HKLM): ' + Version);
@@ -84,18 +116,15 @@ begin
   end;
 end;
 
-// InitializeWizard: Vor der Installation prüfen
 procedure InitializeWizard();
 begin
   WebView2Installed := IsWebView2Installed();
   if not WebView2Installed then
   begin
-    // Optional: Zeige Warnung oder Page (hier nur Log)
-    Log('WebView2 Runtime nicht installiert – wird installiert.');
+    Log('WebView2 Runtime nicht installiert - wird installiert.');
   end;
 end;
 
-// CurStepChanged: Bei Installationsschritt "Install" WebView2 installieren (falls nötig)
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   BootstrapperPath: String;
@@ -105,46 +134,39 @@ begin
   begin
     if not WebView2Installed then
     begin
-      // Online: Lade und installiere Evergreen Bootstrapper (empfohlen für Updates)
       BootstrapperPath := ExpandConstant('{tmp}\MicrosoftEdgeWebView2RuntimeInstallerX64.exe');
+
       if not FileExists(BootstrapperPath) then
       begin
-        // Download (benötigt Internet)
         if not FileCopy('https://go.microsoft.com/fwlink/p/?LinkId=2124703', BootstrapperPath, False) then
         begin
           Log('Fehler beim Download von WebView2 Bootstrapper.');
-          MsgBox('Kann WebView2 Runtime nicht herunterladen. Bitte installiere sie manuell von https://developer.microsoft.com/microsoft-edge/webview2/.', mbError, MB_OK);
+          MsgBox('Kann WebView2 Runtime nicht herunterladen. Bitte manuell installieren.', mbError, MB_OK);
           Abort();
         end;
       end;
-      
-      // Installiere silent (ohne UI, /silent /install)
+
       if Exec(BootstrapperPath, '/silent /install', '', SW_HIDE, ewWaitUntilTerminated, ResultCode) then
       begin
-        Log('WebView2 Runtime erfolgreich installiert (Code: ' + IntToStr(ResultCode) + ').');
+        Log('WebView2 installiert (Code: ' + IntToStr(ResultCode) + ').');
         WebView2Installed := True;
       end
       else
       begin
-        Log('Fehler bei WebView2-Installation (Code: ' + IntToStr(ResultCode) + ').');
-        MsgBox('Fehler bei der Installation der WebView2 Runtime. Bitte installiere sie manuell.', mbError, MB_OK);
+        Log('Fehler bei WebView2-Installation: ' + IntToStr(ResultCode));
+        MsgBox('Fehler bei der Installation von WebView2.', mbError, MB_OK);
         Abort();
       end;
-      
-      DeleteFile(BootstrapperPath);  // Aufräumen
+
+      DeleteFile(BootstrapperPath);
     end
     else
     begin
-      Log('WebView2 Runtime bereits installiert – überspringen.');
+      Log('WebView2 bereits installiert.');
     end;
-    
-    // Optional: .NET 8 Desktop Runtime prüfen/installieren (nur falls framework-dependent!)
-    // Verwende InnoDependencyInstaller (siehe https://github.com/DomGries/InnoDependencyInstaller)
-    // Beispiel: idpInstallDotNet('8.0.0');  // Aktiviere, wenn nicht self-contained
   end;
 end;
 
-// NextButtonClick: Vor "Weiter" prüfen (optional)
 function NextButtonClick(CurPageID: Integer): Boolean;
 begin
   Result := True;
@@ -152,7 +174,7 @@ begin
   begin
     if not WebView2Installed then
     begin
-      if MsgBox('WebView2 Runtime ist erforderlich. Soll sie jetzt installiert werden (benötigt Internet)?', mbConfirmation, MB_YESNO) = IDNO then
+      if MsgBox('WebView2 Runtime ist erforderlich. Soll sie jetzt installiert werden?', mbConfirmation, MB_YESNO) = IDNO then
       begin
         Result := False;
       end;

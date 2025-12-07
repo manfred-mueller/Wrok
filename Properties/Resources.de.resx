@@ -163,4 +163,49 @@
   <data name="wrok_white" type="System.Resources.ResXNullRef, System.Windows.Forms">
     <value />
   </data>
+  <data name="ClearCache" xml:space="preserve">
+    <value>Cache löschen</value>
+  </data>
+  <data name="ClearBrowsingData" xml:space="preserve">
+    <value>Browserdaten löschen</value>
+  </data>
+  <data name="ChooseWhatToBeDeleted" xml:space="preserve">
+    <value>Wählen Sie aus, was gelöscht werden soll:</value>
+  </data>
+  <data name="ClearCacheOnly" xml:space="preserve">
+    <value>Nur Cache löschen</value>
+  </data>
+  <data name="DeleteAll" xml:space="preserve">
+    <value>Alles löschen</value>
+  </data>
+  <data name="CacheCleared" xml:space="preserve">
+    <value>Cache geleert</value>
+  </data>
+  <data name="PicturesScriptsAndOtherDataDeletedNYouAreStillLoggedIn" xml:space="preserve">
+    <value>Bilder, Skripte und andere Daten gelöscht.
+Sie sind noch angemeldet.</value>
+  </data>
+  <data name="CookiesLoginDataAndSettingsDeletedNYouAreLoggedOut" xml:space="preserve">
+    <value>Cookies, Login-Daten und Einstellungen gelöscht.
+Sie sind abgemeldet.</value>
+  </data>
+  <data name="Error" xml:space="preserve">
+    <value>Fehler</value>
+  </data>
+  <data name="AllDataDeleted" xml:space="preserve">
+    <value>Alle Daten gelöscht</value>
+  </data>
+  <data name="ErrorWhileDeletingCacheN0" xml:space="preserve">
+    <value>Fehler beim Löschen des Caches:
+{0}</value>
+  </data>
+  <data name="WebView2NotInitializedYet" xml:space="preserve">
+    <value>WebView2 ist noch nicht initialisiert.</value>
+  </data>
+  <data name="DeleteCache" xml:space="preserve">
+    <value>Cache löschen</value>
+  </data>
+  <data name="ClearCacheAsyncFailed" xml:space="preserve">
+    <value>ClearCacheAsync ist fehlgeschlagen</value>
+  </data>
 </root>

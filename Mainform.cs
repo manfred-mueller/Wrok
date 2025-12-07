@@ -1,13 +1,13 @@
+﻿using Microsoft.Web.WebView2.WinForms;
 using Microsoft.Web.WebView2.Core;
-using Microsoft.Web.WebView2.WinForms;
 using Microsoft.Win32;
 using System;
 using System.Diagnostics;
+using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Net.Http;
 using System.Runtime.InteropServices;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -16,44 +16,41 @@ namespace Wrok
 {
     public partial class MainForm : Form
     {
-        // Reusable HttpClient (1. Verbesserung)
+        // Wiederverwendbarer HttpClient
         private static readonly HttpClient _httpClient = new HttpClient();
 
-        // Controls / resources
+        // Steuerelemente / Ressourcen
         private WebView2? webView;
         private NotifyIcon? trayIcon;
         private ContextMenuStrip? trayMenu;
 
         // Basis-URL und Menüeinträge für das Tray-Menü
-        private readonly string baseUrl = "https://grok.com";
+        private readonly string baseUrl = "https://grok.com/";
         private readonly (string name, string url)[] menuPages = new[]
         {
             (Properties.Resources.Settings, "?_s=home"),
         };
 
-        // --- Hotkey (global) ---
-        // HOTKEY_ID identifiziert die Registrierung, WM_HOTKEY ist die Window-Message.
+        // --- Globaler Hotkey ---
         private const int HOTKEY_ID = 0x9000;
         private const int WM_HOTKEY = 0x0312;
         private const uint MOD_CONTROL = 0x0002;
         private const uint MOD_SHIFT = 0x0004;
 
-        // P/Invoke: Registrierung von globalen Hotkeys
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
 
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
-        // --- Inactivity timer (automatisches Minimieren) ---
+        // --- Inaktivitätstimer (automatisches Minimieren) ---
         private System.Windows.Forms.Timer? inactivityTimer;
         private TimeSpan inactivityTimeout = TimeSpan.FromSeconds(30);
         private ActivityMessageFilter? activityFilter;
         private bool inactivityEnabled = true;
         private readonly int[] inactivityOptions = new[] { 0, 30, 60, 90 };
-        // ------------------------
 
-        // Ergänzte Felder für Activity-Tracking
+        // Ergänzte Felder für Aktivitäts-Tracking
         private DateTime _lastActivity = DateTime.UtcNow;
         private readonly object _activityLock = new object();
 
@@ -61,15 +58,27 @@ namespace Wrok
         {
             InitializeComponent();
 
+            // Globalen Nachrichtenfilter installieren, um Aktivität zu erkennen (WeakReference im Filter verwenden)
+            activityFilter = new ActivityMessageFilter(this);
+            try
+            {
+                Application.AddMessageFilter(activityFilter);
+            }
+            catch
+            {
+                activityFilter = null; // OK, falls Hinzufügen aus irgendeinem Grund fehlschlägt
+            }
+
             // Tray initialisieren und Icon dem aktuellen Theme anpassen
             InitializeTrayIcon();
-            ApplyThemeIcon();
+            RefreshTheme();   // Zentrale Theme-Aktualisierung
 
             LoadWindowSettings();
 
-            // Prüfe, ob die Anwendung zum ersten Mal gestartet wird (Marker-Datei in LocalAppData).
-            // Nur beim Erststart den Inactivity-Timer standardmäßig deaktivieren.
-            var markerDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Wrok");
+            // Prüfen, ob die Anwendung zum ersten Mal gestartet wird (Marker-Datei in LocalAppData)
+            var markerDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Wrok");
             var firstRunMarker = Path.Combine(markerDir, "firstrun.marker");
             var savedSeconds = Properties.Settings.Default.InactivityTimeoutSeconds;
             bool isFirstRun = false;
@@ -80,51 +89,59 @@ namespace Wrok
 
                 isFirstRun = !File.Exists(firstRunMarker);
             }
-            catch (Exception ex)
+            catch
             {
-                Log(ex, "Prüfen/Erstellen firstrun.marker");
-                // Probleme mit Dateizugriff -> nicht FirstRun annehmen
                 isFirstRun = false;
             }
 
-            if (isFirstRun)
+            if (isFirstRun || savedSeconds <= 0)
             {
-                // Erster Start: Inaktivität deaktivieren und Marker anlegen
                 inactivityTimeout = TimeSpan.Zero;
                 inactivityEnabled = false;
-                try { File.WriteAllText(firstRunMarker, DateTime.UtcNow.ToString("o")); } catch (Exception ex) { Log(ex, "Write firstrun.marker"); }
+                Properties.Settings.Default.InactivityTimeoutSeconds = 0;
+                Properties.Settings.Default.Save();
+
+                try
+                {
+                    File.WriteAllText(firstRunMarker, DateTime.UtcNow.ToString("o"));
+                }
+                catch
+                {
+                    // Keine Aktion erforderlich
+                }
             }
             else
             {
-                // Nicht erster Start: gespeicherte Einstellung verwenden
-                if (savedSeconds > 0)
-                {
-                    inactivityTimeout = TimeSpan.FromSeconds(savedSeconds);
-                    inactivityEnabled = true;
-                }
-                else
-                {
-                    inactivityEnabled = false;
-                }
+                inactivityTimeout = TimeSpan.FromSeconds(savedSeconds);
+                inactivityEnabled = savedSeconds > 0;
             }
 
             InitializeWebView();
             InitializeInactivityTimer();
 
-            // Lade die Seite im Hintergrund beim Start, aber ohne das Fenster sichtbar zu machen
-            try { LoadUrl(baseUrl, bringToFront: false); } catch (Exception ex) { Log(ex, "Initial LoadUrl"); }
+            // Seite im Hintergrund laden
+            try
+            {
+                LoadUrl(baseUrl, bringToFront: false);
+            }
+            catch
+            {
+                // Keine Aktion erforderlich
+            }
 
             // Form-Events für WindowState/Position speichern
             this.Resize += MainForm_Resize;
             this.ResizeEnd += MainForm_ResizeEnd;
             this.Move += MainForm_Move;
+
+            // Inaktivitätszustand im Tray-Menü anzeigen
+            UpdateTrayMenuInactivityState();
         }
 
         private void InitializeComponent()
         {
-            // ApplyThemeIcon(); // entfernt, wird bereits in Konstruktor nach InitializeTrayIcon aufgerufen
-
-            this.Text = "Wrok";
+            var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+            this.Text = version != null ? $"Wrok {version.Major}.{version.Minor}.{version.Build}" : "Wrok";
             this.WindowState = FormWindowState.Normal;
             this.StartPosition = FormStartPosition.CenterScreen;
             this.FormBorderStyle = FormBorderStyle.Sizable;
@@ -132,7 +149,7 @@ namespace Wrok
             this.Visible = false;
         }
 
-        // Lade gespeicherte Fensterposition/-größe und stelle sicher, dass die Position auf einem Bildschirm liegt.
+        // Gespeicherte Fensterposition und -größe laden
         private void LoadWindowSettings()
         {
             var s = Properties.Settings.Default;
@@ -140,7 +157,11 @@ namespace Wrok
             if (s.WindowWidth > 0 && s.WindowHeight > 0)
             {
                 this.StartPosition = FormStartPosition.Manual;
-                var desired = new Rectangle(s.WindowLeft, s.WindowTop, s.WindowWidth, s.WindowHeight);
+                var desired = new Rectangle(
+                    s.WindowLeft,
+                    s.WindowTop,
+                    s.WindowWidth,
+                    s.WindowHeight);
 
                 bool intersects = false;
                 foreach (var scr in Screen.AllScreens)
@@ -168,7 +189,7 @@ namespace Wrok
             }
         }
 
-        // Speichert aktuelle Fenstergeometrie in den Settings (mit Schutz vor ungültigen Werten)
+        // Aktuelle Fenstergeometrie speichern
         private void SaveWindowSettings()
         {
             try
@@ -176,7 +197,8 @@ namespace Wrok
                 var s = Properties.Settings.Default;
                 Rectangle bounds;
 
-                if (this.WindowState == FormWindowState.Maximized || this.WindowState == FormWindowState.Minimized)
+                if (this.WindowState == FormWindowState.Maximized ||
+                    this.WindowState == FormWindowState.Minimized)
                     bounds = this.RestoreBounds;
                 else
                     bounds = this.Bounds;
@@ -189,16 +211,16 @@ namespace Wrok
 
                 s.Save();
             }
-            catch (Exception ex)
+            catch
             {
-                Log(ex, "SaveWindowSettings");
-                // Absichtlich still: Settings-Write-Fehler sollen die Benutzer-Interaktion nicht blockieren.
+                // Keine Aktion erforderlich
             }
         }
 
         private void MainForm_Resize(object? sender, EventArgs e)
         {
-            if (this.WindowState == FormWindowState.Minimized || this.WindowState == FormWindowState.Maximized)
+            if (this.WindowState == FormWindowState.Minimized ||
+                this.WindowState == FormWindowState.Maximized)
             {
                 SaveWindowSettings();
             }
@@ -222,9 +244,6 @@ namespace Wrok
 
         /// <summary>
         /// WebView2 initialisieren und feste Runtime nutzen.
-        /// - WebView wird dem Form hinzugefügt.
-        /// - CoreWebView2Environment mit lokalem Runtime-Ordner wird versucht, ansonsten Standard-Environment.
-        /// - NavigationCompleted wird benutzt, um nach erfolgreichem Laden Aktionen auszuführen.
         /// </summary>
         private async void InitializeWebView()
         {
@@ -234,145 +253,102 @@ namespace Wrok
             };
             this.Controls.Add(webView);
 
-            // Kurze Hotkey-ähnliche Aktion im WebView (Strg+Shift minimiert)
-            webView.PreviewKeyDown += (s, e) =>
-            {
-                if ((ModifierKeys & (Keys.Control | Keys.Shift)) == (Keys.Control | Keys.Shift))
-                {
-                    this.WindowState = FormWindowState.Minimized;
-                    this.ShowInTaskbar = false;
-                    this.Opacity = 0;
-                    e.IsInputKey = true;
-                }
-
-                ResetInactivityTimer();
-            };
-
-            // feste Runtime angeben (wenn im App-Ordner "WebView2Runtime" liegt)
-            string appBase = AppDomain.CurrentDomain.BaseDirectory;
-            string runtimePath = Path.Combine(appBase, "WebView2Runtime");
-
             string userDataPath = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "Wrok",
-                "WebView2Data"
-            );
-            try { Directory.CreateDirectory(userDataPath); } catch (Exception ex) { Log(ex, "Create WebView2Data folder"); }
+                "WebView2Data");
 
-            CoreWebView2Environment? env = null;
             try
             {
-                env = await CoreWebView2Environment.CreateAsync(
-                    browserExecutableFolder: runtimePath,
-                    userDataFolder: userDataPath,
-                    options: null
-                );
+                Directory.CreateDirectory(userDataPath);
             }
-            catch (Exception ex)
+            catch
             {
-                Log(ex, "CreateAsync with runtimePath failed - falling back to default env");
-                // Fallback: Default-Environment benutzen
-                try
-                {
-                    env = await CoreWebView2Environment.CreateAsync();
-                }
-                catch (Exception ex2)
-                {
-                    Log(ex2, "CreateAsync default env failed");
-                    env = null;
-                }
+                // Keine Aktion erforderlich
             }
 
-            if (env != null)
+            webView.CoreWebView2InitializationCompleted += async (s, e) =>
             {
-                try
+                if (webView.CoreWebView2 != null)
                 {
-                    await webView.EnsureCoreWebView2Async(env);
-                }
-                catch (Exception ex)
-                {
-                    Log(ex, "EnsureCoreWebView2Async(env) failed");
-                    // EnsureCoreWebView2 schlug fehl  weiter versuchen mit null
-                }
-            }
-            else
-            {
-                try { await webView.EnsureCoreWebView2Async(null); } catch (Exception ex) { Log(ex, "EnsureCoreWebView2Async(null) failed"); }
-            }
+                    string script = @"
+                        (function() {
+                            const resetActivity = () => {
+                                window.chrome.webview.postMessage('resetActivity');
+                            };
 
-            if (webView.CoreWebView2 != null)
-            {
-                webView.CoreWebView2.NavigationCompleted += async (sender, args) =>
-                {
-                    // HINWEIS:
-                    // Dieses Script verwendet JSON-serialisierte Ressourcen-Strings (5. Verbesserung).
-                    if (webView.CoreWebView2.Source.ToString().Contains("grok.com"))
+                            ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart'].forEach(event => {
+                                window.addEventListener(event, resetActivity, { passive: true });
+                            });
+                        })();
+                    ";
+                    try
                     {
-                        // sichere Einbettung von Ressourcentexten
-                        var activationMsg = JsonSerializer.Serialize(Properties.Resources.SpeechModeActivated ?? string.Empty);
-                        var notFoundMsg = JsonSerializer.Serialize(Properties.Resources.SpeechModeButtonNotFound ?? string.Empty);
-
-                        string script = $@"
-                            // Suche nach Voice-Button und klicke ihn an
-                            const voiceBtn = document.querySelector('[data-testid=""voice-mode-button""]') ||
-                                             document.querySelector('button[aria-label*=""Sprachmodus""]') ||
-                                             Array.from(document.querySelectorAll('button')).find(b => 
-                                                 b.textContent.includes('Sprachmodus') || 
-                                                 b.getAttribute('aria-label')?.includes('voice'));
-                            if (voiceBtn) {{
-                                voiceBtn.click();
-                                console.log({activationMsg});
-                            }} else {{
-                                console.warn({notFoundMsg});
-                            }}
-                        ";
-                        try { await webView.CoreWebView2.ExecuteScriptAsync(script); } catch (Exception ex) { Log(ex, "ExecuteScriptAsync"); }
+                        await webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(script);
+                    }
+                    catch
+                    {
+                        // Keine Aktion erforderlich
                     }
 
-                    // Aktivität nach Navigation zurücksetzen
-                    ResetInactivityTimer();
-                };
+                    webView.CoreWebView2.WebMessageReceived += (sender, args) =>
+                    {
+                        if (args.TryGetWebMessageAsString() == "resetActivity")
+                        {
+                            ResetInactivityTimer();
+                        }
+                    };
+                }
+            };
+
+            try
+            {
+                var env = await CoreWebView2Environment.CreateAsync(userDataFolder: userDataPath);
+                await webView.EnsureCoreWebView2Async(env);
+            }
+            catch
+            {
+                // Keine Aktion erforderlich
             }
         }
 
-        // Erzeugt das Tray-Icon + Kontextmenü
+        // Tray-Icon + Kontextmenü
         private void InitializeTrayIcon()
         {
             trayMenu = new ContextMenuStrip();
             trayMenu.Items.Add(Properties.Resources.ShowWindow, null, (s, e) => Reactivate());
-
             trayMenu.Items.Add(Properties.Resources.Reload, null, (s, e) =>
             {
                 try
                 {
                     webView?.CoreWebView2?.Reload();
                 }
-                catch (Exception ex) { Log(ex, "Reload click"); }
+                catch
+                {
+                    // Keine Aktion erforderlich
+                }
             });
-
             trayMenu.Items.Add(new ToolStripSeparator());
 
+            // Inaktivitäts-Untermenü
             var inactivityMenu = new ToolStripMenuItem(Properties.Resources.Inaktivity);
             int current = Properties.Settings.Default.InactivityTimeoutSeconds;
-
             foreach (var sec in inactivityOptions)
             {
-                var item = new ToolStripMenuItem(String.Format(Properties.Resources._0Seconds, sec))
+                var item = new ToolStripMenuItem(string.Format(Properties.Resources._0Seconds, sec))
                 {
                     Tag = sec,
                     CheckOnClick = false,
-                    Checked = (current == sec && current > 0)
+                    Checked = (current == sec)
                 };
                 if (sec == 0)
                 {
-                    item.Text = String.Format(Properties.Resources._0Deactivated, sec);
+                    item.Text = string.Format(Properties.Resources._0Deactivated, sec);
                 }
                 item.Click += InactivityMenuItem_Click;
                 inactivityMenu.DropDownItems.Add(item);
             }
-
             trayMenu.Items.Add(inactivityMenu);
-
             trayMenu.Items.Add(new ToolStripSeparator());
 
             foreach (var page in menuPages)
@@ -380,12 +356,15 @@ namespace Wrok
                 var item = trayMenu.Items.Add(page.name);
                 item.Click += (s, e) => LoadUrl(baseUrl + page.url);
             }
-
+            // Neuer Menüpunkt: Cache löschen
+            trayMenu.Items.Add(Properties.Resources.ClearCache, null, async (s, e) => await ClearCacheAsync());
             trayMenu.Items.Add(new ToolStripSeparator());
             trayMenu.Items.Add(Properties.Resources.Exit, null, (s, e) => Application.Exit());
 
-            // Setze das Tray-Icon direkt bei Erstellung
-            var initialIcon = IsDarkMode() ? Properties.Resources.wrok_white : Properties.Resources.wrok_black;
+            var initialIcon = IsDarkMode()
+                ? Properties.Resources.wrok_white
+                : Properties.Resources.wrok_black;
+
             try
             {
                 trayIcon = new NotifyIcon
@@ -393,13 +372,11 @@ namespace Wrok
                     Text = Properties.Resources.WrokClickToOpen,
                     ContextMenuStrip = trayMenu,
                     Visible = true,
-                    Icon = (System.Drawing.Icon)initialIcon.Clone()
+                    Icon = (Icon)initialIcon.Clone()
                 };
             }
-            catch (Exception ex)
+            catch
             {
-                Log(ex, "InitializeTrayIcon - creating NotifyIcon");
-                // Fallback: versuchen ohne Clone
                 try
                 {
                     trayIcon = new NotifyIcon
@@ -410,14 +387,20 @@ namespace Wrok
                         Icon = initialIcon
                     };
                 }
-                catch (Exception ex2)
+                catch
                 {
-                    Log(ex2, "InitializeTrayIcon - fallback failed");
+                    // Keine Aktion erforderlich
                 }
             }
 
-            // Form-Icon synchronisieren
-            try { this.Icon = (System.Drawing.Icon)initialIcon.Clone(); } catch (Exception ex) { Log(ex, "Setting form icon"); this.Icon = initialIcon; }
+            try
+            {
+                this.Icon = (Icon)initialIcon.Clone();
+            }
+            catch
+            {
+                this.Icon = initialIcon;
+            }
 
             if (trayIcon != null)
             {
@@ -427,23 +410,24 @@ namespace Wrok
                         Reactivate();
                 };
             }
+
+            UpdateTrayMenuInactivityState();
         }
 
-        // Macht das Fenster sichtbar und ggf. lädt den Web-Inhalt
+        // Fenster sichtbar machen und ggf. laden
         private void Reactivate()
         {
             LoadWindowSettings();
-
             this.Show();
-            this.WindowState = Properties.Settings.Default.IsMaximized ? FormWindowState.Maximized : FormWindowState.Normal;
+            this.WindowState = Properties.Settings.Default.IsMaximized
+                ? FormWindowState.Maximized
+                : FormWindowState.Normal;
             this.Opacity = 1.0;
             this.ShowInTaskbar = true;
             this.BringToFront();
             this.Activate();
-
             ResetInactivityTimer();
 
-            // Bei Aktivierung: lade oder bring die bereits geladene Seite in den Vordergrund.
             try
             {
                 if (webView != null)
@@ -461,25 +445,21 @@ namespace Wrok
                             if (!src.Contains(baseUrl, StringComparison.OrdinalIgnoreCase))
                                 needLoad = true;
                         }
-                        catch (Exception ex)
+                        catch (Exception)
                         {
-                            Log(ex, "Reactivate - checking CoreWebView2.Source");
                             needLoad = true;
                         }
                     }
-
                     if (needLoad)
                         LoadUrl(baseUrl, bringToFront: true);
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Log(ex, "Reactivate - outer");
-                // ignore
             }
         }
 
-        // Lädt die URL und zeigt optional das Fenster (bringToFront).
+        // URL laden
         private async void LoadUrl(string url, bool bringToFront = true)
         {
             try
@@ -488,15 +468,19 @@ namespace Wrok
 
                 if (webView.CoreWebView2 == null)
                 {
-                    try { await webView.EnsureCoreWebView2Async(null); }
-                    catch (Exception ex) { Log(ex, "EnsureCoreWebView2Async in LoadUrl"); }
+                    try
+                    {
+                        await webView.EnsureCoreWebView2Async(null);
+                    }
+                    catch (Exception)
+                    {
+                    }
                 }
 
                 var core = webView.CoreWebView2;
                 if (core != null)
                 {
                     bool online = await HasInternetConnectionAsync(attempts: 3, timeoutSeconds: 5);
-
                     if (online)
                     {
                         try
@@ -505,7 +489,7 @@ namespace Wrok
                         }
                         catch (Exception ex)
                         {
-                            Log(ex, "core.Navigate failed");
+                            Log(ex, "core.Navigate fehlgeschlagen");
                             await ShowNoNetImageAsync();
                         }
                     }
@@ -519,26 +503,31 @@ namespace Wrok
                     await ShowNoNetImageAsync();
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Log(ex, "LoadUrl - outer");
-                try { await ShowNoNetImageAsync(); } catch (Exception ex2) { Log(ex2, "ShowNoNetImageAsync after LoadUrl failure"); }
+                try
+                {
+                    await ShowNoNetImageAsync();
+                }
+                catch (Exception)
+                {
+                }
             }
 
             if (!bringToFront) return;
 
-            // Nur wenn explizit erwünscht: Fenster sichtbar machen / in den Vordergrund bringen
             this.Show();
-            this.WindowState = Properties.Settings.Default.IsMaximized ? FormWindowState.Maximized : FormWindowState.Normal;
+            this.WindowState = Properties.Settings.Default.IsMaximized
+                ? FormWindowState.Maximized
+                : FormWindowState.Normal;
             this.Opacity = 1.0;
             this.ShowInTaskbar = true;
             this.BringToFront();
             this.Activate();
-
             ResetInactivityTimer();
         }
 
-        // Prüft Internetverbindung durch Requests an bekannte Endpoints.
+        // Internetverbindung prüfen
         private async Task<bool> HasInternetConnectionAsync(int attempts = 2, int timeoutSeconds = 4)
         {
             try
@@ -546,9 +535,8 @@ namespace Wrok
                 if (!System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable())
                     return false;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Log(ex, "NetworkInterface.GetIsNetworkAvailable");
             }
 
             var urls = new[]
@@ -559,7 +547,7 @@ namespace Wrok
             };
 
             var client = _httpClient;
-            // Verwende CancellationTokenSource pro Request anstelle globaler Timeout-Änderung.
+
             for (int attempt = 0; attempt < Math.Max(1, attempts); attempt++)
             {
                 foreach (var u in urls)
@@ -568,24 +556,33 @@ namespace Wrok
                     {
                         using var req = new HttpRequestMessage(HttpMethod.Head, u);
                         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
+
                         try
                         {
-                            using var resp = await client.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cts.Token);
-                            if (resp.IsSuccessStatusCode || resp.StatusCode == System.Net.HttpStatusCode.NoContent)
+                            using var resp = await client.SendAsync(
+                                req,
+                                HttpCompletionOption.ResponseHeadersRead,
+                                cts.Token);
+
+                            if (resp.IsSuccessStatusCode ||
+                                resp.StatusCode == System.Net.HttpStatusCode.NoContent)
                                 return true;
                         }
-                        catch (Exception)
+                        catch
                         {
-                            // Fallback auf GET, gleiche Timeout
                             using var req2 = new HttpRequestMessage(HttpMethod.Get, u);
-                            using var resp2 = await client.SendAsync(req2, HttpCompletionOption.ResponseHeadersRead, cts.Token);
-                            if (resp2.IsSuccessStatusCode || resp2.StatusCode == System.Net.HttpStatusCode.NoContent)
+                            using var resp2 = await client.SendAsync(
+                                req2,
+                                HttpCompletionOption.ResponseHeadersRead,
+                                cts.Token);
+
+                            if (resp2.IsSuccessStatusCode ||
+                                resp2.StatusCode == System.Net.HttpStatusCode.NoContent)
                                 return true;
                         }
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
-                        Log(ex, $"HasInternetConnectionAsync - checking {u}");
                     }
                 }
 
@@ -601,7 +598,6 @@ namespace Wrok
             if (e.CloseReason == CloseReason.UserClosing)
             {
                 SaveWindowSettings();
-
                 e.Cancel = true;
                 this.WindowState = FormWindowState.Minimized;
                 this.Opacity = 0;
@@ -617,38 +613,50 @@ namespace Wrok
 
             try
             {
-                bool registered = RegisterHotKey(this.Handle, HOTKEY_ID, MOD_CONTROL | MOD_SHIFT, (uint)Keys.Space);
+                bool registered = RegisterHotKey(
+                    this.Handle,
+                    HOTKEY_ID,
+                    MOD_CONTROL | MOD_SHIFT,
+                    (uint)Keys.Space);
                 if (!registered)
                 {
                     int err = Marshal.GetLastWin32Error();
-                    Log($"RegisterHotKey failed (err={err}). Hotkey won't work.");
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Log(ex, "RegisterHotKey threw");
             }
 
-            SetTitleBarDarkMode(IsDarkMode());
-
-            // 💡 Wichtig, wenn Tray-Icon mal woanders disposed würde
+            RefreshTheme(); // Theme auch nach Handle-Erzeugung anpassen
             EnsureTrayIconVisible();
         }
 
         protected override void OnHandleDestroyed(EventArgs e)
         {
+            // Nachrichtenfilter entfernen, falls vorhanden
+            if (activityFilter != null)
+            {
+                try
+                {
+                    Application.RemoveMessageFilter(activityFilter);
+                }
+                catch
+                {
+                    // Ignorieren
+                }
+                activityFilter = null;
+            }
+
             try
             {
                 UnregisterHotKey(this.Handle, HOTKEY_ID);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Log(ex, "UnregisterHotKey");
             }
 
             SystemEvents.UserPreferenceChanged -= SystemEvents_UserPreferenceChanged;
 
-            // Nur wenn das Handle nicht neu erstellt wird -> wirklich "Ende" des Fensters
             if (!this.RecreatingHandle)
             {
                 DisposeTrayIcon();
@@ -657,41 +665,50 @@ namespace Wrok
             base.OnHandleDestroyed(e);
         }
 
-        // Zusätzliche Windows-Messages, die Theme-Änderungen signalisieren können.
+        // Theme/Settings-Nachrichten
         private const int WM_THEMECHANGED = 0x031A;
         private const int WM_SETTINGCHANGE = 0x001A;
+        private const int WM_SHOWWINDOW = 0x0018;
 
         protected override void WndProc(ref Message m)
         {
-            if (m.Msg == WM_HOTKEY && m.WParam.ToInt32() == HOTKEY_ID)
+            switch (m.Msg)
             {
-                MinimizeToTray();
-            }
-            else if (m.Msg == WM_THEMECHANGED || m.Msg == WM_SETTINGCHANGE)
-            {
-                // Theme/Settings changed -> Update Titelbar + Tray-Icon asynchron auf UI-Thread
-                try
-                {
-                    this.BeginInvoke((MethodInvoker)(() =>
+                case WM_THEMECHANGED:
+                case WM_SETTINGCHANGE:
+                    try
                     {
-                        SetTitleBarDarkMode(IsDarkMode());
-                        ApplyThemeIcon();
-                    }));
-                }
-                catch (Exception ex)
-                {
-                    // Fallback synchron
-                    Log(ex, "WndProc theme update BeginInvoke failed");
-                    try { SetTitleBarDarkMode(IsDarkMode()); ApplyThemeIcon(); } catch (Exception ex2) { Log(ex2, "WndProc theme update fallback failed"); }
-                }
+                        RefreshTheme();
+                    }
+                    catch
+                    {
+                    }
+                    break;
+                case WM_SHOWWINDOW:
+                    try
+                    {
+                        this.BeginInvoke((MethodInvoker)(() =>
+                        {
+                            if (this.WindowState == FormWindowState.Minimized)
+                            {
+                                this.WindowState = FormWindowState.Normal;
+                            }
+                            this.Show();
+                            this.BringToFront();
+                            this.Activate();
+                        }));
+                    }
+                    catch
+                    {
+                    }
+                    break;
             }
-
             base.WndProc(ref m);
         }
 
         private void MainForm_Load(object? sender, EventArgs e) { }
 
-        // Inactivity timer: startet/stoppt und reagiert auf Tick
+        // Inaktivitätstimer
         private void InitializeInactivityTimer()
         {
             if (inactivityTimer != null)
@@ -701,16 +718,16 @@ namespace Wrok
                     inactivityTimer.Stop();
                     inactivityTimer.Tick -= InactivityTimer_Tick;
                 }
-                catch (Exception ex) { Log(ex, "InitializeInactivityTimer - cleanup"); }
+                catch
+                {
+                }
                 inactivityTimer = null;
             }
 
             inactivityTimer = new System.Windows.Forms.Timer();
-            // Wenn Timeout == 0 (deaktiviert) verwende einen sicheren Standardintervall,
-            // der später nicht gestartet wird, solange inactivityEnabled == false.
             var intervalMs = inactivityTimeout.TotalMilliseconds > 0
                 ? (int)Math.Min(inactivityTimeout.TotalMilliseconds, int.MaxValue)
-                : 60_000; // 60s placeholder, wird nicht automatisch gestartet wenn disabled
+                : 60_000;
             inactivityTimer.Interval = intervalMs;
             inactivityTimer.Tick += InactivityTimer_Tick;
 
@@ -727,7 +744,6 @@ namespace Wrok
 
         private void InactivityTimer_Tick(object? sender, EventArgs e)
         {
-            // Schütze gegen Rennbedingungen mit lastActivity
             if (inactivityTimer == null) return;
             if (!inactivityEnabled) return;
             if (inactivityTimeout.TotalMilliseconds <= 0) return;
@@ -735,7 +751,6 @@ namespace Wrok
             lock (_activityLock)
             {
                 var elapsed = DateTime.UtcNow - _lastActivity;
-                // Falls kürzlich Aktivität registriert wurde, Timer neu starten
                 if (elapsed < inactivityTimeout)
                 {
                     try
@@ -743,19 +758,28 @@ namespace Wrok
                         inactivityTimer.Stop();
                         inactivityTimer.Start();
                     }
-                    catch (Exception ex) { Log(ex, "InactivityTimer_Tick restart"); }
+                    catch
+                    {
+                    }
                     return;
                 }
             }
 
-            // Kein Activity-Update innerhalb des Timeouts -> minimieren
-            try
+            lock (_activityLock)
             {
-                inactivityTimer.Stop();
+                var elapsed = DateTime.UtcNow - _lastActivity;
+                if (elapsed >= inactivityTimeout)
+                {
+                    try
+                    {
+                        inactivityTimer.Stop();
+                    }
+                    catch
+                    {
+                    }
+                    MinimizeToTray();
+                }
             }
-            catch (Exception ex) { Log(ex, "InactivityTimer_Tick stop"); }
-
-            MinimizeToTray();
         }
 
         private void ResetInactivityTimer()
@@ -771,7 +795,9 @@ namespace Wrok
                     inactivityTimer.Stop();
                     inactivityTimer.Start();
                 }
-                catch (Exception ex) { Log(ex, "ResetInactivityTimer"); }
+                catch
+                {
+                }
             }
         }
 
@@ -780,7 +806,9 @@ namespace Wrok
             inactivityTimeout = timeout;
             if (inactivityTimer != null)
             {
-                inactivityTimer.Interval = (int)Math.Min(Math.Max(1, inactivityTimeout.TotalMilliseconds), int.MaxValue);
+                inactivityTimer.Interval = (int)Math.Min(
+                    Math.Max(1, inactivityTimeout.TotalMilliseconds),
+                    int.MaxValue);
                 lock (_activityLock) { _lastActivity = DateTime.UtcNow; }
                 ResetInactivityTimer();
             }
@@ -798,11 +826,17 @@ namespace Wrok
             }
             else
             {
-                try { inactivityTimer.Stop(); } catch (Exception ex) { Log(ex, "EnableInactivityTimer stop"); }
+                try
+                {
+                    inactivityTimer.Stop();
+                }
+                catch (Exception)
+                {
+                }
             }
         }
 
-        // Message-Filter, der UI-Aktivität erkennt und damit den Inactivity-Timer zurücksetzt.
+        // Nachrichtenfilter für Aktivität
         private class ActivityMessageFilter : IMessageFilter
         {
             private readonly WeakReference<MainForm> _formRef;
@@ -830,9 +864,9 @@ namespace Wrok
                     m.Msg == WM_KEYDOWN ||
                     m.Msg == WM_SYSKEYDOWN)
                 {
-                    if (_formRef.TryGetTarget(out var form))
+                    if (_formRef.TryGetTarget(out var targetInstanceInner))
                     {
-                        form.ResetInactivityTimer();
+                        targetInstanceInner.ResetInactivityTimer();
                     }
                 }
 
@@ -840,10 +874,11 @@ namespace Wrok
             }
         }
 
-        // Menü-Handler: Inaktivitätsdauer einstellen und Settings speichern
+        // Inaktivität aus Tray-Menü heraus einstellen
         private void InactivityMenuItem_Click(object? sender, EventArgs e)
         {
             if (sender is not ToolStripMenuItem clicked) return;
+
             int seconds = Convert.ToInt32(clicked.Tag ?? 0);
 
             Properties.Settings.Default.InactivityTimeoutSeconds = seconds;
@@ -861,22 +896,30 @@ namespace Wrok
 
             if (clicked.OwnerItem is ToolStripMenuItem parent)
             {
-                foreach (ToolStripItem it in parent.DropDownItems)
+                foreach (ToolStripItem item in parent.DropDownItems)
                 {
-                    if (it is ToolStripMenuItem mi)
-                        mi.Checked = (mi == clicked);
+                    if (item is ToolStripMenuItem menuItem)
+                    {
+                        menuItem.Checked = (menuItem == clicked);
+                    }
                 }
             }
         }
 
-        // Zeigt eine einfache Offline-Seite mit eingebettetem Base64-Bitmap
+        // Offline-Seite anzeigen
         private async Task ShowNoNetImageAsync()
         {
             if (webView == null) return;
 
             if (webView.CoreWebView2 == null)
             {
-                try { await webView.EnsureCoreWebView2Async(null); } catch (Exception ex) { Log(ex, "EnsureCoreWebView2Async in ShowNoNetImageAsync"); }
+                try
+                {
+                    await webView.EnsureCoreWebView2Async(null);
+                }
+                catch (Exception)
+                {
+                }
             }
 
             try
@@ -914,13 +957,11 @@ namespace Wrok
                 if (core != null)
                     core.NavigateToString(html);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Log(ex, "ShowNoNetImageAsync");
             }
         }
 
-        // Hilfsfunktion: Bitmap in Base64 kodieren (für Embedded-HTML)
         private string BitmapToBase64(Bitmap bmp)
         {
             try
@@ -929,49 +970,77 @@ namespace Wrok
                 bmp.Save(ms, ImageFormat.Png);
                 return Convert.ToBase64String(ms.ToArray());
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Log(ex, "BitmapToBase64");
                 return string.Empty;
             }
         }
 
-        // Liefert true, wenn Windows auf Apps "Light Theme" verwendet, false = Dark
+        // Light/Dark-Thema
         public static bool IsDarkMode()
         {
             try
             {
-                var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
+                var key = Registry.CurrentUser.OpenSubKey(
+                    @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
                 var value = key?.GetValue("AppsUseLightTheme");
-                return value is int i && i == 0; // 0 = Dark Mode, 1 = Light Mode
+                return value is int i && i == 0; // 0 = Dark Mode
             }
             catch (Exception ex)
             {
-                Trace.WriteLine($"IsDarkMode fallback: {ex}");
-                return true; // Fallback: Dark Mode (häufiger Standard)
+                Trace.WriteLine($"IsDarkMode Fallback: {ex}");
+                return true;
             }
         }
 
-        private void SystemEvents_UserPreferenceChanged(object sender, UserPreferenceChangedEventArgs e)
+        // Zentrale Theme-Aktualisierung
+        private void RefreshTheme()
         {
-            if (e.Category == UserPreferenceCategory.Color)
-            {
-                this.Invoke((MethodInvoker)ApplyThemeIcon); // UI-Thread
-            }
-        }
-
-        // Aktualisiert Tray-Icon und Form-Icon passend zum aktuellen Theme.
-        // Wichtig: NotifyIcon kann Icon-Caching haben, deshalb wird ein Clone verwendet.
-        private void ApplyThemeIcon()
-        {
-            var sourceIcon = IsDarkMode() ? Properties.Resources.wrok_white : Properties.Resources.wrok_black;
-
-            System.Drawing.Icon newIcon;
             try
             {
-                newIcon = (System.Drawing.Icon)sourceIcon.Clone();
+                bool dark = IsDarkMode();
+                ApplyThemeIcon();          // Tray- und Fenster-Icon anpassen
+                SetTitleBarDarkMode(dark); // Titelleiste umschalten
             }
-            catch (Exception)
+            catch
+            {
+                // Bewusst stumm
+            }
+        }
+
+        private void SystemEvents_UserPreferenceChanged(object? sender, UserPreferenceChangedEventArgs e)
+        {
+            // Windows feuert beim Theme-Wechsel je nach Version unterschiedliche Kategorien
+            if (e.Category == UserPreferenceCategory.Color ||
+                e.Category == UserPreferenceCategory.General ||
+                e.Category == UserPreferenceCategory.VisualStyle)
+            {
+                try
+                {
+                    if (!this.IsDisposed)
+                    {
+                        this.BeginInvoke((MethodInvoker)(RefreshTheme));
+                    }
+                }
+                catch
+                {
+                }
+            }
+        }
+
+        // Icons dem Theme anpassen
+        private void ApplyThemeIcon()
+        {
+            var sourceIcon = IsDarkMode()
+                ? Properties.Resources.wrok_white
+                : Properties.Resources.wrok_black;
+
+            Icon newIcon;
+            try
+            {
+                newIcon = (Icon)sourceIcon.Clone();
+            }
+            catch
             {
                 newIcon = sourceIcon;
             }
@@ -982,64 +1051,74 @@ namespace Wrok
                 {
                     var old = trayIcon.Icon;
 
-                    // Windows dazu bringen, die Änderung zu übernehmen
                     trayIcon.Visible = false;
                     trayIcon.Icon = newIcon;
                     trayIcon.Visible = true;
 
-                    // Altes Icon freigeben, wenn es nicht das Ressourcen-Icon ist
                     if (old != null && !ReferenceEquals(old, sourceIcon))
                     {
-                        try { old.Dispose(); } catch (Exception ex) { Log(ex, "Dispose old tray icon"); }
+                        try { old.Dispose(); }
+                        catch (Exception) { }
                     }
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    // Fallback: wenigstens das Icon setzen
-                    Log(ex, "ApplyThemeIcon - set trayIcon.Icon failed");
-                    try { trayIcon.Icon = newIcon; } catch (Exception ex2) { Log(ex2, "ApplyThemeIcon - final fallback"); }
+                    try { trayIcon.Icon = newIcon; }
+                    catch (Exception) { }
                 }
             }
 
-            // Form-Icon setzen (eigene Instanz)
             try
             {
-                this.Icon = (System.Drawing.Icon)newIcon.Clone();
+                this.Icon = (Icon)newIcon.Clone();
             }
-            catch (Exception ex)
+            catch
             {
-                Log(ex, "ApplyThemeIcon set form icon");
                 this.Icon = newIcon;
             }
         }
 
-        // Ergänze neben den anderen DllImport-Deklarationen
+        // DWM für Dark Titlebar
         [DllImport("dwmapi.dll", PreserveSig = true)]
-        private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+        private static extern int DwmSetWindowAttribute(
+            IntPtr hwnd,
+            int attr,
+            ref int attrValue,
+            int attrSize);
 
-        // DWM-Attribute für immersive dark titlebar (verschiedene Windows-Builds)
-        private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20; // neuer Windows 10/11 Wert
-        private const int DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1 = 19; // älterer Fall
+        private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
+        private const int DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1 = 19;
 
-        // Setzt/entfernt den "immersive dark mode" für die native Titelleiste (wenn möglich).
         private void SetTitleBarDarkMode(bool enabled)
         {
             try
             {
                 int val = enabled ? 1 : 0;
-                // Versuch mit neuem Attribut, falls Fehler dann mit älterem
-                int hr = DwmSetWindowAttribute(this.Handle, DWMWA_USE_IMMERSIVE_DARK_MODE, ref val, Marshal.SizeOf<int>());
+                int hr = DwmSetWindowAttribute(
+                    this.Handle,
+                    DWMWA_USE_IMMERSIVE_DARK_MODE,
+                    ref val,
+                    Marshal.SizeOf<int>());
                 if (hr != 0)
                 {
-                    try { DwmSetWindowAttribute(this.Handle, DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1, ref val, Marshal.SizeOf<int>()); } catch (Exception ex) { Log(ex, "DwmSetWindowAttribute fallback"); }
+                    try
+                    {
+                        DwmSetWindowAttribute(
+                            this.Handle,
+                            DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1,
+                            ref val,
+                            Marshal.SizeOf<int>());
+                    }
+                    catch (Exception)
+                    {
+                    }
                 }
             }
-            catch (Exception ex) { Log(ex, "SetTitleBarDarkMode"); }
+            catch (Exception)
+            {
+            }
         }
 
-        /// <summary>
-        /// Minimiert das Fenster in das Tray.
-        /// </summary>
         private void MinimizeToTray()
         {
             this.WindowState = FormWindowState.Minimized;
@@ -1047,7 +1126,6 @@ namespace Wrok
             this.ShowInTaskbar = false;
         }
 
-        // Dispose helper for tray icon (4. Verbesserung)
         private void DisposeTrayIcon()
         {
             if (trayIcon == null) return;
@@ -1056,7 +1134,9 @@ namespace Wrok
             {
                 trayIcon.Visible = false;
             }
-            catch (Exception ex) { Log(ex, "DisposeTrayIcon set Visible=false"); }
+            catch
+            {
+            }
 
             try
             {
@@ -1065,48 +1145,162 @@ namespace Wrok
                 trayIcon = null;
                 if (ico != null)
                 {
-                    try { ico.Dispose(); } catch (Exception ex) { Log(ex, "DisposeTrayIcon dispose icon"); }
+                    try { ico.Dispose(); }
+                    catch
+                    {
+                    }
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                Log(ex, "DisposeTrayIcon");
                 trayIcon = null;
             }
         }
 
-        // Lightweight logging (1. & 2. Verbesserungen)
-        private void Log(string message)
+        private void EnsureTrayIconVisible()
         {
             try
             {
-                Trace.WriteLine($"[{DateTime.UtcNow:O}] {message}");
-                var logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Wrok", "logs");
-                Directory.CreateDirectory(logDir);
-                var file = Path.Combine(logDir, "app.log");
-                File.AppendAllText(file, $"[{DateTime.UtcNow:O}] {message}{Environment.NewLine}");
+                if (trayIcon == null)
+                {
+                    InitializeTrayIcon();
+                    ApplyThemeIcon();
+                }
+
+                if (trayIcon != null && !trayIcon.Visible)
+                    trayIcon.Visible = true;
             }
-            catch
+            catch (Exception)
             {
-                // avoid throwing from Log
             }
         }
 
-        private void Log(Exception ex, string? context = null)
+        private void UpdateTrayMenuInactivityState()
+        {
+            if (trayMenu == null) return;
+
+            ToolStripMenuItem? inactivityMenu = null;
+
+            foreach (ToolStripItem item in trayMenu.Items)
+            {
+                if (item is ToolStripMenuItem mi &&
+                    mi.DropDownItems.Count > 0 &&
+                    mi.Text == Properties.Resources.Inaktivity)
+                {
+                    inactivityMenu = mi;
+                    break;
+                }
+            }
+
+            if (inactivityMenu == null) return;
+
+            int current = Properties.Settings.Default.InactivityTimeoutSeconds;
+
+            foreach (ToolStripItem item in inactivityMenu.DropDownItems)
+            {
+                if (item is ToolStripMenuItem mi && mi.Tag is int sec)
+                {
+                    mi.Checked = (sec == current);
+                }
+            }
+        }
+
+        private async Task ClearCacheAsync()
+        {
+            if (webView?.CoreWebView2?.Profile == null)
+            {
+                MessageBox.Show(Properties.Resources.WebView2NotInitializedYet, Properties.Resources.DeleteCache,
+                                MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            // TaskDialog für Windows 10+
+            var page = new TaskDialogPage
+            {
+                Caption = "Wrok",
+                Heading = Properties.Resources.ClearBrowsingData,
+                Text = Properties.Resources.ChooseWhatToBeDeleted,
+                Icon = TaskDialogIcon.Information,
+                AllowCancel = true,
+                DefaultButton = TaskDialogButton.Yes
+            };
+
+            var btnCache = new TaskDialogButton(Properties.Resources.ClearCacheOnly)
+            {
+                Tag = "cache"
+            };
+            var btnAll = new TaskDialogButton(Properties.Resources.DeleteAll)
+            {
+                Tag = "all"
+            };
+            var btnCancel = TaskDialogButton.Cancel;
+
+            page.Buttons.Add(btnCache);
+            page.Buttons.Add(btnAll);
+            page.Buttons.Add(btnCancel);
+
+            page.DefaultButton = btnCache;  // Fokus auf "Nur Cache löschen"
+
+            var result = TaskDialog.ShowDialog(this.Handle, page);
+
+            if (result == btnCancel || result == TaskDialogButton.Cancel)
+                return;
+
+            try
+            {
+                if (result.Tag?.ToString() == "cache")
+                {
+                    var cacheOnly = CoreWebView2BrowsingDataKinds.DiskCache |
+                                    CoreWebView2BrowsingDataKinds.CacheStorage;
+
+                    await webView.CoreWebView2.Profile.ClearBrowsingDataAsync(cacheOnly);
+
+                    TaskDialog.ShowDialog(this.Handle, new TaskDialogPage
+                    {
+                        Caption = "Wrok",
+                        Heading = Properties.Resources.CacheCleared,
+                        Text = Properties.Resources.PicturesScriptsAndOtherDataDeletedNYouAreStillLoggedIn,
+                        Icon = TaskDialogIcon.Information,
+                        Buttons = { TaskDialogButton.OK }
+                    });
+                }
+                else // Alles löschen
+                {
+                    await webView.CoreWebView2.Profile.ClearBrowsingDataAsync();
+
+                    TaskDialog.ShowDialog(this.Handle, new TaskDialogPage
+                    {
+                        Caption = "Wrok",
+                        Heading = Properties.Resources.AllDataDeleted,
+                        Text = Properties.Resources.CookiesLoginDataAndSettingsDeletedNYouAreLoggedOut,
+                        Icon = TaskDialogIcon.Warning,
+                        Buttons = { TaskDialogButton.OK }
+                    });
+                }
+
+                webView.CoreWebView2?.Reload();
+            }
+            catch (Exception ex)
+            {
+                TaskDialog.ShowDialog(this.Handle, new TaskDialogPage
+                {
+                    Caption = "Wrok",
+                    Heading = Properties.Resources.Error,
+                    Text = String.Format(Properties.Resources.ErrorWhileDeletingCacheN0, ex.Message),
+                    Icon = TaskDialogIcon.Error,
+                    Buttons = { TaskDialogButton.OK }
+                });
+                Log(ex, Properties.Resources.ClearCacheAsyncFailed);
+            }
+        }
+        private void Log(Exception ex, string message)
         {
             try
             {
-                var ctx = string.IsNullOrEmpty(context) ? string.Empty : $"[{context}] ";
-                var msg = $"{ctx}{ex.GetType().FullName}: {ex.Message}{Environment.NewLine}{ex.StackTrace}";
-                Trace.WriteLine(msg);
-                var logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Wrok", "logs");
-                Directory.CreateDirectory(logDir);
-                var file = Path.Combine(logDir, "app.log");
-                File.AppendAllText(file, $"[{DateTime.UtcNow:O}] {msg}{Environment.NewLine}");
+                Trace.WriteLine($"{message}: {ex}");
             }
             catch
             {
-                // avoid throwing from Log
             }
         }
     }

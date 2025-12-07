@@ -79,6 +79,116 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die All data deleted ähnelt.
+        /// </summary>
+        internal static string AllDataDeleted {
+            get {
+                return ResourceManager.GetString("AllDataDeleted", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Cache cleared ähnelt.
+        /// </summary>
+        internal static string CacheCleared {
+            get {
+                return ResourceManager.GetString("CacheCleared", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Choose what to be deleted: ähnelt.
+        /// </summary>
+        internal static string ChooseWhatToBeDeleted {
+            get {
+                return ResourceManager.GetString("ChooseWhatToBeDeleted", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Clear browsing data ähnelt.
+        /// </summary>
+        internal static string ClearBrowsingData {
+            get {
+                return ResourceManager.GetString("ClearBrowsingData", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Clear cache ähnelt.
+        /// </summary>
+        internal static string ClearCache {
+            get {
+                return ResourceManager.GetString("ClearCache", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die ClearCacheAsync failed ähnelt.
+        /// </summary>
+        internal static string ClearCacheAsyncFailed {
+            get {
+                return ResourceManager.GetString("ClearCacheAsyncFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Clear Cache only ähnelt.
+        /// </summary>
+        internal static string ClearCacheOnly {
+            get {
+                return ResourceManager.GetString("ClearCacheOnly", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Cookies, Login-Data and Settings deleted.
+        ///You are logged out. ähnelt.
+        /// </summary>
+        internal static string CookiesLoginDataAndSettingsDeletedNYouAreLoggedOut {
+            get {
+                return ResourceManager.GetString("CookiesLoginDataAndSettingsDeletedNYouAreLoggedOut", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Delete all ähnelt.
+        /// </summary>
+        internal static string DeleteAll {
+            get {
+                return ResourceManager.GetString("DeleteAll", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Delete cache ähnelt.
+        /// </summary>
+        internal static string DeleteCache {
+            get {
+                return ResourceManager.GetString("DeleteCache", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Error ähnelt.
+        /// </summary>
+        internal static string Error {
+            get {
+                return ResourceManager.GetString("Error", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Error while deleting cache:
+        ///{0} ähnelt.
+        /// </summary>
+        internal static string ErrorWhileDeletingCacheN0 {
+            get {
+                return ResourceManager.GetString("ErrorWhileDeletingCacheN0", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die Exit ähnelt.
         /// </summary>
         internal static string Exit {
@@ -125,6 +235,16 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Pictures, scripts and other data deleted.
+        ///You are still logged in. ähnelt.
+        /// </summary>
+        internal static string PicturesScriptsAndOtherDataDeletedNYouAreStillLoggedIn {
+            get {
+                return ResourceManager.GetString("PicturesScriptsAndOtherDataDeletedNYouAreStillLoggedIn", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die Reload window ähnelt.
         /// </summary>
         internal static string Reload {
@@ -166,6 +286,15 @@ namespace Wrok.Properties {
         internal static string SpeechModeButtonNotFound {
             get {
                 return ResourceManager.GetString("SpeechModeButtonNotFound", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die WebView2 not initialized yet. ähnelt.
+        /// </summary>
+        internal static string WebView2NotInitializedYet {
+            get {
+                return ResourceManager.GetString("WebView2NotInitializedYet", resourceCulture);
             }
         }
         

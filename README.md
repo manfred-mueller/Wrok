@@ -1,46 +1,35 @@
 ![dunkles wrok icon](/wrok_black.ico?raw=true "Dunkles Wrok-Symbol")
 
+**Wrok** ist ein moderner, portabler WebView2-basierter Grok™-Client.
 
-Wrok ist ein Webview2 basierter Grok™-Client.
+Er arbeitet komplett ohne API-Zugriff und bietet folgende Funktionen:
 
+- Zugriff auf Grok®-Einstellungen  
+- Boss-Taste **Strg + Shift + Leertaste** (sofortiges Minimieren)  
+- Automatische Fensterminimierung nach einstellbarem Inaktivitäts-Zeitraum  
+- Speichern von Fenstergröße, -position und Maximierungsstatus  
+- Vollautomatische Anpassung an Windows Dark/Light-Mode (inkl. Tray-Icon und Titelleiste)  
+- Intelligentes Löschen der Browsing-Daten (mit Auswahl: nur Cache oder alles)  
+- Tray-Menü mit Schnellzugriff auf alle wichtigen Funktionen  
 
-Er arbeitet ohne Api-Zugriff und bietet folgende Funktionen:
+**NASS e.K. und Wrok sind in keiner Weise mit Grok™, xAI oder X® (ehemals Twitter) verbunden.**  
+Alle in dieser Software verwendeten Markennamen und Bezeichnungen sind eingetragene Warenzeichen und Marken der jeweiligen Eigentümer und dienen nur der Beschreibung.
 
-\- Zugriff auf Grok®-Einstellungen
+---
 
-\- 'Boss-Taste' Strg-Shift-Leertaste
+**Wrok** is a modern, portable WebView2-based Grok™ client.
 
-\- Fensterminimierung nach Inaktivitäts-Zeitraum
+It works entirely without API access and offers the following features:
 
-\- Speichern von Fenster-Größe und -Position
+- Access to Grok™ settings  
+- Boss key **Ctrl + Shift + Spacebar** (instant minimize)  
+- Automatic window minimization after configurable inactivity period  
+- Saving of window size, position and maximized state  
+- Full automatic adaptation to Windows Dark/Light mode (including tray icon and title bar)  
+- Smart clearing of browsing data (with choice: cache only or everything)  
+- Tray menu with quick access to all important functions  
 
-\- Automatische Anpassung an dark/light mode
+**NASS e.K. and Wrok are in no way affiliated with Grok™, xAI or X® (formerly Twitter).**  
+All brand names and designations used in this software are registered trademarks and brands of their respective owners and are used for descriptive purposes only.
 
-
-NASS e.K. und Wrok sind in keinster Weise mit Grok™ oder X® verbunden. Alle in dieser Software verwendeten Markennamen und Bezeichnungen sind eingetragene Warenzeichen und Marken der jeweiligen Eigentümer und dienen nur der Beschreibung.
-
- 
-
-Wrok is a WebView2-based Grok™ client.
-
-
-
-It operates without API access and offers the following features:
-
-
-
-\- Access to Grok™ settings
-
-\- 'Boss key' Ctrl-Shift-Spacebar
-
-\- Window minimization after a period of inactivity
-
-\- Saving window size and position
-
-\- Automatic adaption to dark/light mode
-
-
-
-NASS e.K. and Wrok are in no way affiliated with Grok™ or X®. All brand names and designations used in this software are registered trademarks and brands of their respective owners and are used for descriptive purposes only.
-
-![wrok screenshot](/Screenshot.png?raw=true "Wrok screenshot") 
+![Wrok Screenshot](/Screenshot.png?raw=true "Wrok Screenshot")
