@@ -170,6 +170,15 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Delete favorites ähnelt.
+        /// </summary>
+        internal static string DeleteFavorites {
+            get {
+                return ResourceManager.GetString("DeleteFavorites", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die Error ähnelt.
         /// </summary>
         internal static string Error {

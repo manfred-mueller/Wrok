@@ -20,7 +20,8 @@ mono_crash.*
 [Dd]ebug/
 [Dd]ebugPublic/
 [Mm]anifests/
-[Bb]in/x64/[Rr]elease/net8.0-windows
+[Bb]in/[Rr]elease/net8.0-windows
+[Bb]in/x64/Release/net8.0-windows
 [Rr]eleases/
 Wrok.exe.WebView2/
 [Ww][Ii][Nn]32/

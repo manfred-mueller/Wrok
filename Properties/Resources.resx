@@ -208,4 +208,7 @@ You are logged out.</value>
   <data name="ClearCacheAsyncFailed" xml:space="preserve">
     <value>ClearCacheAsync failed</value>
   </data>
+  <data name="DeleteFavorites" xml:space="preserve">
+    <value>Delete favorites</value>
+  </data>
 </root>

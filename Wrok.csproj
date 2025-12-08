@@ -2,18 +2,25 @@
 
   <PropertyGroup Label="Globals">
     <WebView2LoaderPreference>Static</WebView2LoaderPreference>
-    <Platforms>AnyCPU;x64</Platforms>
+    <Platforms>x64</Platforms>
   </PropertyGroup>
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <StartupObject>Wrok.Program</StartupObject>
     <ApplicationIcon>wrok_black.ico</ApplicationIcon>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+
+    <!-- DIESE 4 ZEILEN SIND ENTSCHEIDEND FÜR SINGLE-FILE + COSTURA -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <PublishTrimmed>false</PublishTrimmed>
   </PropertyGroup>
 
   <ItemGroup>
@@ -29,6 +36,7 @@
     <PackageReference Include="Resource.Embedder" Version="2.2.0" />
   </ItemGroup>
 
+  <!-- Ressourcen -->
   <ItemGroup>
     <Compile Update="Properties\Resources.Designer.cs">
       <DesignTime>True</DesignTime>
@@ -56,6 +64,7 @@
     </None>
   </ItemGroup>
 
+  <!-- Optional: Post-Build für Signieren + Inno Setup -->
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <Exec Command="D:\Tools\sign.cmd $(TargetPath) &amp;&amp; iscc $(SolutionDir)InstallScript.iss &quot;/Ssigntool=D:\Tools\signtool.exe sign /a /n $qOpen Source Developer, Mueller Manfred$q /t http://time.certum.pl/ /fd sha256 /v $f&quot;" />
   </Target>

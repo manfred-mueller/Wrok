@@ -208,4 +208,7 @@ Sie sind abgemeldet.</value>
   <data name="ClearCacheAsyncFailed" xml:space="preserve">
     <value>ClearCacheAsync ist fehlgeschlagen</value>
   </data>
+  <data name="DeleteFavorites" xml:space="preserve">
+    <value>Favoriten löschen</value>
+  </data>
 </root>
