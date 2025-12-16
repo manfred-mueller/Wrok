@@ -6,6 +6,7 @@
 Einfach per WinGet:
 ```bash
 winget install --id NASS.Wrok
+```
 
 Er arbeitet komplett ohne API-Zugriff und bietet folgende Funktionen:
 
