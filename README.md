@@ -1,5 +1,10 @@
 ![dunkles wrok icon](/wrok_black.ico?raw=true "Dunkles Wrok-Symbol")
 
+[![Stars](https://img.shields.io/github/stars/manfred-mueller/Wrok?style=social)](https://github.com/manfred-mueller/Wrok/stargazers)
+[![Forks](https://img.shields.io/github/forks/manfred-mueller/Wrok?style=social)](https://github.com/manfred-mueller/Wrok/network/members)
+[![License](https://img.shields.io/github/license/manfred-mueller/Wrok)](https://github.com/manfred-mueller/Wrok/blob/master/LICENSE.txt)
+[![WinGet](https://img.shields.io/badge/WinGet-Install-blue)](https://winget.run/) <!-- oder genaue ID, sobald bekannt -->
+
 **Wrok** ist ein moderner, portabler WebView2-basierter Grok™-Client.
 
 Er arbeitet komplett ohne API-Zugriff und bietet folgende Funktionen:
