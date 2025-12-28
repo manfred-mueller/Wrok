@@ -2,6 +2,12 @@
 
 **Wrok** ist ein moderner, portabler WebView2-basierter Grok™-Client.
 
+## Installation
+Einfach per WinGet:
+```bash
+winget install --id NASS.Wrok
+```
+
 Er arbeitet komplett ohne API-Zugriff und bietet folgende Funktionen:
 
 - Zugriff auf Grok®-Einstellungen  
