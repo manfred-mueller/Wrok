@@ -211,4 +211,67 @@ Sie sind abgemeldet.</value>
   <data name="DeleteFavorites" xml:space="preserve">
     <value>Favoriten löschen</value>
   </data>
+  <data name="CouldnTOpenLinkToGitHub0" xml:space="preserve">
+    <value>Link zu GitHub konnte nicht geöffnet werden: {0}</value>
+  </data>
+  <data name="LinkCouldnTBeOepened" xml:space="preserve">
+    <value>Link konnte nicht geöffnet werden.</value>
+  </data>
+  <data name="AboutWrok" xml:space="preserve">
+    <value>Über Wrok</value>
+  </data>
+  <data name="Close" xml:space="preserve">
+    <value>Schließen</value>
+  </data>
+  <data name="UnknownVersion" xml:space="preserve">
+    <value>Unbekannte Version</value>
+  </data>
+  <data name="Send" xml:space="preserve">
+    <value>Senden</value>
+  </data>
+  <data name="SendEnter" xml:space="preserve">
+    <value>Senden + Eingabetaste</value>
+  </data>
+  <data name="Edit" xml:space="preserve">
+    <value>Bearbeiten</value>
+  </data>
+  <data name="Delete" xml:space="preserve">
+    <value>Löschen</value>
+  </data>
+  <data name="DeleteMacro" xml:space="preserve">
+    <value>Makro löschen?</value>
+  </data>
+  <data name="Confirm" xml:space="preserve">
+    <value>Bestätigen</value>
+  </data>
+  <data name="EditMacro" xml:space="preserve">
+    <value>Makro bearbeiten</value>
+  </data>
+  <data name="NewMacro" xml:space="preserve">
+    <value>Neues Makro</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>Abbrechen</value>
+  </data>
+  <data name="OK" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="Macros" xml:space="preserve">
+    <value>Makros</value>
+  </data>
+  <data name="NewMacroMenuItem" xml:space="preserve">
+    <value>Neues Makro...</value>
+  </data>
+  <data name="WebView2IsNotInitializedYet" xml:space="preserve">
+    <value>WebView2 ist noch nicht initialisiert.</value>
+  </data>
+  <data name="CacheHasBeenDeleted" xml:space="preserve">
+    <value>Cache wurde gelöscht.</value>
+  </data>
+  <data name="ErrorWhileDeletingCache" xml:space="preserve">
+    <value>Fehler beim Löschen des Caches:</value>
+  </data>
+  <data name="ClearCacheFailed" xml:space="preserve">
+    <value>ClearCacheAsync ist fehlgeschlagen:</value>
+  </data>
 </root>

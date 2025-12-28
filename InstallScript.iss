@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Wrok"
-#define MyAppVersion "0.8.0"
+#define MyAppVersion "0.9.0"
 #define MyAppExeName MyAppName + ".exe"
 #define MyAppPublisher "NASS e.K."
 #define MyAppURL "https://www.nass-ek.de"
@@ -63,26 +63,26 @@ var
 begin
   Result := True;
 
-  { Prüfe zuerst HKLM, dann HKCU, ob eine alte Wrok-Installation existiert }
+  { Pr fe zuerst HKLM, dann HKCU, ob eine alte Wrok-Installation existiert }
   if RegQueryStringValue(HKLM, OldUninstallKey, 'UninstallString', UninstPath) or
      RegQueryStringValue(HKCU, OldUninstallKey, 'UninstallString', UninstPath) then
   begin
     Log('Vorherige Wrok-Installation gefunden. Starte Deinstallation: ' + UninstPath);
 
-    { Anführungszeichen entfernen, damit wir eigene Parameter anhängen können }
+    { Anf hrungszeichen entfernen, damit wir eigene Parameter anh ngen k nnen }
     UninstPath := RemoveQuotes(UninstPath);
 
     { Alte Version still deinstallieren }
     if not Exec(UninstPath, '/SILENT /NORESTART', '', SW_SHOW,
                 ewWaitUntilTerminated, ResultCode) then
     begin
-      Log('Fehler beim Starten des Uninstallers. Rückgabecode: ' + IntToStr(ResultCode));
-      { Wenn du im Fehlerfall abbrechen willst, kommentiere die nächste Zeile aus: }
+      Log('Fehler beim Starten des Uninstallers. R ckgabecode: ' + IntToStr(ResultCode));
+      { Wenn du im Fehlerfall abbrechen willst, kommentiere die n chste Zeile aus: }
       { Result := False; }
     end
     else
     begin
-      Log('Alte Wrok-Version deinstalliert. Rückgabecode: ' + IntToStr(ResultCode));
+      Log('Alte Wrok-Version deinstalliert. R ckgabecode: ' + IntToStr(ResultCode));
     end;
   end
   else

@@ -79,6 +79,15 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die About Wrok ähnelt.
+        /// </summary>
+        internal static string AboutWrok {
+            get {
+                return ResourceManager.GetString("AboutWrok", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die All data deleted ähnelt.
         /// </summary>
         internal static string AllDataDeleted {
@@ -93,6 +102,24 @@ namespace Wrok.Properties {
         internal static string CacheCleared {
             get {
                 return ResourceManager.GetString("CacheCleared", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Cache has been deleted. ähnelt.
+        /// </summary>
+        internal static string CacheHasBeenDeleted {
+            get {
+                return ResourceManager.GetString("CacheHasBeenDeleted", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Cancel ähnelt.
+        /// </summary>
+        internal static string Cancel {
+            get {
+                return ResourceManager.GetString("Cancel", resourceCulture);
             }
         }
         
@@ -133,11 +160,38 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die ClearCacheAsync failed:  ähnelt.
+        /// </summary>
+        internal static string ClearCacheFailed {
+            get {
+                return ResourceManager.GetString("ClearCacheFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die Clear Cache only ähnelt.
         /// </summary>
         internal static string ClearCacheOnly {
             get {
                 return ResourceManager.GetString("ClearCacheOnly", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Close ähnelt.
+        /// </summary>
+        internal static string Close {
+            get {
+                return ResourceManager.GetString("Close", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Confirm ähnelt.
+        /// </summary>
+        internal static string Confirm {
+            get {
+                return ResourceManager.GetString("Confirm", resourceCulture);
             }
         }
         
@@ -148,6 +202,24 @@ namespace Wrok.Properties {
         internal static string CookiesLoginDataAndSettingsDeletedNYouAreLoggedOut {
             get {
                 return ResourceManager.GetString("CookiesLoginDataAndSettingsDeletedNYouAreLoggedOut", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Couldn&apos;t open link to GitHub: {0} ähnelt.
+        /// </summary>
+        internal static string CouldnTOpenLinkToGitHub0 {
+            get {
+                return ResourceManager.GetString("CouldnTOpenLinkToGitHub0", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Delete ähnelt.
+        /// </summary>
+        internal static string Delete {
+            get {
+                return ResourceManager.GetString("Delete", resourceCulture);
             }
         }
         
@@ -179,11 +251,47 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Delete macro? ähnelt.
+        /// </summary>
+        internal static string DeleteMacro {
+            get {
+                return ResourceManager.GetString("DeleteMacro", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Edit ähnelt.
+        /// </summary>
+        internal static string Edit {
+            get {
+                return ResourceManager.GetString("Edit", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Edit macro ähnelt.
+        /// </summary>
+        internal static string EditMacro {
+            get {
+                return ResourceManager.GetString("EditMacro", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die Error ähnelt.
         /// </summary>
         internal static string Error {
             get {
                 return ResourceManager.GetString("Error", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Error while deleting cache: ähnelt.
+        /// </summary>
+        internal static string ErrorWhileDeletingCache {
+            get {
+                return ResourceManager.GetString("ErrorWhileDeletingCache", resourceCulture);
             }
         }
         
@@ -216,6 +324,42 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Link couldn&apos;t be  oepened. ähnelt.
+        /// </summary>
+        internal static string LinkCouldnTBeOepened {
+            get {
+                return ResourceManager.GetString("LinkCouldnTBeOepened", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Macros ähnelt.
+        /// </summary>
+        internal static string Macros {
+            get {
+                return ResourceManager.GetString("Macros", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die New macro ähnelt.
+        /// </summary>
+        internal static string NewMacro {
+            get {
+                return ResourceManager.GetString("NewMacro", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die New Macro... ähnelt.
+        /// </summary>
+        internal static string NewMacroMenuItem {
+            get {
+                return ResourceManager.GetString("NewMacroMenuItem", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die None ähnelt.
         /// </summary>
         internal static string None {
@@ -231,6 +375,15 @@ namespace Wrok.Properties {
             get {
                 object obj = ResourceManager.GetObject("nonet", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die OK ähnelt.
+        /// </summary>
+        internal static string OK {
+            get {
+                return ResourceManager.GetString("OK", resourceCulture);
             }
         }
         
@@ -259,6 +412,24 @@ namespace Wrok.Properties {
         internal static string Reload {
             get {
                 return ResourceManager.GetString("Reload", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Send ähnelt.
+        /// </summary>
+        internal static string Send {
+            get {
+                return ResourceManager.GetString("Send", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Send + Enter ähnelt.
+        /// </summary>
+        internal static string SendEnter {
+            get {
+                return ResourceManager.GetString("SendEnter", resourceCulture);
             }
         }
         
@@ -295,6 +466,24 @@ namespace Wrok.Properties {
         internal static string SpeechModeButtonNotFound {
             get {
                 return ResourceManager.GetString("SpeechModeButtonNotFound", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Unknown version ähnelt.
+        /// </summary>
+        internal static string UnknownVersion {
+            get {
+                return ResourceManager.GetString("UnknownVersion", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die WebView2 is not initialized yet. ähnelt.
+        /// </summary>
+        internal static string WebView2IsNotInitializedYet {
+            get {
+                return ResourceManager.GetString("WebView2IsNotInitializedYet", resourceCulture);
             }
         }
         
