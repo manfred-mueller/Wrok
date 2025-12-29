@@ -218,7 +218,7 @@ You are logged out.</value>
     <value>Link couldn't be  oepened.</value>
   </data>
   <data name="AboutWrok" xml:space="preserve">
-    <value>About Wrok</value>
+    <value>About Wrok / Manual</value>
   </data>
   <data name="Close" xml:space="preserve">
     <value>Close</value>
@@ -273,5 +273,77 @@ You are logged out.</value>
   </data>
   <data name="ClearCacheFailed" xml:space="preserve">
     <value>ClearCacheAsync failed: </value>
+  </data>
+  <data name="Macro0" xml:space="preserve">
+    <value>Macro {0}</value>
+  </data>
+  <data name="Ctrl0" xml:space="preserve">
+    <value>Ctrl+{0}</value>
+  </data>
+  <data name="Ctrl" xml:space="preserve">
+    <value>Ctrl</value>
+  </data>
+  <data name="Shift" xml:space="preserve">
+    <value>+Shift</value>
+  </data>
+  <data name="_Ctrl" xml:space="preserve">
+    <value>Ctrl+^</value>
+  </data>
+  <data name="EditWithRightClickRunWith0" xml:space="preserve">
+    <value>Edit with right click. Run with {0}
+</value>
+  </data>
+  <data name="MacroClickSendFailed0" xml:space="preserve">
+    <value>Macro click send failed: {0}</value>
+  </data>
+  <data name="EditMacroAndSaveFailed0" xml:space="preserve">
+    <value>EditMacroAndSave failed: {0}</value>
+  </data>
+  <data name="LeftClickSendsAndSubmitsShiftClickSendsWithoutEnter" xml:space="preserve">
+    <value>Left-click sends and submits.
+Shift+Click sends without Enter.</value>
+  </data>
+  <data name="SaveMacrosFailed0" xml:space="preserve">
+    <value>SaveMacros failed: {0}</value>
+  </data>
+  <data name="SendTextToWebViewAsyncClickSucceededReturning" xml:space="preserve">
+    <value>SendTextToWebViewAsync: click succeeded, returning.</value>
+  </data>
+  <data name="SendTextToWebViewAsyncJsSucceededTrueReturningNoClick" xml:space="preserve">
+    <value>SendTextToWebViewAsync: jsSucceeded true, returning (no click).</value>
+  </data>
+  <data name="ParsingClickScriptResultFailed0" xml:space="preserve">
+    <value>Parsing clickScript result failed: {0}</value>
+  </data>
+  <data name="SendTextToWebViewAsyncClickScriptResult0" xml:space="preserve">
+    <value>SendTextToWebViewAsync: clickScript result={0}</value>
+  </data>
+  <data name="Manual" xml:space="preserve">
+    <value>Manual</value>
+  </data>
+  <data name="MacroHelp" xml:space="preserve">
+    <value>Macros
+- Edit: Right-click on a macro in the tray menu -&gt; Edit.
+- Send via menu: Left-click on a macro to insert the text and send it (Send+Enter).
+- Send without Enter: Left-click + Shift (or Alt) sends the text WITHOUT pressing Enter.
+- Hotkeys: Ctrl+1 .. Ctrl+5 send the respective macro. By default, Enter is sent after pasting (as with left-clicking).
+  Hold Shift or Alt while pressing the hotkey to suppress Enter.
+
+Boss-Key
+- To minimize the window press Strg+Tab.
+
+Clear cache
+- Tray menu → ‘Clear cache’ deletes WebView2 browser data (cache, cookies, locally stored data).
+- When to use: for display errors, login problems, or when a ‘clean’ session is needed.
+- Note: After clearing, you may need to log in again or reload the page.
+
+Troubleshooting / Tips
+- If text is not being sent: Make sure the page is fully loaded and the editor is visible.
+- Open DevTools: In debugging situations, WebView2 DevTools can be opened to check DOM/Console.
+- Messages and logs can be found at %LOCALAPPDATA%\\Wrok\\logs\\app.log
+
+Brief overview of operation
+- Click and hotkey behavior is the same: insert text, then attempt to send via button click or OS Enter.
+  Some web editors ignore synthetic JS keyboard events; therefore a real Enter is sent via InputSimulator if necessary.</value>
   </data>
 </root>

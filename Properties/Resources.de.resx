@@ -218,7 +218,7 @@ Sie sind abgemeldet.</value>
     <value>Link konnte nicht geöffnet werden.</value>
   </data>
   <data name="AboutWrok" xml:space="preserve">
-    <value>Über Wrok</value>
+    <value>Über Wrok / Handbuch</value>
   </data>
   <data name="Close" xml:space="preserve">
     <value>Schließen</value>
@@ -272,6 +272,78 @@ Sie sind abgemeldet.</value>
     <value>Fehler beim Löschen des Caches:</value>
   </data>
   <data name="ClearCacheFailed" xml:space="preserve">
-    <value>ClearCacheAsync ist fehlgeschlagen:</value>
+    <value>ClearCacheAsync ist fehlgeschlagen: </value>
+  </data>
+  <data name="Macro0" xml:space="preserve">
+    <value>Makro {0}</value>
+  </data>
+  <data name="Ctrl0" xml:space="preserve">
+    <value>Strg+{0}</value>
+  </data>
+  <data name="Ctrl" xml:space="preserve">
+    <value>Strg</value>
+  </data>
+  <data name="Shift" xml:space="preserve">
+    <value>+Umschalt</value>
+  </data>
+  <data name="_Ctrl" xml:space="preserve">
+    <value>Strg+^</value>
+  </data>
+  <data name="EditWithRightClickRunWith0" xml:space="preserve">
+    <value>Mit Rechtsklick bearbeiten. Mit {0} ausführen
+</value>
+  </data>
+  <data name="MacroClickSendFailed0" xml:space="preserve">
+    <value>Senden des Makroklicks fehlgeschlagen: {0}</value>
+  </data>
+  <data name="EditMacroAndSaveFailed0" xml:space="preserve">
+    <value>EditMacroAndSave fehlgeschlagen: {0}</value>
+  </data>
+  <data name="LeftClickSendsAndSubmitsShiftClickSendsWithoutEnter" xml:space="preserve">
+    <value>Klicken Sie mit der linken Maustaste zum Senden.
+Umschalt+Klick trägt ein ohne zu senden.</value>
+  </data>
+  <data name="SaveMacrosFailed0" xml:space="preserve">
+    <value>SaveMacros fehlgeschlagen: {0}</value>
+  </data>
+  <data name="SendTextToWebViewAsyncClickSucceededReturning" xml:space="preserve">
+    <value>SendTextToWebViewAsync: Klicken war erfolgreich, Rückkehr.</value>
+  </data>
+  <data name="SendTextToWebViewAsyncJsSucceededTrueReturningNoClick" xml:space="preserve">
+    <value>SendTextToWebViewAsync: jsSucceeded true, Rückgabe (kein Klick).</value>
+  </data>
+  <data name="ParsingClickScriptResultFailed0" xml:space="preserve">
+    <value>Das ClickScript-Ergebnis konnte nicht analysiert werden: {0}</value>
+  </data>
+  <data name="SendTextToWebViewAsyncClickScriptResult0" xml:space="preserve">
+    <value>SendTextToWebViewAsync: clickScript result={0}</value>
+  </data>
+  <data name="Manual" xml:space="preserve">
+    <value>Handbuch</value>
+  </data>
+  <data name="MacroHelp" xml:space="preserve">
+    <value>Makros
+- Bearbeiten: Rechtsklick auf ein Makro im Tray‑Menü -&gt; Bearbeiten.
+- Senden per Menü: Linksklick auf ein Makro fügt den Text ein und sendet ihn (Send+Enter).
+- Senden ohne Enter: Linksklick + Shift (oder Alt) sendet den Text OHNE abschließendes Enter.
+- Hotkeys: Strg+1 .. Strg+5 senden das jeweilige Makro. Standardmäßig wird nach dem Einfügen Enter gesendet (wie Linksklick).
+  Halte Shift oder Alt beim Hotkey, um Enter zu unterdrücken.
+
+Chef-Taste
+- Zum Minimieren des Fensters die Tastenkombination Strg+Tab drücken.
+
+Cache löschen
+- Tray‑Menü → 'Cache löschen' löscht WebView2‑Browserdaten (Cache, Cookies, lokal gespeicherte Daten).
+- Wann einsetzen: bei Anzeigefehlern, Login‑Problemen oder wenn eine 'saubere' Sitzung benötigt wird.
+- Hinweis: Nach dem Löschen kann ein erneuter Login oder erneutes Laden der Seite nötig sein.
+
+Fehlerbehebung / Tipps
+- Wenn Text nicht abgeschickt wird: Stelle sicher, dass die Seite vollständig geladen ist und der Editor sichtbar ist.
+- DevTools öffnen: In Debugging‑Situationen kann WebView2 DevTools geöffnet werden, um DOM/Console zu prüfen.
+- Meldungen und Logs findest du unter %LOCALAPPDATA%\\Wrok\\logs\\app.log
+
+Kurz zur Bedienung
+- Verhalten beim Klick und Hotkey ist gleich: Text einfügen, anschließend wird versucht, per Button‑Click oder OS‑Enter zu senden.
+  Einige Web‑Editoren ignorieren synthetische JS‑KeyboardEvents; deshalb wird bei Bedarf ein echtes Enter per InputSimulator gesendet.</value>
   </data>
 </root>

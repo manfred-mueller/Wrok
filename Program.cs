@@ -25,12 +25,12 @@ namespace Wrok
 
             if (!isNewInstance)
             {
-                // Es läuft schon eine Instanz -> diese bitten, sich zu zeigen
+                // Another instance is running — notify it to show its window and exit.
                 NotifyExistingInstance();
                 return;
             }
 
-            // Nur in der ersten Instanz: Named-Pipe-Server für SHOW-Nachrichten starten
+            // In the single (first) instance: start a named-pipe server to receive SHOW messages.
             StartNamedPipeServer();
 
             Application.EnableVisualStyles();
@@ -44,7 +44,7 @@ namespace Wrok
             }
             catch
             {
-                // ignorieren – beim Beenden nicht kritisch
+                // Swallow exceptions on shutdown; not critical.
             }
         }
 
@@ -58,7 +58,7 @@ namespace Wrok
                            PipeDirection.Out,
                            PipeOptions.Asynchronous))
                 {
-                    client.Connect(500); // 0,5 Sekunden Timeout
+                    client.Connect(500); // 0.5 second timeout
 
                     using (var writer = new StreamWriter(client))
                     {
@@ -69,7 +69,7 @@ namespace Wrok
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Fehler beim Benachrichtigen der bestehenden Instanz: {ex.Message}");
+                Debug.WriteLine($"Failed to notify existing instance: {ex.Message}");
             }
         }
 
@@ -95,7 +95,7 @@ namespace Wrok
                                 var message = reader.ReadLine();
                                 if (string.Equals(message, "SHOW", StringComparison.OrdinalIgnoreCase))
                                 {
-                                    // Broadcast WM_SHOWWINDOW -> MainForm.WndProc reagiert und bringt sich nach vorne
+                                    // Broadcast WM_SHOWWINDOW — MainForm.WndProc will react and bring the window forward.
                                     PostMessage((IntPtr)HWND_BROADCAST, WM_SHOWWINDOW, IntPtr.Zero, IntPtr.Zero);
                                 }
                             }
@@ -103,8 +103,8 @@ namespace Wrok
                     }
                     catch (Exception ex)
                     {
-                        Debug.WriteLine($"Fehler im Named Pipe Server: {ex.Message}");
-                        // danach weiterlaufen und nächsten Client akzeptieren
+                        Debug.WriteLine($"Named pipe server error: {ex.Message}");
+                        // Continue loop and accept next client.
                     }
                 }
             })

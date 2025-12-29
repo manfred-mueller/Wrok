@@ -79,7 +79,16 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die About Wrok ähnelt.
+        ///   Sucht eine lokalisierte Zeichenfolge, die Ctrl+^ ähnelt.
+        /// </summary>
+        internal static string _Ctrl {
+            get {
+                return ResourceManager.GetString("_Ctrl", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die About Wrok / Manual ähnelt.
         /// </summary>
         internal static string AboutWrok {
             get {
@@ -215,6 +224,24 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Ctrl ähnelt.
+        /// </summary>
+        internal static string Ctrl {
+            get {
+                return ResourceManager.GetString("Ctrl", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Ctrl+{0} ähnelt.
+        /// </summary>
+        internal static string Ctrl0 {
+            get {
+                return ResourceManager.GetString("Ctrl0", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die Delete ähnelt.
         /// </summary>
         internal static string Delete {
@@ -278,6 +305,25 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die EditMacroAndSave failed: {0} ähnelt.
+        /// </summary>
+        internal static string EditMacroAndSaveFailed0 {
+            get {
+                return ResourceManager.GetString("EditMacroAndSaveFailed0", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Edit with right click. Run with {0}
+        /// ähnelt.
+        /// </summary>
+        internal static string EditWithRightClickRunWith0 {
+            get {
+                return ResourceManager.GetString("EditWithRightClickRunWith0", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die Error ähnelt.
         /// </summary>
         internal static string Error {
@@ -324,6 +370,16 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Left-click sends and submits.
+        ///Shift+Click sends without Enter. ähnelt.
+        /// </summary>
+        internal static string LeftClickSendsAndSubmitsShiftClickSendsWithoutEnter {
+            get {
+                return ResourceManager.GetString("LeftClickSendsAndSubmitsShiftClickSendsWithoutEnter", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die Link couldn&apos;t be  oepened. ähnelt.
         /// </summary>
         internal static string LinkCouldnTBeOepened {
@@ -333,11 +389,58 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Macro {0} ähnelt.
+        /// </summary>
+        internal static string Macro0 {
+            get {
+                return ResourceManager.GetString("Macro0", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Macro click send failed: {0} ähnelt.
+        /// </summary>
+        internal static string MacroClickSendFailed0 {
+            get {
+                return ResourceManager.GetString("MacroClickSendFailed0", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Macros
+        ///- Edit: Right-click on a macro in the tray menu -&gt; Edit.
+        ///- Send via menu: Left-click on a macro to insert the text and send it (Send+Enter).
+        ///- Send without Enter: Left-click + Shift (or Alt) sends the text WITHOUT pressing Enter.
+        ///- Hotkeys: Ctrl+1 .. Ctrl+5 send the respective macro. By default, Enter is sent after pasting (as with left-clicking).
+        ///  Hold Shift or Alt while pressing the hotkey to suppress Enter.
+        ///
+        ///Boss-Key
+        ///- To minimize the window press Strg+Tab.
+        ///
+        ///Clear cache
+        ///- Tray menu → ‘ [Rest der Zeichenfolge wurde abgeschnitten]&quot;; ähnelt.
+        /// </summary>
+        internal static string MacroHelp {
+            get {
+                return ResourceManager.GetString("MacroHelp", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die Macros ähnelt.
         /// </summary>
         internal static string Macros {
             get {
                 return ResourceManager.GetString("Macros", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Manual ähnelt.
+        /// </summary>
+        internal static string Manual {
+            get {
+                return ResourceManager.GetString("Manual", resourceCulture);
             }
         }
         
@@ -388,6 +491,15 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Parsing clickScript result failed: {0} ähnelt.
+        /// </summary>
+        internal static string ParsingClickScriptResultFailed0 {
+            get {
+                return ResourceManager.GetString("ParsingClickScriptResultFailed0", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die Personality ähnelt.
         /// </summary>
         internal static string Personality {
@@ -416,6 +528,15 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die SaveMacros failed: {0} ähnelt.
+        /// </summary>
+        internal static string SaveMacrosFailed0 {
+            get {
+                return ResourceManager.GetString("SaveMacrosFailed0", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die Send ähnelt.
         /// </summary>
         internal static string Send {
@@ -434,11 +555,47 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die SendTextToWebViewAsync: clickScript result={0} ähnelt.
+        /// </summary>
+        internal static string SendTextToWebViewAsyncClickScriptResult0 {
+            get {
+                return ResourceManager.GetString("SendTextToWebViewAsyncClickScriptResult0", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die SendTextToWebViewAsync: click succeeded, returning. ähnelt.
+        /// </summary>
+        internal static string SendTextToWebViewAsyncClickSucceededReturning {
+            get {
+                return ResourceManager.GetString("SendTextToWebViewAsyncClickSucceededReturning", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die SendTextToWebViewAsync: jsSucceeded true, returning (no click). ähnelt.
+        /// </summary>
+        internal static string SendTextToWebViewAsyncJsSucceededTrueReturningNoClick {
+            get {
+                return ResourceManager.GetString("SendTextToWebViewAsyncJsSucceededTrueReturningNoClick", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die Settings ähnelt.
         /// </summary>
         internal static string Settings {
             get {
                 return ResourceManager.GetString("Settings", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die +Shift ähnelt.
+        /// </summary>
+        internal static string Shift {
+            get {
+                return ResourceManager.GetString("Shift", resourceCulture);
             }
         }
         

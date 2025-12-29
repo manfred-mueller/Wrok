@@ -19,23 +19,23 @@ namespace Wrok
 {
     public partial class MainForm : Form
     {
-        // Wiederverwendbarer HttpClient
+        // Shared HttpClient instance for all network checks/requests.
         private static readonly HttpClient _httpClient = new HttpClient();
 
-        // Steuerelemente / Ressourcen
+        // UI controls and resources.
         private WebView2? webView;
         private NotifyIcon? trayIcon;
         private ContextMenuStrip? trayMenu;
         private ToolStripMenuItem? macrosMenu;
 
-        // Basis-URL und Menüeinträge für das Tray-Menü
+        // Base URL and entries used for the tray menu.
         private readonly string baseUrl = "https://grok.com/";
         private readonly (string name, string url)[] menuPages = new[]
         {
             (Properties.Resources.Settings, "?_s=home"),
         };
 
-        // --- Globaler Hotkey ---
+        // Global hotkey identifiers and modifier flags.
         private const int HOTKEY_ID = 0x9000;
         private const int WM_HOTKEY = 0x0312;
         private const uint MOD_CONTROL = 0x0002;
@@ -47,30 +47,29 @@ namespace Wrok
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
-        // --- Inaktivitätstimer (automatisches Minimieren) ---
+        // Inactivity timer for automatic minimization.
         private System.Windows.Forms.Timer? inactivityTimer;
         private TimeSpan inactivityTimeout = TimeSpan.FromSeconds(30);
         private ActivityMessageFilter? activityFilter;
         private bool inactivityEnabled = true;
         private readonly int[] inactivityOptions = new[] { 0, 30, 60, 90 };
 
-        // Ergänze Felder für Aktivitäts-Tracking
+        // Fields used for activity tracking.
         private DateTime _lastActivity = DateTime.UtcNow;
         private readonly object _activityLock = new object();
 
-        // Neue Felder / Hotkey-IDs
+        // Input simulator and hotkey base IDs for macros.
         private InputSimulator? _inputSimulator;
 
-        // === Hotkey-IDs: Basis separat halten (keine Kollision mit anderem HOTKEY_ID) ===
+        // Separate base for macro hotkeys to avoid collisions with other IDs.
         private const int HOTKEY_BASE = 0x9100;
-        private const int HOTKEY_MACRO_1 = HOTKEY_BASE + 0;   // Strg+1
-        private const int HOTKEY_MACRO_2 = HOTKEY_BASE + 1;   // Strg+2
-        private const int HOTKEY_MACRO_3 = HOTKEY_BASE + 2;   // Strg+3
-        private const int HOTKEY_MACRO_4 = HOTKEY_BASE + 3;   // Strg+4
-        private const int HOTKEY_MACRO_5 = HOTKEY_BASE + 4;   // Strg+5
-        private const int HOTKEY_MACRO_6 = HOTKEY_BASE + 5;   // Strg+^ (dynamisch ermittelt)
+        private const int HOTKEY_MACRO_1 = HOTKEY_BASE + 0;
+        private const int HOTKEY_MACRO_2 = HOTKEY_BASE + 1;
+        private const int HOTKEY_MACRO_3 = HOTKEY_BASE + 2;
+        private const int HOTKEY_MACRO_4 = HOTKEY_BASE + 3;
+        private const int HOTKEY_MACRO_5 = HOTKEY_BASE + 4;
 
-        // P/Invoke: SetForegroundWindow, damit Zielfenster Fokus bekommt (wenn nötig)
+        // P/Invoke SetForegroundWindow to ensure the app can bring itself forward.
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool SetForegroundWindow(IntPtr hWnd);
 
@@ -81,7 +80,7 @@ namespace Wrok
         {
             InitializeComponent();
 
-            // Globalen Nachrichtenfilter installieren, um Aktivität zu erkennen (WeakReference im Filter verwenden)
+            // Install a global message filter (weak reference) to detect user activity.
             activityFilter = new ActivityMessageFilter(this);
             try
             {
@@ -89,15 +88,15 @@ namespace Wrok
             }
             catch
             {
-                activityFilter = null; // OK, falls Hinzufügen aus irgendeinem Grund fehlschlägt
+                activityFilter = null; // Not critical if registration fails.
             }
 
-            // Tray initialisieren und Icon dem aktuellen Theme anpassen
+            // Initialize tray icon and apply current theme.
             InitializeTrayIcon();
-            RefreshTheme(); // Zentrale Theme-Aktualisierung
+            RefreshTheme();
             LoadWindowSettings();
 
-            // Prüfen, ob die Anwendung zum ersten Mal gestartet wird (Marker-Datei in LocalAppData)
+            // Check first-run state via a marker file in %LOCALAPPDATA%\Wrok.
             var markerDir = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "Wrok");
@@ -119,6 +118,7 @@ namespace Wrok
 
             if (isFirstRun || savedSeconds <= 0)
             {
+                // Disable inactivity timer on first run or if setting is non-positive.
                 inactivityTimeout = TimeSpan.Zero;
                 inactivityEnabled = false;
                 Properties.Settings.Default.InactivityTimeoutSeconds = 0;
@@ -130,7 +130,7 @@ namespace Wrok
                 }
                 catch
                 {
-                    // Keine Aktion erforderlich
+                    // Ignore write errors for the marker file.
                 }
             }
             else
@@ -142,22 +142,22 @@ namespace Wrok
             _ = InitializeWebViewAsync();
             InitializeInactivityTimer();
 
-            // Seite im Hintergrund laden
+            // Load page in background without bringing window to front.
             try
             {
                 _ = LoadUrlAsync(baseUrl, bringToFront: false);
             }
             catch
             {
-                // Keine Aktion erforderlich
+                // Non-fatal.
             }
 
-            // Form-Events für WindowState/Position speichern
+            // Save window state events.
             this.Resize += MainForm_Resize;
             this.ResizeEnd += MainForm_ResizeEnd;
             this.Move += MainForm_Move;
 
-            // Inaktivitätszustand im Tray-Menü anzeigen
+            // Update tray menu to reflect inactivity settings.
             UpdateTrayMenuInactivityState();
         }
 
@@ -172,12 +172,24 @@ namespace Wrok
             this.Visible = false;
         }
 
-        // Gespeicherte Fensterposition und -größe laden
+        // Load stored window position/size; if valid, apply it.
         private void LoadWindowSettings()
         {
             var s = Properties.Settings.Default;
 
-            if (s.WindowWidth > 0 && s.WindowHeight > 0)
+            // Log loaded values for debugging (use Output window)
+            try
+            {
+                Trace.WriteLine($"LoadWindowSettings: WindowLeft={s.WindowLeft}, WindowTop={s.WindowTop}, WindowWidth={s.WindowWidth}, WindowHeight={s.WindowHeight}, IsMaximized={s.IsMaximized}");
+            }
+            catch { }
+
+            // Determine if size and position look valid.
+            bool hasValidSize = (s.WindowWidth > 0 && s.WindowHeight > 0);
+            // Treat (0,0) as "not set" to avoid unintentionally placing window at top-left.
+            bool hasExplicitPosition = (s.WindowLeft != 0 || s.WindowTop != 0);
+
+            if (hasValidSize && hasExplicitPosition)
             {
                 this.StartPosition = FormStartPosition.Manual;
                 var desired = new Rectangle(
@@ -202,8 +214,25 @@ namespace Wrok
                 }
                 else
                 {
+                    // Stored position is off-screen: use stored size but center on a screen.
+                    this.Size = new Size(s.WindowWidth, s.WindowHeight);
                     this.StartPosition = FormStartPosition.CenterScreen;
+                    try { this.CenterToScreen(); } catch { }
+                    Trace.WriteLine("LoadWindowSettings: Stored bounds are off-screen; using stored size and CenterScreen.");
                 }
+            }
+            else if (hasValidSize && !hasExplicitPosition)
+            {
+                // Size is known but position not explicitly set -> apply size and center the window.
+                this.Size = new Size(s.WindowWidth, s.WindowHeight);
+                this.StartPosition = FormStartPosition.CenterScreen;
+                try { this.CenterToScreen(); } catch { }
+                Trace.WriteLine("LoadWindowSettings: Position not set (0,0); applied stored size and using CenterScreen.");
+            }
+            else
+            {
+                // No valid stored size -> keep default StartPosition (CenterScreen from InitializeComponent).
+                Trace.WriteLine("LoadWindowSettings: No valid stored size; keeping default StartPosition.");
             }
 
             if (s.IsMaximized)
@@ -212,7 +241,7 @@ namespace Wrok
             }
         }
 
-        // Aktuelle Fenstergeometrie speichern
+        // Save current window geometry into user-scoped settings.
         private void SaveWindowSettings()
         {
             try
@@ -234,7 +263,7 @@ namespace Wrok
             }
             catch
             {
-                // Keine Aktion erforderlich
+                // Swallow errors — saving window state is non-critical.
             }
         }
 
@@ -263,7 +292,7 @@ namespace Wrok
         }
 
         /// <summary>
-        /// WebView2 initialisieren und feste Runtime nutzen.
+        /// Initialize WebView2 and inject helper script for focus/text insertion and activity events.
         /// </summary>
         private async Task InitializeWebViewAsync()
         {
@@ -284,28 +313,112 @@ namespace Wrok
             }
             catch
             {
-                // Keine Aktion erforderlich
+                // Non-fatal if creating folder fails.
             }
 
             webView.CoreWebView2InitializationCompleted += async (s, e) =>
             {
                 if (webView.CoreWebView2 != null)
                 {
-                    // helperScript als Verbatim-String ohne C#-Escape-Sequenzen wie \".
+                    // JavaScript helper injected into each document to:
+                    // - reset activity on user interactions inside the webview
+                    // - reliably focus editable elements (including contenteditable editors)
+                    // - insert text and optionally trigger a send/submit action
                     var helperScript = @"
 (function() {
   const resetActivity = function() { window.chrome.webview.postMessage('resetActivity'); };
   ['mousemove','mousedown','keydown','scroll','touchstart'].forEach(function(ev){ window.addEventListener(ev, resetActivity, { passive: true }); });
 
+  function isProseMirror(el) {
+    try {
+      if (!el || !el.className) return false;
+      var cn = (el.className + '').toString().toLowerCase();
+      return cn.indexOf('prosemirror') !== -1 || cn.indexOf('tiptap') !== -1;
+    } catch(e) { return false; }
+  }
+
+  function tryFocusInput(el) {
+    try {
+      el.focus();
+      if ('setSelectionRange' in el && typeof el.setSelectionRange === 'function') {
+        var len = (el.value || '').length;
+        try { el.setSelectionRange(len, len); } catch(e) {}
+      }
+      try { el.dispatchEvent(new Event('input', { bubbles: true })); } catch(e) {}
+      try { el.dispatchEvent(new Event('focus', { bubbles: true })); } catch(e) {}
+      try { el.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch(e) {}
+      return true;
+    } catch(e) { return false; }
+  }
+
+  function placeCaretAtEndContentEditable(el) {
+    try {
+      el.focus();
+      var sel = window.getSelection();
+      var range = document.createRange();
+      // place caret at the end of the element
+      range.selectNodeContents(el);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+      try { el.dispatchEvent(new InputEvent('input', { bubbles: true })); } catch(e) {}
+      try { el.dispatchEvent(new Event('focus', { bubbles: true })); } catch(e) {}
+      try { el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true })); } catch(e) {}
+      try { el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true })); } catch(e) {}
+      try { el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); } catch(e) {}
+      try { el.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch(e) {}
+      return true;
+    } catch(e) { return false; }
+  }
+
+  window.__wrokEnsureFocus = function() {
+    try {
+      var el = document.activeElement;
+      if (!el || el === document.body || !(el.isContentEditable || 'value' in el)) {
+        el = document.querySelector('[contenteditable], textarea, input[type=text], input[type=search], [role=textbox]');
+      }
+      if (!el) {
+        // fallback: search common editable targets
+        el = document.querySelector('textarea, input[type=text], [contenteditable]');
+        if (!el) return false;
+      }
+
+      var tag = (el.tagName || '').toUpperCase();
+
+      // Prefer standard inputs and textareas.
+      if ((tag === 'INPUT' || tag === 'TEXTAREA' || 'value' in el) && tryFocusInput(el)) return true;
+
+      // Handle contenteditable editors.
+      if (el.isContentEditable && placeCaretAtEndContentEditable(el)) return true;
+
+      // Search editable descendants if host element isn't itself editable.
+      var child = el.querySelector('textarea, input[type=text], [contenteditable]');
+      if (child) {
+        if (child.isContentEditable) return placeCaretAtEndContentEditable(child);
+        return tryFocusInput(child);
+      }
+
+      // Last resort: click host and try again.
+      try { el.click(); } catch(e) {}
+      if (el.isContentEditable) return placeCaretAtEndContentEditable(el);
+
+      return false;
+    } catch(e) {
+      return false;
+    }
+  };
+
   window.__wrokSend = function(text, pressEnter) {
     try {
       if (typeof text !== 'string') text = String(text || '');
       var target = document.activeElement;
-      if (!target || target === document.body) {
+      if (!target || target === document.body || !(target.isContentEditable || 'value' in target)) {
         target = document.querySelector('[contenteditable], textarea, input[type=text], input[type=search], [role=textbox]');
       }
       if (!target) return false;
-      try { target.focus(); } catch (e) {}
+
+      try { if (window.__wrokEnsureFocus) window.__wrokEnsureFocus(); } catch(e) {}
+      try { target.focus(); } catch(e) {}
 
       var tag = (target.tagName || '').toUpperCase();
       if (tag === 'INPUT' || tag === 'TEXTAREA' || 'value' in target) {
@@ -317,8 +430,8 @@ namespace Wrok
         target.value = newVal;
         var newPos = start + prefix.length + text.length;
         try { target.setSelectionRange(newPos, newPos); } catch (e) {}
-        target.dispatchEvent(new Event('input', { bubbles: true }));
-        target.dispatchEvent(new Event('change', { bubbles: true }));
+        try { target.dispatchEvent(new Event('input', { bubbles: true })); } catch(e) {}
+        try { target.dispatchEvent(new Event('change', { bubbles: true })); } catch(e) {}
         if (pressEnter) {
           try {
             if (target.form) {
@@ -328,11 +441,12 @@ namespace Wrok
               target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
               target.dispatchEvent(new KeyboardEvent('keyup',   { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
             }
-          } catch (e) {}
+          } catch(e) {}
         }
         return true;
       }
 
+      // Handle contenteditable insertion and optional submit.
       var sel = window.getSelection();
       var range = sel && sel.rangeCount ? sel.getRangeAt(0) : null;
       if (!range) {
@@ -401,10 +515,10 @@ namespace Wrok
                     }
                     catch
                     {
-                        // ignore
+                        // Ignore script injection failures — non-fatal.
                     }
 
-                    // Wenn die Seite schon geladen ist, helperScript sofort in das aktuelle Dokument injizieren (verhindert "erstes Mal fehlt helper")
+                    // If the page is already loaded, execute the helper immediately to ensure availability.
                     try
                     {
                         await webView.CoreWebView2.ExecuteScriptAsync(helperScript);
@@ -414,6 +528,7 @@ namespace Wrok
                         Trace.WriteLine($"Inject helperScript to current document failed: {ex}");
                     }
 
+                    // Listen for messages from the injected script (activity resets).
                     webView.CoreWebView2.WebMessageReceived += (sender, args) =>
                     {
                         if (args.TryGetWebMessageAsString() == "resetActivity")
@@ -431,18 +546,17 @@ namespace Wrok
             }
             catch
             {
-                // Keine Aktion erforderlich
+                // Non-fatal if environment creation fails.
             }
         }
 
-        // Sehr kurzer, performanter per-call Aufruf der einmal registrierten helper-Funktion.
-        // Das erzeugt minimalen JS-Overhead (nur zwei Argumente, kein lange Script-Parsing pro Aufruf).
+        // Perform a quick, low-overhead JS call into the registered helper functions.
         private async Task SendTextToWebViewAsync(string text, bool pressEnter = false)
         {
             if (webView?.CoreWebView2 == null)
                 return;
 
-            // Fokus sicherstellen (UI-Thread)
+            // Ensure the WebView has focus on the UI thread.
             try
             {
                 if (!this.IsDisposed && this.IsHandleCreated)
@@ -463,21 +577,21 @@ namespace Wrok
             }
             catch { }
 
-            // Kurzes Timing-Window
+            // Short delay to allow focus transfer to settle.
             await Task.Delay(120).ConfigureAwait(false);
 
             var payload = System.Text.Json.JsonSerializer.Serialize(text);
-            var callScript = $"(function(){{ try {{ return window.__wrokSend ? window.__wrokSend({payload}, {(pressEnter ? "true" : "false")}) : false; }} catch(e) {{ return false; }} }})();";
+            var callScript = $"(function(){{ try {{ if (window.__wrokEnsureFocus) window.__wrokEnsureFocus(); return window.__wrokSend ? window.__wrokSend({payload}, {(pressEnter ? "true" : "false")}) : false; }} catch(e) {{ return false; }} }})();";
 
             string? rawResult = null;
             try
             {
                 rawResult = await webView.CoreWebView2.ExecuteScriptAsync(callScript).ConfigureAwait(false);
-                Trace.WriteLine($"SendTextToWebViewAsync: first ExecuteScriptAsync result={rawResult}");
+                Trace.WriteLine(String.Format(Properties.Resources.ParsingClickScriptResultFailed0, rawResult));
             }
             catch (Exception ex)
             {
-                Trace.WriteLine($"ExecuteScriptAsync failed (first attempt): {ex}");
+                Trace.WriteLine(String.Format(Properties.Resources.ParsingClickScriptResultFailed0, ex));
             }
 
             bool jsSucceeded = false;
@@ -493,7 +607,6 @@ namespace Wrok
                         jsSucceeded = true;
                     else
                     {
-                        // ggf. als JsonElement parsen
                         try
                         {
                             var el = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(rawResult);
@@ -506,13 +619,13 @@ namespace Wrok
             }
             catch (Exception ex)
             {
-                Trace.WriteLine($"Parsing ExecuteScriptAsync result failed: {ex}");
+                Trace.WriteLine(String.Format(Properties.Resources.ParsingClickScriptResultFailed0, ex));
             }
 
-            // Wenn Enter gewünscht, versuche zusätzlich verzögert, gezielt den Send-Button zu klicken.
+            // If Enter is requested, try clicking a visible send button as a robust approach.
             if (pressEnter)
             {
-                // Warte kurz, damit die Seite Zeit hat, UI (z.B. Button enable) zu aktualisieren
+                // Small delay to allow UI changes (button enablement) to complete.
                 await Task.Delay(140).ConfigureAwait(false);
 
                 var clickScript = @"
@@ -521,7 +634,7 @@ namespace Wrok
     var sel = 'button[type=submit], button[aria-label*=""send"" i], button[aria-label*=""submit"" i], button[aria-label*=""absenden"" i], button[class*=""send"" i], [role=button][aria-label*=""send"" i]';
     var btn = document.querySelector(sel);
     if (!btn) {
-      // fallback: suche sichtbaren Button mit Text 'Absenden'/'Senden'/'Submit'
+      // fallback: search visible buttons by text/label
       var candidates = Array.from(document.querySelectorAll('button, [role=button]'));
       for (var i=0;i<candidates.length;i++){
         try {
@@ -545,11 +658,11 @@ namespace Wrok
                 try
                 {
                     clickResult = await webView.CoreWebView2.ExecuteScriptAsync(clickScript).ConfigureAwait(false);
-                    Trace.WriteLine($"SendTextToWebViewAsync: clickScript result={clickResult}");
+                    Trace.WriteLine(String.Format(Properties.Resources.SendTextToWebViewAsyncClickScriptResult0, clickResult));
                 }
                 catch (Exception ex)
                 {
-                    Trace.WriteLine($"ExecuteScriptAsync(clickScript) failed: {ex}");
+                    Trace.WriteLine(String.Format(Properties.Resources.ParsingClickScriptResultFailed0, ex));
                 }
 
                 bool clickSucceeded = false;
@@ -564,23 +677,52 @@ namespace Wrok
                 }
                 catch (Exception ex)
                 {
-                    Trace.WriteLine($"Parsing clickScript result failed: {ex}");
+                    Trace.WriteLine(String.Format(Properties.Resources.ParsingClickScriptResultFailed0, ex));
                 }
 
                 if (clickSucceeded)
                 {
-                    Trace.WriteLine("SendTextToWebViewAsync: click succeeded, returning.");
+                    Trace.WriteLine(Properties.Resources.SendTextToWebViewAsyncClickSucceededReturning);
                     return;
                 }
 
-                // Falls JS bereits erfolgreiches Insert/submit meldete, return
+                // If JS inserted text but click failed, send an actual OS Enter keystroke as fallback.
+                // Many editor frameworks ignore synthetic KeyboardEvent dispatch from JS.
                 if (jsSucceeded)
                 {
-                    Trace.WriteLine("SendTextToWebViewAsync: jsSucceeded true, returning (no click).");
-                    return;
-                }
+                    Trace.WriteLine("JS inserted text but click failed — sending Enter via InputSimulator fallback.");
+                    try
+                    {
+                        // Ensure focus on UI thread.
+                        try
+                        {
+                            if (!this.IsDisposed && this.IsHandleCreated)
+                            {
+                                this.BeginInvoke((MethodInvoker)(() =>
+                                {
+                                    try
+                                    {
+                                        webView?.Focus();
+                                        SetForegroundWindow(this.Handle);
+                                    }
+                                    catch { }
+                                }));
+                            }
+                        }
+                        catch { }
 
-                // Wenn alles JS fehlschlug -> InputSimulator Fallback unten
+                        await Task.Delay(80).ConfigureAwait(false);
+
+                        _inputSimulator?.Keyboard.KeyPress(VirtualKeyCode.RETURN);
+                        Trace.WriteLine("SendTextToWebViewAsync: Enter sent via InputSimulator after JS insert.");
+                        return;
+                    }
+                    catch (Exception ex)
+                    {
+                        Trace.WriteLine($"Enter fallback via InputSimulator failed: {ex}");
+                        // Continue to full fallback below.
+                    }
+                }
             }
             else
             {
@@ -588,10 +730,10 @@ namespace Wrok
                     return;
             }
 
-            // Fallback: InputSimulator (TextEntry + optional Enter)
+            // Full fallback: type text via InputSimulator and optionally press Enter.
             try
             {
-                // nochmals Fokus auf UI-Thread setzen
+                // Ensure focus on UI thread.
                 try
                 {
                     if (!this.IsDisposed && this.IsHandleCreated)
@@ -629,10 +771,12 @@ namespace Wrok
             }
         }
 
-        // Tray-Icon + Kontextmenü
+        // Initialize the tray icon and context menu entries.
         private void InitializeTrayIcon()
         {
             trayMenu = new ContextMenuStrip();
+            trayMenu.ShowItemToolTips = true;
+
             trayMenu.Items.Add(Properties.Resources.ShowWindow, null, (s, e) => Reactivate());
             trayMenu.Items.Add(Properties.Resources.Reload, null, async (s, e) =>
             {
@@ -645,13 +789,13 @@ namespace Wrok
                 }
                 catch
                 {
-                    // Keine Aktion erforderlich
+                    // Non-fatal.
                 }
             });
 
             trayMenu.Items.Add(new ToolStripSeparator());
 
-            // Inaktivitäts-Untermenü
+            // Inactivity submenu.
             var inactivityMenu = new ToolStripMenuItem(Properties.Resources.Inaktivity);
             int current = Properties.Settings.Default.InactivityTimeoutSeconds;
 
@@ -676,7 +820,7 @@ namespace Wrok
             trayMenu.Items.Add(inactivityMenu);
             trayMenu.Items.Add(new ToolStripSeparator());
 
-            // Makros-Menü initialisieren
+            // Macros menu
             InitializeMacrosMenu();
             if (macrosMenu != null) trayMenu.Items.Add(macrosMenu);
             trayMenu.Items.Add(new ToolStripSeparator());
@@ -687,11 +831,9 @@ namespace Wrok
                 item.Click += async (s, e) => await LoadUrlAsync(baseUrl + page.url);
             }
 
-            // Neuer Menüpunkt: Cache löschen
             trayMenu.Items.Add(Properties.Resources.ClearCache, null, async (s, e) => await ClearCacheAsync());
             trayMenu.Items.Add(new ToolStripSeparator());
 
-            // About-Eintrag
             trayMenu.Items.Add(Properties.Resources.AboutWrok, null, (s, e) =>
             {
                 using (var dlg = new AboutForm())
@@ -728,7 +870,7 @@ namespace Wrok
                 }
                 catch
                 {
-                    // Keine Aktion erforderlich
+                    // Ignore icon creation errors.
                 }
             }
 
@@ -753,10 +895,16 @@ namespace Wrok
             UpdateTrayMenuInactivityState();
         }
 
-        // Fenster sichtbar machen und ggf. laden
+        // Show the window and ensure content is loaded if necessary.
         private void Reactivate()
         {
             LoadWindowSettings();
+
+            // If using center screen positioning (no saved geometry), center now.
+            if (this.StartPosition == FormStartPosition.CenterScreen)
+            {
+                try { this.CenterToScreen(); } catch { }
+            }
 
             this.Show();
             this.WindowState = Properties.Settings.Default.IsMaximized ? FormWindowState.Maximized : FormWindowState.Normal;
@@ -796,11 +944,11 @@ namespace Wrok
             }
             catch
             {
-                // Ignorieren
+                // Ignore errors during reactivation.
             }
         }
 
-        // URL laden
+        // Load a URL and optionally bring the window to the front.
         private async Task LoadUrlAsync(string url, bool bringToFront = true)
         {
             try
@@ -833,7 +981,7 @@ namespace Wrok
                         }
                         catch (Exception ex)
                         {
-                            Log(ex, "core.Navigate fehlgeschlagen");
+                            Log(ex, "core.Navigate failed");
                             await ShowNoNetImageAsync();
                         }
                     }
@@ -870,7 +1018,7 @@ namespace Wrok
             ResetInactivityTimer();
         }
 
-        // Internetverbindung prüfen
+        // Check internet connectivity by probing known URLs.
         private async Task<bool> HasInternetConnectionAsync(int attempts = 2, int timeoutSeconds = 4)
         {
             try
@@ -880,7 +1028,7 @@ namespace Wrok
             }
             catch
             {
-                // Wenn der Check fehlschlägt, testen wir trotzdem weiter.
+                // If the quick check fails, proceed with the network requests anyway.
             }
 
             var urls = new[]
@@ -927,7 +1075,7 @@ namespace Wrok
                     }
                     catch
                     {
-                        // Ignorieren
+                        // Ignore and try next URL.
                     }
                 }
 
@@ -963,8 +1111,8 @@ namespace Wrok
             {
                 bool ok;
 
-                // Minimize / Toggle Hotkey: Strg+Shift+Space
-                ok = RegisterHotKey(this.Handle, HOTKEY_ID, MOD_CONTROL | MOD_SHIFT, (uint)Keys.Space);
+                // Register global hotkeys. Minimize/toggle: Ctrl+Space
+                ok = RegisterHotKey(this.Handle, HOTKEY_ID, MOD_CONTROL, (uint)Keys.Space);
                 if (!ok) Debug.WriteLine($"RegisterHotKey failed id={HOTKEY_ID} err={Marshal.GetLastWin32Error()}");
 
                 ok = RegisterHotKey(this.Handle, HOTKEY_MACRO_1, MOD_CONTROL, (uint)Keys.D1);
@@ -982,35 +1130,19 @@ namespace Wrok
                 ok = RegisterHotKey(this.Handle, HOTKEY_MACRO_5, MOD_CONTROL, (uint)Keys.D5);
                 if (!ok) Debug.WriteLine($"RegisterHotKey failed id={HOTKEY_MACRO_5} err={Marshal.GetLastWin32Error()}");
 
-                // Ctrl + '^' dynamisch ermitteln (VkKeyScan bereits vorhanden)
-                short scan = VkKeyScan('^');
-                if (scan != -1)
-                {
-                    byte vk = (byte)(scan & 0xFF);
-                    byte shiftState = (byte)((scan >> 8) & 0xFF);
-                    uint mods = MOD_CONTROL;
-                    if ((shiftState & 0x01) != 0) mods |= MOD_SHIFT;
-                    ok = RegisterHotKey(this.Handle, HOTKEY_MACRO_6, mods, vk);
-                    if (!ok) Debug.WriteLine($"RegisterHotKey failed id={HOTKEY_MACRO_6} vk={vk} err={Marshal.GetLastWin32Error()}");
-                }
-                else
-                {
-                    ok = RegisterHotKey(this.Handle, HOTKEY_MACRO_6, MOD_CONTROL, (uint)Keys.D6);
-                    if (!ok) Debug.WriteLine($"RegisterHotKey fallback failed id={HOTKEY_MACRO_6} err={Marshal.GetLastWin32Error()}");
-                }
+                // NOTE: dynamic Ctrl+^ registration is intentionally skipped to avoid layout/OEM issues.
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"OnHandleCreated Hotkey registration exception: {ex}");
+                Debug.WriteLine(String.Format(Properties.Resources.ParsingClickScriptResultFailed0, ex));
             }
 
             RefreshTheme();
             EnsureTrayIconVisible();
         }
-
         protected override void OnHandleDestroyed(EventArgs e)
         {
-            // Nachrichtenfilter entfernen, falls vorhanden
+            // Remove message filter if present.
             if (activityFilter != null)
             {
                 try
@@ -1019,7 +1151,7 @@ namespace Wrok
                 }
                 catch
                 {
-                    // Ignorieren
+                    // Ignore.
                 }
 
                 activityFilter = null;
@@ -1033,13 +1165,12 @@ namespace Wrok
             {
             }
 
-            // alle Hotkeys wieder abmelden
+            // Unregister macro hotkeys.
             try { UnregisterHotKey(this.Handle, HOTKEY_MACRO_1); } catch { }
             try { UnregisterHotKey(this.Handle, HOTKEY_MACRO_2); } catch { }
             try { UnregisterHotKey(this.Handle, HOTKEY_MACRO_3); } catch { }
             try { UnregisterHotKey(this.Handle, HOTKEY_MACRO_4); } catch { }
             try { UnregisterHotKey(this.Handle, HOTKEY_MACRO_5); } catch { }
-            try { UnregisterHotKey(this.Handle, HOTKEY_MACRO_6); } catch { }
 
             _inputSimulator = null;
 
@@ -1053,12 +1184,12 @@ namespace Wrok
             base.OnHandleDestroyed(e);
         }
 
-        // Theme/Settings-Nachrichten
+        // Message constants used for theme/settings handling.
         private const int WM_THEMECHANGED = 0x031A;
         private const int WM_SETTINGCHANGE = 0x001A;
         private const int WM_SHOWWINDOW = 0x0018;
 
-        // === WndProc: auf UI-Thread die Makro-Ausführung starten (damit Fokus gesetzt werden kann) ===
+        // Handle window messages; start macro execution on UI thread to allow focus changes.
         protected override void WndProc(ref Message m)
         {
             switch (m.Msg)
@@ -1070,7 +1201,7 @@ namespace Wrok
 
                         if (id == HOTKEY_ID)
                         {
-                            // Toggle: bei Minimiert -> reaktivieren, sonst minimieren in Tray
+                            // Toggle: if minimized, reactivate; otherwise minimize to tray.
                             this.BeginInvoke((MethodInvoker)(() =>
                             {
                                 try
@@ -1092,13 +1223,13 @@ namespace Wrok
                         }
                         else
                         {
-                            // Makro-Hotkey
+                            // Macro hotkey pressed — run asynchronously on UI thread.
                             this.BeginInvoke((MethodInvoker)(() => _ = PerformMacroAsync(id)));
                         }
                     }
                     catch
                     {
-                        // Ignorieren
+                        // Ignore.
                     }
                     break;
 
@@ -1131,7 +1262,7 @@ namespace Wrok
         {
         }
 
-        // Inaktivitätstimer
+        // Inactivity timer initialization.
         private void InitializeInactivityTimer()
         {
             if (inactivityTimer != null)
@@ -1144,13 +1275,14 @@ namespace Wrok
                 catch
                 {
                 }
-
                 inactivityTimer = null;
             }
 
             inactivityTimer = new System.Windows.Forms.Timer();
+
+            // Use a short interval (up to 1s) to reduce race conditions when activity happens near timeout.
             var intervalMs = inactivityTimeout.TotalMilliseconds > 0
-                ? (int)Math.Min(inactivityTimeout.TotalMilliseconds, int.MaxValue)
+                ? (int)Math.Min(1000, inactivityTimeout.TotalMilliseconds)
                 : 60_000;
 
             inactivityTimer.Interval = intervalMs;
@@ -1162,7 +1294,6 @@ namespace Wrok
                 {
                     _lastActivity = DateTime.UtcNow;
                 }
-
                 inactivityTimer.Start();
             }
             else
@@ -1188,29 +1319,26 @@ namespace Wrok
                 elapsed = DateTime.UtcNow - _lastActivity;
             }
 
-            if (elapsed < inactivityTimeout)
-            {
-                try
-                {
-                    inactivityTimer.Stop();
-                    inactivityTimer.Start();
-                }
-                catch
-                {
-                }
-
-                return;
-            }
-
+            // If the window is visible and focused or mouse is over it, treat as activity to avoid unwanted minimization.
             try
             {
-                inactivityTimer.Stop();
+                if (this.Visible && (this.Focused || this.Bounds.Contains(Cursor.Position)))
+                {
+                    lock (_activityLock) { _lastActivity = DateTime.UtcNow; }
+                    return;
+                }
             }
             catch
             {
+                // Ignore defensively.
             }
 
-            MinimizeToTray();
+            if (elapsed >= inactivityTimeout)
+            {
+                try { inactivityTimer.Stop(); } catch { }
+                MinimizeToTray();
+            }
+            // sonst: nichts tun, nächster Tick überprüft erneut
         }
 
         private void ResetInactivityTimer()
@@ -1224,15 +1352,16 @@ namespace Wrok
             lock (_activityLock)
             {
                 _lastActivity = DateTime.UtcNow;
+            }
 
-                try
-                {
-                    inactivityTimer.Stop();
+            try
+            {
+                // Sicherstellen, dass der Timer läuft (kein Stop/Start nötig)
+                if (!inactivityTimer.Enabled)
                     inactivityTimer.Start();
-                }
-                catch
-                {
-                }
+            }
+            catch
+            {
             }
         }
 
@@ -1283,7 +1412,7 @@ namespace Wrok
             }
         }
 
-        // Nachrichtenfilter für Aktivität
+        // Nachrichtenschleife zum Zurücksetzen des Inaktivität Timers
         private class ActivityMessageFilter : IMessageFilter
         {
             private readonly WeakReference<MainForm> _formRef;
@@ -1321,7 +1450,7 @@ namespace Wrok
             }
         }
 
-        // Inaktivität aus Tray-Menü heraus einstellen
+        // Inaktivitätsmenüeinträge im Tray-Menü behandeln
         private void InactivityMenuItem_Click(object? sender, EventArgs e)
         {
             if (sender is not ToolStripMenuItem clicked)
@@ -1353,7 +1482,7 @@ namespace Wrok
             }
         }
 
-        // Offline-Seite anzeigen
+        // Zeige statische Offline-Seite im WebView2-Steuerelement an.
         private async Task ShowNoNetImageAsync()
         {
             if (webView == null)
@@ -1413,7 +1542,7 @@ namespace Wrok
     <div class=""wrapper"">
       <img src=""data:image/png;base64,{base64}"" alt=""offline"" />
       <h1>offline / keine Verbindung</h1>
-      <p>Bitte überprüfe deine Internetverbindung und versuche es erneut.</p>
+      <p>Bitte überprüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.</p>
     </div>
   </body>
 </html>
@@ -1441,7 +1570,7 @@ namespace Wrok
             }
         }
 
-        // Light/Dark-Thema
+        // Rückfrage ob Dunkelmodus aktiv ist
         public static bool IsDarkMode()
         {
             try
@@ -1449,33 +1578,33 @@ namespace Wrok
                 var key = Registry.CurrentUser.OpenSubKey(
                     @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
                 var value = key?.GetValue("AppsUseLightTheme");
-                return value is int i && i == 0; // 0 = Dark Mode
+                return value is int i && i == 0; // 0 = Dunkelmodus
             }
             catch (Exception ex)
             {
-                Trace.WriteLine($"IsDarkMode Fallback: {ex}");
+                Trace.WriteLine($"IsDarkMode fallback: {ex}");
                 return true;
             }
         }
 
-        // Zentrale Theme-Aktualisierung
+        // Aktualisiere Icons und Titelleistenattributen nach aktuellen Themaeinstellungen
         private void RefreshTheme()
         {
             try
             {
                 bool dark = IsDarkMode();
-                ApplyThemeIcon();      // Tray- und Fenster-Icon anpassen
-                SetTitleBarDarkMode(dark); // Titelleiste umschalten
+                ApplyThemeIcon();
+                SetTitleBarDarkMode(dark);
             }
             catch
             {
-                // Bewusst stumm
+                // Intentionally silent on theme update errors.
             }
         }
 
         private void SystemEvents_UserPreferenceChanged(object? sender, UserPreferenceChangedEventArgs e)
         {
-            // Windows feuert beim Theme-Wechsel je nach Version unterschiedliche Kategorien
+            // React to theme/visual changes from Windows and refresh UI accordingly.
             if (e.Category == UserPreferenceCategory.Color ||
                 e.Category == UserPreferenceCategory.General ||
                 e.Category == UserPreferenceCategory.VisualStyle)
@@ -1493,7 +1622,7 @@ namespace Wrok
             }
         }
 
-        // Icons dem Theme anpassen
+        // Update tray/window icons according to current theme.
         private void ApplyThemeIcon()
         {
             var sourceIcon = IsDarkMode() ? Properties.Resources.wrok_white : Properties.Resources.wrok_black;
@@ -1550,7 +1679,7 @@ namespace Wrok
             }
         }
 
-        // DWM für Dark Titlebar
+        // P/Invoke für DWM Titelleistenattribute
         [DllImport("dwmapi.dll", PreserveSig = true)]
         private static extern int DwmSetWindowAttribute(
             IntPtr hwnd,
@@ -1653,6 +1782,7 @@ namespace Wrok
             }
         }
 
+        // Update the checked state of inactivity menu items.
         private void UpdateTrayMenuInactivityState()
         {
             if (trayMenu == null)
@@ -1698,7 +1828,7 @@ namespace Wrok
             }
             catch
             {
-                // still silent per project guidelines
+                // Keep silent according to project guidelines.
             }
         }
 
@@ -1707,7 +1837,6 @@ namespace Wrok
             if (macrosMenu == null)
                 return;
 
-            // Remove existing macro items (we rebuild all)
             macrosMenu.DropDownItems.Clear();
 
             var col = Properties.Settings.Default.Macros;
@@ -1717,13 +1846,13 @@ namespace Wrok
                 Properties.Settings.Default.Macros = col;
             }
 
-            const int requiredMacros = 6;
+            const int requiredMacros = 5;
             bool addedDefaults = false;
             for (int i = 0; i < requiredMacros; i++)
             {
                 if (i >= col.Count)
                 {
-                    col.Add($"Macro {i + 1}");
+                    col.Add(String.Format(Properties.Resources.Macro0, i + 1));
                     addedDefaults = true;
                 }
             }
@@ -1734,13 +1863,14 @@ namespace Wrok
             for (int i = 0; i < requiredMacros; i++)
             {
                 string text = col[i] ?? string.Empty;
-                var display = string.IsNullOrWhiteSpace(text) ? $"Makro {i + 1}" : text;
-                var macroItem = new ToolStripMenuItem(display)
-                {
-                    Tag = i
-                };
+                var display = string.IsNullOrWhiteSpace(text) ? String.Format(Properties.Resources.Macro0, i + 1) : text;
+                var macroItem = new ToolStripMenuItem(display) { Tag = i };
 
-                // Single left-click sends text; Shift/Ctrl+click sends +Enter; right-click edits.
+                // Help text explaining default behavior and modifiers.
+                string hotkeyDisplay = i < 5 ? String.Format(Properties.Resources.Ctrl0, i + 1) : "";
+                macroItem.ToolTipText = String.Format(Properties.Resources.EditWithRightClickRunWith0, hotkeyDisplay)
+                                      + " " + Properties.Resources.LeftClickSendsAndSubmitsShiftClickSendsWithoutEnter;
+
                 macroItem.MouseDown += async (sender, me) =>
                 {
                     try
@@ -1751,8 +1881,14 @@ namespace Wrok
 
                         if (me.Button == MouseButtons.Left)
                         {
-                            bool pressEnter = (Control.ModifierKeys & Keys.Alt) == Keys.Alt
-                                              || (Control.ModifierKeys & Keys.Control) == Keys.Control;
+                            // Default send + Enter; hold Shift or Alt to send without Enter.
+                            bool pressEnter = true;
+                            if ((ModifierKeys & Keys.Shift) == Keys.Shift ||
+                                (ModifierKeys & Keys.Alt) == Keys.Alt)
+                            {
+                                pressEnter = false;
+                            }
+
                             try
                             {
                                 var macros = Properties.Settings.Default.Macros;
@@ -1761,25 +1897,16 @@ namespace Wrok
                             }
                             catch (Exception ex)
                             {
-                                Trace.WriteLine($"Macro click send failed: {ex}");
+                                Trace.WriteLine(String.Format(Properties.Resources.MacroClickSendFailed0, ex));
                             }
                         }
                         else if (me.Button == MouseButtons.Right)
                         {
-                            try
-                            {
-                                EditMacroAndSave(idx);
-                            }
-                            catch (Exception ex)
-                            {
-                                Trace.WriteLine($"EditMacroAndSave failed: {ex}");
-                            }
+                            try { EditMacroAndSave(idx); }
+                            catch (Exception ex) { Trace.WriteLine(String.Format(Properties.Resources.EditMacroAndSaveFailed0, ex)); }
                         }
                     }
-                    catch
-                    {
-                        // ignore per guidelines
-                    }
+                    catch { }
                 };
 
                 macrosMenu.DropDownItems.Add(macroItem);
@@ -1811,12 +1938,10 @@ namespace Wrok
 
                 if (index >= 0)
                 {
-                    // replace
                     col[index] = edited;
                 }
                 else
                 {
-                    // add
                     col.Add(edited);
                 }
 
@@ -1825,7 +1950,7 @@ namespace Wrok
             }
             catch
             {
-                // ignore per guidelines
+                // Ignore per guidelines.
             }
         }
 
@@ -1892,11 +2017,11 @@ namespace Wrok
             }
             catch (Exception ex)
             {
-                Trace.WriteLine($"SaveMacros failed: {ex}");
+                Trace.WriteLine(String.Format(Properties.Resources.SaveMacrosFailed0, ex));
             }
         }
 
-        // Ergänze asynchrone Methode zur Ausführung des Makros anhand der Hotkey-ID
+        // Execute a macro based on the registered hotkey ID.
         private async Task PerformMacroAsync(int hotkeyId)
         {
             try
@@ -1906,7 +2031,6 @@ namespace Wrok
                     return;
 
                 int macroIndex = -1;
-                bool pressEnter = false;
 
                 switch (hotkeyId)
                 {
@@ -1915,7 +2039,6 @@ namespace Wrok
                     case HOTKEY_MACRO_3: macroIndex = 2; break;
                     case HOTKEY_MACRO_4: macroIndex = 3; break;
                     case HOTKEY_MACRO_5: macroIndex = 4; break;
-                    case HOTKEY_MACRO_6: macroIndex = 5; pressEnter = true; break;
                     default: return;
                 }
 
@@ -1925,6 +2048,20 @@ namespace Wrok
                 string text = col[macroIndex] ?? string.Empty;
                 if (string.IsNullOrWhiteSpace(text))
                     return;
+
+                // Default behavior mirrors left-click: insert text and send Enter.
+                // Hold Shift or Alt while pressing the hotkey to suppress Enter.
+                bool pressEnter = true;
+                try
+                {
+                    var mods = ModifierKeys;
+                    if ((mods & Keys.Shift) == Keys.Shift || (mods & Keys.Alt) == Keys.Alt)
+                        pressEnter = false;
+                }
+                catch
+                {
+                    // Keep default if modifier check fails.
+                }
 
                 await SendTextToWebViewAsync(text, pressEnter);
             }
@@ -1942,11 +2079,11 @@ namespace Wrok
             }
             catch
             {
-                // Logging darf keine Ausnahme werfen
+                // Ensure logging cannot throw.
             }
         }
 
-        // Ergänze asynchrone Methode zum Löschen des WebView2-Caches gemäß Projektkonventionen
+        // Clear the WebView2 browsing data and inform the user.
         private async Task ClearCacheAsync()
         {
             try
@@ -1957,7 +2094,6 @@ namespace Wrok
                     return;
                 }
 
-                // Alle Browserdaten löschen (Cache, Cookies etc.)
                 await webView.CoreWebView2.Profile.ClearBrowsingDataAsync();
 
                 MessageBox.Show(Properties.Resources.CacheHasBeenDeleted, Properties.Resources.ClearCache, MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -1970,6 +2106,35 @@ namespace Wrok
                     Properties.Resources.Error,
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
+            }
+        }
+
+        // Track that first OnShown centering has been applied to avoid repeated centering.
+        private bool _centeredOnFirstShow = false;
+
+        // Ensure window is centered on first show when no stored geometry exists.
+        protected override void OnShown(EventArgs e)
+        {
+            base.OnShown(e);
+
+            if (_centeredOnFirstShow)
+                return;
+
+            try
+            {
+                var s = Properties.Settings.Default;
+                if (s.WindowWidth <= 0 || s.WindowHeight <= 0)
+                {
+                    try { this.CenterToScreen(); } catch { }
+                }
+            }
+            catch
+            {
+                // Ignore errors here.
+            }
+            finally
+            {
+                _centeredOnFirstShow = true;
             }
         }
     }
