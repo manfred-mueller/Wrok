@@ -1,5 +1,41 @@
 ﻿# Changelog
 
+## [1.0.0] - 2026-07-18
+
+### Features
+- Cache löschen mit Auswahl: **Nur Cache** (Cookies/Login bleiben erhalten) oder **Alles** (inkl. Cookies/Login). Dialog nutzt die vorhandenen Resource-Strings.
+- **Autostart mit Windows**: umschaltbarer Tray-Eintrag (HKCU\…\Run, kein Admin-Recht nötig); Status wird gegen den aktuellen Programmpfad geprüft.
+
+### Features
+- **Video-Wiedergabe im Endlos-Loop.** Klick auf ein Video in Grok (oder `Strg+Shift+P` mit kopierter Video-Adresse) öffnet es in einem eigenen Fenster, links auf voller Bildschirmhöhe wie Bilder. Umgesetzt mit einem zweiten WebView2, das dieselbe `CoreWebView2Environment` — und damit dieselbe Login-Session — nutzt; das Video wird direkt gestreamt statt heruntergeladen. Start stumm (Autoplay-Sperre) mit Bedienelementen zum Aufdrehen; `Esc` schließt, `Strg+P` heftet an.
+  - Die Player-Seite wird über `WebResourceRequested` unter einer `grok.com`-URL ausgeliefert, damit das Dokument den richtigen Ursprung hat und SameSite-Cookies greifen.
+  - Typerkennung: beim Klick über das DOM (`<video>` vs. `<img>`), beim Zwischenablage-Weg über einen Content-Type-Probe-Request — Grok-URLs haben keine Dateiendung.
+  - Bild und Video teilen sich einen Medien-Slot: es ist immer höchstens ein Medienfenster offen, und „Letztes Medium" holt zurück, was zuletzt lief.
+- **Nebeneinander-Anordnung:** Ein geöffnetes Bild wird links auf volle Bildschirmhöhe skaliert, Wrok füllt automatisch den Rest rechts daneben. Es gibt immer höchstens ein Viewer-Fenster — ein neues Bild ersetzt das bisherige. Wrok bleibt nach dem Schließen in der Anordnung stehen, sodass das nächste Bild ohne Sprung aufgeht; die in den Settings gespeicherte Fenstergröße bleibt davon unberührt. Die Bildbreite ist auf 60 % der Bildschirmbreite gedeckelt, damit für Wrok genug Platz bleibt.
+- **Tray-Menü neu strukturiert** — von 21 auf 8 Einträge auf oberster Ebene:
+  - *Einstellungen → App*: Inaktivität, Makros Import/Export, Mit Windows starten
+  - *Einstellungen → Grok*: öffnet Groks eigene Einstellungsseite
+  - *Werkzeuge*: Rate Limits, Bild aus Zwischenablage öffnen, Letztes Bild öffnen, Cache löschen
+  - Makros bleiben auf oberster Ebene (meistgenutzte Funktion)
+- Hartkodierte deutsche Menütexte bei Makro-Import/Export durch die bereits vorhandenen Ressourcen ersetzt.
+- **Tray-Eintrag „Bild aus Zwischenablage öffnen…"**: nimmt eine per Rechtsklick → „Bildadresse kopieren" kopierte URL, zeigt sie zum Bestätigen/Bearbeiten an und öffnet sie im Viewer. Erlaubt das Öffnen von Bildern unabhängig von der Klick-Erkennung.
+- **Bild-Viewer ist jetzt ein eigenständiges Fenster** (kein Owner-Fenster mehr, `ShowInTaskbar`): alt-tabbar und hinter das Hauptfenster legbar, sodass während der Bildanzeige weiter Text eingegeben werden kann.
+- **Globaler Hotkey `Strg+Shift+P`** öffnet ein Bild aus der Zwischenablage — ohne Rückfrage, direkt aus der kopierten URL.
+- **„Letztes Bild öffnen"**: Das zuletzt angezeigte Bild wird beim Öffnen lokal unter `%LOCALAPPDATA%\Wrok\images\last-image.png` abgelegt (immer dieselbe Datei) und steht nach jedem Neustart sofort wieder zur Verfügung — ohne Netzwerk, Session oder gültige URL.
+- **Viewer ohne Toolbar**: geschlossen wird über das X der Titelleiste. Funktionen liegen auf Tastenkürzeln (`Esc` schließen, `+`/`-` und Mausrad zoomen, `Strg+F` einpassen, `Strg+S` speichern, `Strg+P` anheften).
+- **Fenster öffnet in Bildgröße** (auf 90 % des Arbeitsbereichs begrenzt) und ist frei skalierbar; die Fenstergröße skaliert das Bild mit. Titelleiste zeigt die Auflösung, bei aktivem Anheften zusätzlich 📌.
+
+### Fixes
+- **Bild-Viewer öffnete sich nie.** `CoreWebView2.ExecuteScriptAsync` löst keine Promises auf – die `async`-IIFE lieferte wörtlich `{}` statt Base64, was in `Convert.FromBase64String` als `FormatException` endete. Asynchrone JS-Ergebnisse laufen jetzt über eine Token-basierte `postMessage`-Brücke (`wrokResult:<token>:<payload>`).
+- **Rate-Limit-Anzeige lieferte nie Daten** – gleiche Promise-Ursache, ebenfalls auf die Brücke umgestellt. Doppeltes JSON-Unquoting entfällt; Modellnamen sind jetzt Konstanten.
+- Base64-Konvertierung großer Bilder erfolgt blockweise statt Zeichen für Zeichen.
+- **Bild-Viewer: sporadische GDI+-Fehler behoben.** Das Bitmap wurde aus einem `MemoryStream` erzeugt, der bereits geschlossen war, wenn das Bild später auf dem UI-Thread gezeichnet wurde. Die Pixeldaten werden jetzt in ein eigenständiges Bitmap kopiert.
+- **Mausrad-Zoom im Bild-Viewer funktioniert.** `WM_MOUSEWHEEL` geht nur an das fokussierte Control; die `PictureBox` war nicht fokussierbar. Sie ist jetzt selektierbar und holt sich den Fokus, sobald der Zeiger über dem Bild ist.
+- **{input}-Dialog erscheint zuverlässig im Vordergrund**, auch wenn das Makro per globalem Hotkey bei minimiertem/hintergründigem Wrok ausgelöst wird (TopMost + Aktivierung, ohne Owner bei unsichtbarem Hauptfenster).
+
+### Docs
+- Boss-Taste in README, Changelog und Hilfe-Ressourcen einheitlich auf **Ctrl+Space** korrigiert (entspricht dem tatsächlich registrierten Hotkey; vorher fälschlich als Ctrl+Shift+Space bzw. Ctrl+Tab dokumentiert).
+
 ## [0.9.0] - 2025-12-28
 
 ### Highlights
@@ -8,7 +44,7 @@
   - Left-click + modifier (Alt/Ctrl): send text + Enter
   - Right-click: edit macro (persisted to settings)
 - Improved WebView2 text injection robustness and fallbacks.
-- Re-introduced global toggle hotkey (Ctrl+Shift+Space) for minimize/reactivate.
+- Re-introduced global toggle hotkey (Ctrl+Space) for minimize/reactivate.
 
 ### Features
 - Ensure `Properties.Settings.Default.Macros` contains six entries on startup.
@@ -30,7 +66,7 @@
 2. Left-click a macro → text inserted into active WebView2 input.
 3. Left-click + Alt/Ctrl → text + submit.
 4. Right-click macro → edit dialog; changes persist.
-5. Press Ctrl+Shift+Space → app toggles minimize/reactivate.
+5. Press Ctrl+Space → app toggles minimize/reactivate.
 6. Press Ctrl+1..Ctrl+5 and Ctrl+^ → corresponding macro sent.
 
 ### Rollback
@@ -39,4 +75,4 @@
 ### Suggested commit messages
 - `feat(macros): simplify to 6 fixed macros and edit on right-click`
 - `fix(webview): inject helper into existing doc and harden SendTextToWebViewAsync`
-- `fix(hotkeys): register Ctrl+Shift+Space toggle and separate WndProc handling`
+- `fix(hotkeys): register Ctrl+Space toggle and separate WndProc handling`

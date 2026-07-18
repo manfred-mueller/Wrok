@@ -166,6 +166,41 @@
   <data name="ClearCache" xml:space="preserve">
     <value>Cache löschen</value>
   </data>
+  <data name="StartWithWindows" xml:space="preserve">
+    <value>Mit Windows starten</value>
+  </data>
+  <data name="MacroInputTitle" xml:space="preserve">
+    <value>Makro-Eingabe</value>
+  </data>
+  <data name="OpenImageFromClipboard" xml:space="preserve">
+    <value>Bild aus Zwischenablage öffnen…</value>
+  </data>
+  <data name="ImageLoadFailed" xml:space="preserve">
+    <value>Das Bild konnte nicht geladen werden. Details stehen im Log.</value>
+  </data>
+  <data name="OpenLastImage" xml:space="preserve">
+    <value>Letztes Bild öffnen</value>
+  </data>
+  <data name="MenuTools" xml:space="preserve">
+    <value>Werkzeuge</value>
+  </data>
+  <data name="MenuApp" xml:space="preserve">
+    <value>App</value>
+  </data>
+  <data name="MenuGrok" xml:space="preserve">
+    <value>Grok</value>
+  </data>
+  <data name="NoLastImage" xml:space="preserve">
+    <value>Kein Bild verfügbar.
+
+Tipp: In Grok mit Rechtsklick auf ein Bild „Bildadresse kopieren“ wählen und Strg+Shift+P drücken. Danach steht es hier nach jedem Neustart zur Verfügung.</value>
+  </data>
+  <data name="MacroInputPrompt" xml:space="preserve">
+    <value>Eingabe:</value>
+  </data>
+  <data name="MacroVariablesHint" xml:space="preserve">
+    <value>Variablen: {input} {date} {time} {username} {clipboard}</value>
+  </data>
   <data name="ClearBrowsingData" xml:space="preserve">
     <value>Browserdaten löschen</value>
   </data>
@@ -328,9 +363,11 @@ Umschalt+Klick trägt ein ohne zu senden.</value>
 - Senden ohne Enter: Linksklick + Shift (oder Alt) sendet den Text OHNE abschließendes Enter.
 - Hotkeys: Strg+1 .. Strg+5 senden das jeweilige Makro. Standardmäßig wird nach dem Einfügen Enter gesendet (wie Linksklick).
   Halte Shift oder Alt beim Hotkey, um Enter zu unterdrücken.
+- Variablen: Makrotext kann {date}, {time}, {username}, {clipboard} und {input} enthalten.
+  {input} (oder {input:Deine Frage}) fragt dich direkt vor dem Senden nach einem Wert — praktisch fürs Rollenspiel.
 
 Chef-Taste
-- Zum Minimieren des Fensters die Tastenkombination Strg+Tab drücken.
+- Zum Minimieren des Fensters die Tastenkombination Strg+Leertaste drücken (erneutes Drücken stellt das Fenster wieder her).
 
 Cache löschen
 - Tray‑Menü → 'Cache löschen' löscht WebView2‑Browserdaten (Cache, Cookies, lokal gespeicherte Daten).
@@ -345,5 +382,139 @@ Fehlerbehebung / Tipps
 Kurz zur Bedienung
 - Verhalten beim Klick und Hotkey ist gleich: Text einfügen, anschließend wird versucht, per Button‑Click oder OS‑Enter zu senden.
   Einige Web‑Editoren ignorieren synthetische JS‑KeyboardEvents; deshalb wird bei Bedarf ein echtes Enter per InputSimulator gesendet.</value>
+  </data>
+  <data name="EmptyMacro" xml:space="preserve">
+    <value>Leer</value>
+  </data>
+  <data name="MacroName" xml:space="preserve">
+    <value>Makroname:</value>
+  </data>
+  <data name="InitialLoadUrlAsyncFireAndForgetFailed" xml:space="preserve">
+    <value>Das anfängliche Fire-and-Forget von LoadUrlAsync ist fehlgeschlagen</value>
+  </data>
+  <data name="LoadWindowSettingsStoredBoundsAreOffScreenUsingStoredSizeAndCenterScreen" xml:space="preserve">
+    <value>LoadWindowSettings: Gespeicherte Grenzen liegen außerhalb des Bildschirms; unter Verwendung der gespeicherten Größe und des CenterScreen.</value>
+  </data>
+  <data name="LoadWindowSettingsPositionNotSet00AppliedStoredSizeAndUsingCenterScreen" xml:space="preserve">
+    <value>LoadWindowSettings: Position nicht festgelegt (0,0); Angewendete gespeicherte Größe und Verwendung von CenterScreen.</value>
+  </data>
+  <data name="LoadWindowSettingsNoValidStoredSizeKeepingDefaultStartPosition" xml:space="preserve">
+    <value>LoadWindowSettings: Keine gültige gespeicherte Größe; Beibehaltung der Standard-StartPosition.</value>
+  </data>
+  <data name="AddScriptToExecuteOnDocumentCreatedFailed" xml:space="preserve">
+    <value>AddScriptToExecuteOnDocumentCreated ist fehlgeschlagen</value>
+  </data>
+  <data name="InjectHelperScriptToCurrentDocumentFailed" xml:space="preserve">
+    <value>Das Einfügen von helperScript in das aktuelle Dokument ist fehlgeschlagen</value>
+  </data>
+  <data name="InitializeWebViewAsyncCoreWebView2EnvironmentCreationFailed" xml:space="preserve">
+    <value>InitializeWebViewAsync: Die Erstellung der CoreWebView2-Umgebung ist fehlgeschlagen</value>
+  </data>
+  <data name="JSInsertedTextButClickFailedSendingEnterViaInputSimulatorFallback" xml:space="preserve">
+    <value>JS hat Text eingefügt, aber das Klicken ist fehlgeschlagen – Senden der Eingabetaste über den InputSimulator-Fallback.</value>
+  </data>
+  <data name="SendTextToWebViewAsyncEnterSentViaNativeInputAfterJSInsert" xml:space="preserve">
+    <value>SendTextToWebViewAsync: Eingabe wird nach JS-Einfügung über NativeInput gesendet.</value>
+  </data>
+  <data name="CoreNavigateFailed" xml:space="preserve">
+    <value>core.Navigate ist fehlgeschlagen</value>
+  </data>
+  <data name="LoadMacrosJSONDeserializationFailedReturningDefaults" xml:space="preserve">
+    <value>LoadMacros: JSON-Deserialisierung fehlgeschlagen, Standardwerte werden zurückgegeben</value>
+  </data>
+  <data name="SaveMacrosFailed" xml:space="preserve">
+    <value>SaveMacros ist fehlgeschlagen</value>
+  </data>
+  <data name="MacrosImportExport" xml:space="preserve">
+    <value>Makros Import/Export</value>
+  </data>
+  <data name="MacrosExport" xml:space="preserve">
+    <value>Makros exportieren...</value>
+  </data>
+  <data name="MacrosImport" xml:space="preserve">
+    <value>Makros importieren...</value>
+  </data>
+  <data name="ExportMacrosTitle" xml:space="preserve">
+    <value>Makros exportieren</value>
+  </data>
+  <data name="ExportMacrosFilter" xml:space="preserve">
+    <value>JSON-Datei (*.json)|*.json</value>
+  </data>
+  <data name="ExportSuccessTitle" xml:space="preserve">
+    <value>Export erfolgreich</value>
+  </data>
+  <data name="ExportSuccessMsg" xml:space="preserve">
+    <value>Makros erfolgreich exportiert nach:
+{0}</value>
+  </data>
+  <data name="ExportFailedMsg" xml:space="preserve">
+    <value>Export fehlgeschlagen. Bitte Pfad und Berechtigungen prüfen.</value>
+  </data>
+  <data name="ImportMacrosTitle" xml:space="preserve">
+    <value>Makros importieren</value>
+  </data>
+  <data name="ImportConfirmMsg" xml:space="preserve">
+    <value>Die aktuellen Makros werden durch die importierten ersetzt.
+Fortfahren?</value>
+  </data>
+  <data name="ImportConfirmTitle" xml:space="preserve">
+    <value>Makros importieren</value>
+  </data>
+  <data name="ImportSuccessTitle" xml:space="preserve">
+    <value>Import erfolgreich</value>
+  </data>
+  <data name="ImportSuccessMsg" xml:space="preserve">
+    <value>Makros erfolgreich importiert.</value>
+  </data>
+  <data name="ImportFailedMsg" xml:space="preserve">
+    <value>Import fehlgeschlagen. Bitte prüfen ob die Datei ein gültiges Wrok-Makro-Format hat.</value>
+  </data>
+  <data name="CharacterCount" xml:space="preserve">
+    <value>{0} Zeichen</value>
+  </data>
+  <data name="OfflineTitle" xml:space="preserve">
+    <value>offline / keine Verbindung</value>
+  </data>
+  <data name="OfflineHeading" xml:space="preserve">
+    <value>offline / keine Verbindung</value>
+  </data>
+  <data name="OfflineBody" xml:space="preserve">
+    <value>Bitte überprüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.</value>
+  </data>
+  <data name="RateLimits" xml:space="preserve">
+    <value>Rate Limits</value>
+  </data>
+  <data name="RateLimitLoading" xml:space="preserve">
+    <value>Lädt...</value>
+  </data>
+  <data name="RateLimitRefresh" xml:space="preserve">
+    <value>Aktualisieren</value>
+  </data>
+  <data name="RateLimitError0" xml:space="preserve">
+    <value>Fehler: {0}</value>
+  </data>
+  <data name="RateLimitUpdatedAt0" xml:space="preserve">
+    <value>Aktualisiert: {0}</value>
+  </data>
+  <data name="RateLimitModel0Remaining1Of2" xml:space="preserve">
+    <value>{0}: {1} / {2} übrig</value>
+  </data>
+  <data name="RateLimitModel0NotLoggedIn" xml:space="preserve">
+    <value>{0}: nicht angemeldet</value>
+  </data>
+  <data name="RateLimitModel0Error1" xml:space="preserve">
+    <value>{0}: Fehler ({1})</value>
+  </data>
+  <data name="RateLimitModel0Unknown" xml:space="preserve">
+    <value>{0}: unbekannt</value>
+  </data>
+  <data name="RateLimitResetsIn0h1m" xml:space="preserve">
+    <value>Reset in {0}h {1}m</value>
+  </data>
+  <data name="RateLimitResetsIn0m" xml:space="preserve">
+    <value>Reset in {0}m</value>
+  </data>
+  <data name="HotkeyToggleFailed" xml:space="preserve">
+    <value>Hotkey-Toggle fehlgeschlagen: {0}</value>
   </data>
 </root>

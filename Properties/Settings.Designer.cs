@@ -105,5 +105,53 @@ namespace Wrok.Properties {
                 this["IsMaximized"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool InactivityConfigured {
+            get {
+                return ((bool)(this["InactivityConfigured"]));
+            }
+            set {
+                this["InactivityConfigured"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string MacrosJson {
+            get {
+                return ((string)(this["MacrosJson"]));
+            }
+            set {
+                this["MacrosJson"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string LastImagePath {
+            get {
+                return ((string)(this["LastImagePath"]));
+            }
+            set {
+                this["LastImagePath"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string LastImageUrl {
+            get {
+                return ((string)(this["LastImageUrl"]));
+            }
+            set {
+                this["LastImageUrl"] = value;
+            }
+        }
     }
 }

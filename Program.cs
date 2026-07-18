@@ -20,6 +20,48 @@ namespace Wrok
         [STAThread]
         private static void Main()
         {
+            // --- Persistent file logging setup (writes Trace to %LOCALAPPDATA%\Wrok\logs\app.log) ---
+            try
+            {
+                var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                var appDir = Path.Combine(localAppData, "Wrok");
+                var logsDir = Path.Combine(appDir, "logs");
+
+                Directory.CreateDirectory(logsDir);
+
+                var logFile = Path.Combine(logsDir, "app.log");
+
+                // Keep a rolling simple policy: rename existing file if bigger than 5 MB
+                try
+                {
+                    const long maxSize = 5 * 1024 * 1024;
+                    if (File.Exists(logFile))
+                    {
+                        var fi = new FileInfo(logFile);
+                        if (fi.Length > maxSize)
+                        {
+                            var archived = Path.Combine(logsDir, $"app-{DateTime.UtcNow:yyyyMMddHHmmss}.log");
+                            try { File.Move(logFile, archived); } catch { /* ignore */ }
+                        }
+                    }
+                }
+                catch { /* defensive */ }
+
+                var tw = new StreamWriter(new FileStream(logFile, FileMode.Append, FileAccess.Write, FileShare.Read))
+                {
+                    AutoFlush = true
+                };
+
+                Trace.Listeners.Add(new TextWriterTraceListener(tw));
+                Trace.AutoFlush = true;
+                Trace.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] Wrok starting (pid={Process.GetCurrentProcess().Id})");
+            }
+            catch
+            {
+                // If logging setup fails, continue without file logging.
+            }
+            // --- end logging setup ---
+
             bool isNewInstance;
             _singleInstanceMutex = new Mutex(true, MutexName, out isNewInstance);
 

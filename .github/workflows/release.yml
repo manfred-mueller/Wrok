@@ -1,0 +1,98 @@
+name: Create Release from Setup
+
+# Ausgeloest durch das Einchecken einer neu gebauten Setup-Datei.
+# Version und Tag stammen aus dem Dateinamen - der wird beim lokalen Build
+# aus InstallScript.iss erzeugt und ist damit die einzige Quelle der Wahrheit.
+
+on:
+  push:
+    paths:
+      - "bin/x64/Release/Wrok-Setup-*.exe"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag:     ${{ steps.version.outputs.tag }}
+      file:    ${{ steps.version.outputs.file }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # wichtig für Tags
+
+      - name: Extract version from setup filename
+        id: version
+        run: |
+          FILE=$(ls bin/x64/Release/Wrok-Setup-*.exe | head -n 1)
+          echo "Found file: $FILE"
+          VERSION=$(basename "$FILE" | sed -E 's/Wrok-Setup-([0-9]+\.[0-9]+\.[0-9]+)\.exe/\1/')
+          echo "Version: $VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+          echo "file=$FILE" >> $GITHUB_OUTPUT
+
+      - name: Delete existing tag (local & remote)
+        run: |
+          TAG=${{ steps.version.outputs.tag }}
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            git tag -d "$TAG"
+          fi
+          if git ls-remote --tags origin | grep -q "refs/tags/$TAG"; then
+            git push --delete origin "$TAG"
+          fi
+
+      - name: Create Git tag (force)
+        run: |
+          git tag ${{ steps.version.outputs.tag }}
+          git push origin ${{ steps.version.outputs.tag }}
+
+      - name: Create or update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Wrok ${{ steps.version.outputs.tag }}
+          files: ${{ steps.version.outputs.file }}
+
+  winget:
+    # Muss im selben Workflow-Lauf haengen: Ein Release, das mit dem
+    # GITHUB_TOKEN erstellt wurde, loest KEINE weiteren Workflows aus.
+    needs: release
+    runs-on: windows-latest   # wingetcreate ist ein Windows-Programm
+    steps:
+      - name: Manifest aktualisieren und PR einreichen
+        shell: pwsh
+        run: |
+          $version = '${{ needs.release.outputs.version }}'
+          $tag     = '${{ needs.release.outputs.tag }}'
+          $url     = "https://github.com/${{ github.repository }}/releases/download/$tag/Wrok-Setup-$version.exe"
+
+          Write-Host "Version: $version"
+          Write-Host "URL:     $url"
+
+          # Kurz warten: das Asset ist unmittelbar nach dem Release-Schritt
+          # nicht immer sofort ueber die Download-URL erreichbar.
+          for ($i = 1; $i -le 10; $i++) {
+            try {
+              Invoke-WebRequest -Uri $url -Method Head -UseBasicParsing | Out-Null
+              Write-Host "Installer erreichbar."
+              break
+            } catch {
+              if ($i -eq 10) { throw "Installer nicht erreichbar: $url" }
+              Write-Host "Noch nicht da, warte 15s ($i/10)..."
+              Start-Sleep -Seconds 15
+            }
+          }
+
+          # wingetcreate laedt den Installer selbst und berechnet den SHA256.
+          Invoke-WebRequest -Uri 'https://aka.ms/wingetcreate/latest' -OutFile wingetcreate.exe -UseBasicParsing
+
+          .\wingetcreate.exe update NASS.Wrok `
+            --version $version `
+            --urls $url `
+            --submit `
+            --token '${{ secrets.WINGET_TOKEN }}'

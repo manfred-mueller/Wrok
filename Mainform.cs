@@ -1,1102 +1,1025 @@
-﻿using Microsoft.Web.WebView2.WinForms;
 using Microsoft.Web.WebView2.Core;
+using Microsoft.Web.WebView2.WinForms;
 using Microsoft.Win32;
-using System;
-using System.Collections.Specialized;
 using System.Diagnostics;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.IO;
-using System.Net.Http;
 using System.Runtime.InteropServices;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows.Forms;
-using WindowsInput;
-using WindowsInput.Native;
 
 namespace Wrok
 {
     public partial class MainForm : Form
     {
-        // Shared HttpClient instance for all network checks/requests.
-        private static readonly HttpClient _httpClient = new HttpClient();
+        // ------------------------------------------------------------------
+        // Konstanten
+        // ------------------------------------------------------------------
 
-        // UI controls and resources.
-        private WebView2? webView;
-        private NotifyIcon? trayIcon;
-        private ContextMenuStrip? trayMenu;
-        private ToolStripMenuItem? macrosMenu;
+        private const int HOTKEY_ID       = 0x9000;
+        private const int HOTKEY_ID_IMAGE = 0x9001;   // Strg+Shift+P
+        private const int WM_HOTKEY    = 0x0312;
+        private const uint MOD_CONTROL = 0x0002;
+        private const uint MOD_SHIFT   = 0x0004;
 
-        // Base URL and entries used for the tray menu.
+        private const int WM_THEMECHANGED  = 0x031A;
+        private const int WM_SETTINGCHANGE = 0x001A;
+        private const int WM_SHOWWINDOW    = 0x0018;
+
+        private const int DWMWA_USE_IMMERSIVE_DARK_MODE          = 20;
+        private const int DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1 = 19;
+
         private readonly string baseUrl = "https://grok.com/";
         private readonly (string name, string url)[] menuPages = new[]
         {
-            (Properties.Resources.Settings, "?_s=home"),
+            (Properties.Resources.MenuGrok, "?_s=home"),
         };
 
-        // Global hotkey identifiers and modifier flags.
-        private const int HOTKEY_ID = 0x9000;
-        private const int WM_HOTKEY = 0x0312;
-        private const uint MOD_CONTROL = 0x0002;
-        private const uint MOD_SHIFT = 0x0004;
+        private readonly int[] inactivityOptions = new[] { 0, 30, 60, 90 };
+
+        // ------------------------------------------------------------------
+        // Felder
+        // ------------------------------------------------------------------
+
+        private WebView2?          _webView;
+        private WebViewManager?    _webViewManager;
+        private MacroManager       _macroManager = new();
+
+        private NotifyIcon?        trayIcon;
+        private ContextMenuStrip?  trayMenu;
+        private ToolStripMenuItem? macrosMenu;
+        private ToolStripMenuItem? _inactivityMenu;
+
+        // Nebeneinander-Anordnung (Medium links, Wrok rechts)
+        private bool  _suppressWindowSave;
+        private Form? _mediaViewer;   // es gibt immer höchstens einen (Bild ODER Video)
+
+        // Inaktivitäts-Timer
+        private System.Windows.Forms.Timer? inactivityTimer;
+        private TimeSpan  inactivityTimeout = TimeSpan.FromSeconds(30);
+        private bool      inactivityEnabled = true;
+        private DateTime  _lastActivity     = DateTime.UtcNow;
+        private readonly object _activityLock = new();
+
+        private ActivityMessageFilter? activityFilter;
+        private RateLimitManager?      _rateLimitManager;
+        private ToolStripMenuItem?     _rateLimitMenu;
+
+        // ------------------------------------------------------------------
+        // P/Invoke
+        // ------------------------------------------------------------------
 
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
-
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
-
-        // Inactivity timer for automatic minimization.
-        private System.Windows.Forms.Timer? inactivityTimer;
-        private TimeSpan inactivityTimeout = TimeSpan.FromSeconds(30);
-        private ActivityMessageFilter? activityFilter;
-        private bool inactivityEnabled = true;
-        private readonly int[] inactivityOptions = new[] { 0, 30, 60, 90 };
-
-        // Fields used for activity tracking.
-        private DateTime _lastActivity = DateTime.UtcNow;
-        private readonly object _activityLock = new object();
-
-        // Input simulator and hotkey base IDs for macros.
-        private InputSimulator? _inputSimulator;
-
-        // Separate base for macro hotkeys to avoid collisions with other IDs.
-        private const int HOTKEY_BASE = 0x9100;
-        private const int HOTKEY_MACRO_1 = HOTKEY_BASE + 0;
-        private const int HOTKEY_MACRO_2 = HOTKEY_BASE + 1;
-        private const int HOTKEY_MACRO_3 = HOTKEY_BASE + 2;
-        private const int HOTKEY_MACRO_4 = HOTKEY_BASE + 3;
-        private const int HOTKEY_MACRO_5 = HOTKEY_BASE + 4;
-
-        // P/Invoke SetForegroundWindow to ensure the app can bring itself forward.
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool SetForegroundWindow(IntPtr hWnd);
+        [DllImport("dwmapi.dll", PreserveSig = true)]
+        private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
 
-        [DllImport("user32.dll")]
-        private static extern short VkKeyScan(char ch);
+        // ------------------------------------------------------------------
+        // Konstruktor
+        // ------------------------------------------------------------------
 
         public MainForm()
         {
             InitializeComponent();
 
-            // Install a global message filter (weak reference) to detect user activity.
             activityFilter = new ActivityMessageFilter(this);
-            try
-            {
-                Application.AddMessageFilter(activityFilter);
-            }
-            catch
-            {
-                activityFilter = null; // Not critical if registration fails.
-            }
+            try { Application.AddMessageFilter(activityFilter); }
+            catch { activityFilter = null; }
 
-            // Initialize tray icon and apply current theme.
             InitializeTrayIcon();
             RefreshTheme();
             LoadWindowSettings();
-
-            // Check first-run state via a marker file in %LOCALAPPDATA%\Wrok.
-            var markerDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Wrok");
-            var firstRunMarker = Path.Combine(markerDir, "firstrun.marker");
-            var savedSeconds = Properties.Settings.Default.InactivityTimeoutSeconds;
-            bool isFirstRun = false;
-
-            try
-            {
-                if (!Directory.Exists(markerDir))
-                    Directory.CreateDirectory(markerDir);
-
-                isFirstRun = !File.Exists(firstRunMarker);
-            }
-            catch
-            {
-                isFirstRun = false;
-            }
-
-            if (isFirstRun || savedSeconds <= 0)
-            {
-                // Disable inactivity timer on first run or if setting is non-positive.
-                inactivityTimeout = TimeSpan.Zero;
-                inactivityEnabled = false;
-                Properties.Settings.Default.InactivityTimeoutSeconds = 0;
-                Properties.Settings.Default.Save();
-
-                try
-                {
-                    File.WriteAllText(firstRunMarker, DateTime.UtcNow.ToString("o"));
-                }
-                catch
-                {
-                    // Ignore write errors for the marker file.
-                }
-            }
-            else
-            {
-                inactivityTimeout = TimeSpan.FromSeconds(savedSeconds);
-                inactivityEnabled = savedSeconds > 0;
-            }
+            ApplyInactivitySettings();
 
             _ = InitializeWebViewAsync();
             InitializeInactivityTimer();
+            _ = InitializeRateLimitManagerAsync();
 
-            // Load page in background without bringing window to front.
-            try
-            {
-                _ = LoadUrlAsync(baseUrl, bringToFront: false);
-            }
-            catch
-            {
-                // Non-fatal.
-            }
+            try { _ = LoadUrlAsync(baseUrl, bringToFront: false); }
+            catch (Exception ex) { Log(ex, "Initialer LoadUrlAsync fehlgeschlagen"); }
 
-            // Save window state events.
-            this.Resize += MainForm_Resize;
-            this.ResizeEnd += MainForm_ResizeEnd;
-            this.Move += MainForm_Move;
+            this.Resize   += (s, e) => { if (this.WindowState != FormWindowState.Normal) SaveWindowSettings(); };
+            this.ResizeEnd += (s, e) => { if (this.WindowState == FormWindowState.Normal) SaveWindowSettings(); };
+            this.Move      += (s, e) => { if (this.WindowState == FormWindowState.Normal) SaveWindowSettings(); };
 
-            // Update tray menu to reflect inactivity settings.
             UpdateTrayMenuInactivityState();
         }
+
+        // ------------------------------------------------------------------
+        // InitializeComponent
+        // ------------------------------------------------------------------
 
         private void InitializeComponent()
         {
             var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
-            this.Text = version != null ? $"Wrok {version.Major}.{version.Minor}.{version.Build}" : "Wrok";
-            this.WindowState = FormWindowState.Normal;
-            this.StartPosition = FormStartPosition.CenterScreen;
-            this.FormBorderStyle = FormBorderStyle.Sizable;
-            this.ShowInTaskbar = false;
-            this.Visible = false;
+            this.Text             = version != null ? $"Wrok {version.Major}.{version.Minor}.{version.Build}" : "Wrok";
+            this.WindowState      = FormWindowState.Normal;
+            this.StartPosition    = FormStartPosition.CenterScreen;
+            this.FormBorderStyle  = FormBorderStyle.Sizable;
+            this.ShowInTaskbar    = false;
+            this.Visible          = false;
         }
 
-        // Load stored window position/size; if valid, apply it.
+        // ------------------------------------------------------------------
+        // WebView-Initialisierung
+        // ------------------------------------------------------------------
+
+        private async Task InitializeWebViewAsync()
+        {
+            _webView = new WebView2 { Dock = DockStyle.Fill };
+            this.Controls.Add(_webView);
+
+            _webViewManager = new WebViewManager(_webView, this, ResetInactivityTimer);
+            await _webViewManager.InitializeAsync();
+        }
+
+        // ------------------------------------------------------------------
+        // Navigation
+        // ------------------------------------------------------------------
+
+        private async Task LoadUrlAsync(string url, bool bringToFront = true)
+        {
+            try
+            {
+                if (_webViewManager != null)
+                    await _webViewManager.NavigateAsync(url);
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "LoadUrlAsync fehlgeschlagen");
+            }
+
+            if (!bringToFront) return;
+
+            this.Show();
+            this.WindowState = Properties.Settings.Default.IsMaximized
+                ? FormWindowState.Maximized : FormWindowState.Normal;
+            this.Opacity      = 1.0;
+            this.ShowInTaskbar = true;
+            this.BringToFront();
+            this.Activate();
+            ResetInactivityTimer();
+        }
+
+        // ------------------------------------------------------------------
+        // Fenster-Zustand
+        // ------------------------------------------------------------------
+
         private void LoadWindowSettings()
         {
             var s = Properties.Settings.Default;
+            bool hasValidSize      = s.WindowWidth > 0 && s.WindowHeight > 0;
+            bool hasExplicitPos    = s.WindowLeft != 0 || s.WindowTop != 0;
 
-            // Log loaded values for debugging (use Output window)
-            try
+            if (hasValidSize && hasExplicitPos)
             {
-                Trace.WriteLine($"LoadWindowSettings: WindowLeft={s.WindowLeft}, WindowTop={s.WindowTop}, WindowWidth={s.WindowWidth}, WindowHeight={s.WindowHeight}, IsMaximized={s.IsMaximized}");
-            }
-            catch { }
-
-            // Determine if size and position look valid.
-            bool hasValidSize = (s.WindowWidth > 0 && s.WindowHeight > 0);
-            // Treat (0,0) as "not set" to avoid unintentionally placing window at top-left.
-            bool hasExplicitPosition = (s.WindowLeft != 0 || s.WindowTop != 0);
-
-            if (hasValidSize && hasExplicitPosition)
-            {
-                this.StartPosition = FormStartPosition.Manual;
-                var desired = new Rectangle(
-                    s.WindowLeft,
-                    s.WindowTop,
-                    s.WindowWidth,
-                    s.WindowHeight);
-
-                bool intersects = false;
-                foreach (var scr in Screen.AllScreens)
+                var desired = new Rectangle(s.WindowLeft, s.WindowTop, s.WindowWidth, s.WindowHeight);
+                bool onScreen = Screen.AllScreens.Any(scr => scr.WorkingArea.IntersectsWith(desired));
+                if (onScreen)
                 {
-                    if (scr.WorkingArea.IntersectsWith(desired))
-                    {
-                        intersects = true;
-                        break;
-                    }
-                }
-
-                if (intersects)
-                {
+                    this.StartPosition = FormStartPosition.Manual;
                     this.Bounds = desired;
                 }
                 else
                 {
-                    // Stored position is off-screen: use stored size but center on a screen.
                     this.Size = new Size(s.WindowWidth, s.WindowHeight);
                     this.StartPosition = FormStartPosition.CenterScreen;
                     try { this.CenterToScreen(); } catch { }
-                    Trace.WriteLine("LoadWindowSettings: Stored bounds are off-screen; using stored size and CenterScreen.");
                 }
             }
-            else if (hasValidSize && !hasExplicitPosition)
+            else if (hasValidSize)
             {
-                // Size is known but position not explicitly set -> apply size and center the window.
                 this.Size = new Size(s.WindowWidth, s.WindowHeight);
                 this.StartPosition = FormStartPosition.CenterScreen;
                 try { this.CenterToScreen(); } catch { }
-                Trace.WriteLine("LoadWindowSettings: Position not set (0,0); applied stored size and using CenterScreen.");
-            }
-            else
-            {
-                // No valid stored size -> keep default StartPosition (CenterScreen from InitializeComponent).
-                Trace.WriteLine("LoadWindowSettings: No valid stored size; keeping default StartPosition.");
             }
 
             if (s.IsMaximized)
-            {
                 this.WindowState = FormWindowState.Maximized;
-            }
         }
 
-        // Save current window geometry into user-scoped settings.
         private void SaveWindowSettings()
         {
+            // Während der Nebeneinander-Anordnung nicht speichern – sonst würde
+            // die vom Nutzer gewählte Fenstergeometrie dauerhaft überschrieben.
+            if (_suppressWindowSave) return;
+
             try
             {
                 var s = Properties.Settings.Default;
-                Rectangle bounds;
+                var bounds = (this.WindowState == FormWindowState.Maximized ||
+                              this.WindowState == FormWindowState.Minimized)
+                    ? this.RestoreBounds : this.Bounds;
 
-                if (this.WindowState == FormWindowState.Maximized || this.WindowState == FormWindowState.Minimized)
-                    bounds = this.RestoreBounds;
-                else
-                    bounds = this.Bounds;
-
-                s.WindowLeft = bounds.Left;
-                s.WindowTop = bounds.Top;
-                s.WindowWidth = Math.Max(100, bounds.Width);
+                s.WindowLeft   = bounds.Left;
+                s.WindowTop    = bounds.Top;
+                s.WindowWidth  = Math.Max(100, bounds.Width);
                 s.WindowHeight = Math.Max(100, bounds.Height);
-                s.IsMaximized = (this.WindowState == FormWindowState.Maximized);
+                s.IsMaximized  = this.WindowState == FormWindowState.Maximized;
                 s.Save();
             }
-            catch
-            {
-                // Swallow errors — saving window state is non-critical.
-            }
+            catch { }
         }
 
-        private void MainForm_Resize(object? sender, EventArgs e)
+        private void Reactivate()
         {
-            if (this.WindowState == FormWindowState.Minimized || this.WindowState == FormWindowState.Maximized)
-            {
-                SaveWindowSettings();
-            }
-        }
+            LoadWindowSettings();
+            if (this.StartPosition == FormStartPosition.CenterScreen)
+                try { this.CenterToScreen(); } catch { }
 
-        private void MainForm_ResizeEnd(object? sender, EventArgs e)
-        {
-            if (this.WindowState == FormWindowState.Normal)
-            {
-                SaveWindowSettings();
-            }
-        }
-
-        private void MainForm_Move(object? sender, EventArgs e)
-        {
-            if (this.WindowState == FormWindowState.Normal)
-            {
-                SaveWindowSettings();
-            }
-        }
-
-        /// <summary>
-        /// Initialize WebView2 and inject helper script for focus/text insertion and activity events.
-        /// </summary>
-        private async Task InitializeWebViewAsync()
-        {
-            webView = new WebView2
-            {
-                Dock = DockStyle.Fill
-            };
-            this.Controls.Add(webView);
-
-            string userDataPath = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Wrok",
-                "WebView2Data");
+            this.Show();
+            this.WindowState   = Properties.Settings.Default.IsMaximized
+                ? FormWindowState.Maximized : FormWindowState.Normal;
+            this.Opacity       = 1.0;
+            this.ShowInTaskbar = true;
+            this.BringToFront();
+            this.Activate();
+            ResetInactivityTimer();
 
             try
             {
-                Directory.CreateDirectory(userDataPath);
-            }
-            catch
-            {
-                // Non-fatal if creating folder fails.
-            }
-
-            webView.CoreWebView2InitializationCompleted += async (s, e) =>
-            {
-                if (webView.CoreWebView2 != null)
+                if (_webView != null)
                 {
-                    // JavaScript helper injected into each document to:
-                    // - reset activity on user interactions inside the webview
-                    // - reliably focus editable elements (including contenteditable editors)
-                    // - insert text and optionally trigger a send/submit action
-                    var helperScript = @"
-(function() {
-  const resetActivity = function() { window.chrome.webview.postMessage('resetActivity'); };
-  ['mousemove','mousedown','keydown','scroll','touchstart'].forEach(function(ev){ window.addEventListener(ev, resetActivity, { passive: true }); });
-
-  function isProseMirror(el) {
-    try {
-      if (!el || !el.className) return false;
-      var cn = (el.className + '').toString().toLowerCase();
-      return cn.indexOf('prosemirror') !== -1 || cn.indexOf('tiptap') !== -1;
-    } catch(e) { return false; }
-  }
-
-  function tryFocusInput(el) {
-    try {
-      el.focus();
-      if ('setSelectionRange' in el && typeof el.setSelectionRange === 'function') {
-        var len = (el.value || '').length;
-        try { el.setSelectionRange(len, len); } catch(e) {}
-      }
-      try { el.dispatchEvent(new Event('input', { bubbles: true })); } catch(e) {}
-      try { el.dispatchEvent(new Event('focus', { bubbles: true })); } catch(e) {}
-      try { el.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch(e) {}
-      return true;
-    } catch(e) { return false; }
-  }
-
-  function placeCaretAtEndContentEditable(el) {
-    try {
-      el.focus();
-      var sel = window.getSelection();
-      var range = document.createRange();
-      // place caret at the end of the element
-      range.selectNodeContents(el);
-      range.collapse(false);
-      sel.removeAllRanges();
-      sel.addRange(range);
-      try { el.dispatchEvent(new InputEvent('input', { bubbles: true })); } catch(e) {}
-      try { el.dispatchEvent(new Event('focus', { bubbles: true })); } catch(e) {}
-      try { el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true })); } catch(e) {}
-      try { el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true })); } catch(e) {}
-      try { el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); } catch(e) {}
-      try { el.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch(e) {}
-      return true;
-    } catch(e) { return false; }
-  }
-
-  window.__wrokEnsureFocus = function() {
-    try {
-      var el = document.activeElement;
-      if (!el || el === document.body || !(el.isContentEditable || 'value' in el)) {
-        el = document.querySelector('[contenteditable], textarea, input[type=text], input[type=search], [role=textbox]');
-      }
-      if (!el) {
-        // fallback: search common editable targets
-        el = document.querySelector('textarea, input[type=text], [contenteditable]');
-        if (!el) return false;
-      }
-
-      var tag = (el.tagName || '').toUpperCase();
-
-      // Prefer standard inputs and textareas.
-      if ((tag === 'INPUT' || tag === 'TEXTAREA' || 'value' in el) && tryFocusInput(el)) return true;
-
-      // Handle contenteditable editors.
-      if (el.isContentEditable && placeCaretAtEndContentEditable(el)) return true;
-
-      // Search editable descendants if host element isn't itself editable.
-      var child = el.querySelector('textarea, input[type=text], [contenteditable]');
-      if (child) {
-        if (child.isContentEditable) return placeCaretAtEndContentEditable(child);
-        return tryFocusInput(child);
-      }
-
-      // Last resort: click host and try again.
-      try { el.click(); } catch(e) {}
-      if (el.isContentEditable) return placeCaretAtEndContentEditable(el);
-
-      return false;
-    } catch(e) {
-      return false;
-    }
-  };
-
-  window.__wrokSend = function(text, pressEnter) {
-    try {
-      if (typeof text !== 'string') text = String(text || '');
-      var target = document.activeElement;
-      if (!target || target === document.body || !(target.isContentEditable || 'value' in target)) {
-        target = document.querySelector('[contenteditable], textarea, input[type=text], input[type=search], [role=textbox]');
-      }
-      if (!target) return false;
-
-      try { if (window.__wrokEnsureFocus) window.__wrokEnsureFocus(); } catch(e) {}
-      try { target.focus(); } catch(e) {}
-
-      var tag = (target.tagName || '').toUpperCase();
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || 'value' in target) {
-        var start = typeof target.selectionStart === 'number' ? target.selectionStart : (target.value || '').length;
-        var end = typeof target.selectionEnd === 'number' ? target.selectionEnd : start;
-        var val = target.value || '';
-        var prefix = (start > 0 && val.charAt(start - 1) !== ' ') ? ' ' : '';
-        var newVal = val.slice(0, start) + prefix + text + val.slice(end);
-        target.value = newVal;
-        var newPos = start + prefix.length + text.length;
-        try { target.setSelectionRange(newPos, newPos); } catch (e) {}
-        try { target.dispatchEvent(new Event('input', { bubbles: true })); } catch(e) {}
-        try { target.dispatchEvent(new Event('change', { bubbles: true })); } catch(e) {}
-        if (pressEnter) {
-          try {
-            if (target.form) {
-              if (typeof target.form.requestSubmit === 'function') target.form.requestSubmit();
-              else target.form.submit();
-            } else {
-              target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
-              target.dispatchEvent(new KeyboardEvent('keyup',   { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
-            }
-          } catch(e) {}
-        }
-        return true;
-      }
-
-      // Handle contenteditable insertion and optional submit.
-      var sel = window.getSelection();
-      var range = sel && sel.rangeCount ? sel.getRangeAt(0) : null;
-      if (!range) {
-        var prefix = (target.innerText && target.innerText.slice(-1) !== ' ') ? ' ' : '';
-        target.innerText = (target.innerText || '') + prefix + text;
-        var r2 = document.createRange();
-        r2.selectNodeContents(target);
-        r2.collapse(false);
-        sel.removeAllRanges();
-        sel.addRange(r2);
-        try { target.dispatchEvent(new InputEvent('input', { bubbles: true })); } catch (e) {}
-        if (pressEnter) {
-          var btn = document.querySelector('button[type=submit], button[aria-label*=""send"" i], button[class*=""send"" i], [role=button][aria-label*=""send"" i]');
-          if (btn) { try { btn.click(); } catch (e) {} }
-          else {
-            try { target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true })); } catch (e) {}
-            try { target.dispatchEvent(new KeyboardEvent('keyup',   { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true })); } catch (e) {}
-          }
-        }
-        return true;
-      }
-
-      var prefix = '';
-      var sc = range.startContainer;
-      var off = range.startOffset;
-      var prevChar = '';
-      if (sc.nodeType === Node.TEXT_NODE) {
-        if (off > 0) prevChar = sc.textContent.charAt(off - 1) || '';
-        else {
-          var prev = sc.previousSibling;
-          if (prev && prev.nodeType === Node.TEXT_NODE) prevChar = prev.textContent.charAt(prev.textContent.length - 1) || '';
-        }
-      } else {
-        var prevNode = range.startContainer.childNodes[off - 1];
-        if (prevNode && prevNode.nodeType === Node.TEXT_NODE) prevChar = prevNode.textContent.charAt(prevNode.textContent.length - 1) || '';
-      }
-      if (prevChar && prevChar !== ' ') prefix = ' ';
-      var node = document.createTextNode(prefix + text);
-      range.insertNode(node);
-      range.setStartAfter(node);
-      range.collapse(true);
-      sel.removeAllRanges();
-      sel.addRange(range);
-      try { target.dispatchEvent(new InputEvent('input', { bubbles: true })); } catch (e) {}
-      if (pressEnter) {
-        var btn2 = document.querySelector('button[type=submit], button[aria-label*=""send"" i], button[class*=""send"" i], [role=button][aria-label*=""send"" i]');
-        if (btn2) { try { btn2.click(); } catch (e) {} }
-        else {
-          try { range.insertNode(document.createElement('br')); } catch (e) {}
-          try { range.setStartAfter(node.nextSibling || node); } catch (e) {}
-          try { range.collapse(true); } catch (e) {}
-          try { sel.removeAllRanges(); sel.addRange(range); } catch (e) {}
-          try { target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true })); } catch (e) {}
-          try { target.dispatchEvent(new KeyboardEvent('keyup',   { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true })); } catch (e) {}
-        }
-      }
-      return true;
-    } catch (e) {
-      return false;
-    }
-  };
-})();";
-                    try
-                    {
-                        await webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(helperScript);
-                    }
-                    catch
-                    {
-                        // Ignore script injection failures — non-fatal.
-                    }
-
-                    // If the page is already loaded, execute the helper immediately to ensure availability.
-                    try
-                    {
-                        await webView.CoreWebView2.ExecuteScriptAsync(helperScript);
-                    }
-                    catch (Exception ex)
-                    {
-                        Trace.WriteLine($"Inject helperScript to current document failed: {ex}");
-                    }
-
-                    // Listen for messages from the injected script (activity resets).
-                    webView.CoreWebView2.WebMessageReceived += (sender, args) =>
-                    {
-                        if (args.TryGetWebMessageAsString() == "resetActivity")
-                        {
-                            ResetInactivityTimer();
-                        }
-                    };
-                }
-            };
-
-            try
-            {
-                var env = await CoreWebView2Environment.CreateAsync(userDataFolder: userDataPath);
-                await webView.EnsureCoreWebView2Async(env);
-            }
-            catch
-            {
-                // Non-fatal if environment creation fails.
-            }
-        }
-
-        // Perform a quick, low-overhead JS call into the registered helper functions.
-        private async Task SendTextToWebViewAsync(string text, bool pressEnter = false)
-        {
-            if (webView?.CoreWebView2 == null)
-                return;
-
-            // Ensure the WebView has focus on the UI thread.
-            try
-            {
-                if (!this.IsDisposed && this.IsHandleCreated)
-                {
-                    var tcs = new TaskCompletionSource<bool>();
-                    this.BeginInvoke((MethodInvoker)(() =>
-                    {
-                        try
-                        {
-                            webView?.Focus();
-                            SetForegroundWindow(this.Handle);
-                        }
-                        catch { }
-                        finally { tcs.TrySetResult(true); }
-                    }));
-                    await tcs.Task.ConfigureAwait(false);
+                    bool needLoad = _webView.CoreWebView2 == null ||
+                                   !(_webView.CoreWebView2.Source?.Contains(baseUrl, StringComparison.OrdinalIgnoreCase) ?? false);
+                    if (needLoad) _ = LoadUrlAsync(baseUrl, bringToFront: true);
                 }
             }
             catch { }
-
-            // Short delay to allow focus transfer to settle.
-            await Task.Delay(120).ConfigureAwait(false);
-
-            var payload = System.Text.Json.JsonSerializer.Serialize(text);
-            var callScript = $"(function(){{ try {{ if (window.__wrokEnsureFocus) window.__wrokEnsureFocus(); return window.__wrokSend ? window.__wrokSend({payload}, {(pressEnter ? "true" : "false")}) : false; }} catch(e) {{ return false; }} }})();";
-
-            string? rawResult = null;
-            try
-            {
-                rawResult = await webView.CoreWebView2.ExecuteScriptAsync(callScript).ConfigureAwait(false);
-                Trace.WriteLine(String.Format(Properties.Resources.ParsingClickScriptResultFailed0, rawResult));
-            }
-            catch (Exception ex)
-            {
-                Trace.WriteLine(String.Format(Properties.Resources.ParsingClickScriptResultFailed0, ex));
-            }
-
-            bool jsSucceeded = false;
-            try
-            {
-                if (!string.IsNullOrWhiteSpace(rawResult))
-                {
-                    var trimmed = rawResult.Trim();
-                    if (trimmed.Length >= 2 && trimmed[0] == '"' && trimmed[^1] == '"')
-                        trimmed = trimmed.Substring(1, trimmed.Length - 2);
-
-                    if (string.Equals(trimmed, "true", StringComparison.OrdinalIgnoreCase))
-                        jsSucceeded = true;
-                    else
-                    {
-                        try
-                        {
-                            var el = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(rawResult);
-                            if (el.ValueKind == System.Text.Json.JsonValueKind.True) jsSucceeded = true;
-                            else if (el.ValueKind == System.Text.Json.JsonValueKind.Object && el.TryGetProperty("ok", out var p) && p.ValueKind == System.Text.Json.JsonValueKind.True) jsSucceeded = true;
-                        }
-                        catch { }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Trace.WriteLine(String.Format(Properties.Resources.ParsingClickScriptResultFailed0, ex));
-            }
-
-            // If Enter is requested, try clicking a visible send button as a robust approach.
-            if (pressEnter)
-            {
-                // Small delay to allow UI changes (button enablement) to complete.
-                await Task.Delay(140).ConfigureAwait(false);
-
-                var clickScript = @"
-(function(){
-  try {
-    var sel = 'button[type=submit], button[aria-label*=""send"" i], button[aria-label*=""submit"" i], button[aria-label*=""absenden"" i], button[class*=""send"" i], [role=button][aria-label*=""send"" i]';
-    var btn = document.querySelector(sel);
-    if (!btn) {
-      // fallback: search visible buttons by text/label
-      var candidates = Array.from(document.querySelectorAll('button, [role=button]'));
-      for (var i=0;i<candidates.length;i++){
-        try {
-          var txt = ((candidates[i].innerText || candidates[i].getAttribute('aria-label') || candidates[i].title) + '').toLowerCase();
-          if (txt.indexOf('absend') !== -1 || txt.indexOf('send') !== -1 || txt.indexOf('submit') !== -1) { btn = candidates[i]; break; }
-        } catch(e){}
-      }
-    }
-    if (!btn) return false;
-    try {
-      var wasDisabled = !!btn.disabled;
-      if (wasDisabled) { btn.disabled = false; btn.removeAttribute('disabled'); }
-      btn.click();
-      if (wasDisabled) { setTimeout(function(){ try { btn.disabled = true; btn.setAttribute('disabled',''); } catch(e){} }, 200); }
-      return true;
-    } catch(e){ return false; }
-  } catch(e){ return false; }
-})();";
-
-                string? clickResult = null;
-                try
-                {
-                    clickResult = await webView.CoreWebView2.ExecuteScriptAsync(clickScript).ConfigureAwait(false);
-                    Trace.WriteLine(String.Format(Properties.Resources.SendTextToWebViewAsyncClickScriptResult0, clickResult));
-                }
-                catch (Exception ex)
-                {
-                    Trace.WriteLine(String.Format(Properties.Resources.ParsingClickScriptResultFailed0, ex));
-                }
-
-                bool clickSucceeded = false;
-                try
-                {
-                    if (!string.IsNullOrWhiteSpace(clickResult))
-                    {
-                        var t = clickResult.Trim();
-                        if (t.Length >= 2 && t[0] == '"' && t[^1] == '"') t = t.Substring(1, t.Length - 2);
-                        clickSucceeded = string.Equals(t, "true", StringComparison.OrdinalIgnoreCase);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Trace.WriteLine(String.Format(Properties.Resources.ParsingClickScriptResultFailed0, ex));
-                }
-
-                if (clickSucceeded)
-                {
-                    Trace.WriteLine(Properties.Resources.SendTextToWebViewAsyncClickSucceededReturning);
-                    return;
-                }
-
-                // If JS inserted text but click failed, send an actual OS Enter keystroke as fallback.
-                // Many editor frameworks ignore synthetic KeyboardEvent dispatch from JS.
-                if (jsSucceeded)
-                {
-                    Trace.WriteLine("JS inserted text but click failed — sending Enter via InputSimulator fallback.");
-                    try
-                    {
-                        // Ensure focus on UI thread.
-                        try
-                        {
-                            if (!this.IsDisposed && this.IsHandleCreated)
-                            {
-                                this.BeginInvoke((MethodInvoker)(() =>
-                                {
-                                    try
-                                    {
-                                        webView?.Focus();
-                                        SetForegroundWindow(this.Handle);
-                                    }
-                                    catch { }
-                                }));
-                            }
-                        }
-                        catch { }
-
-                        await Task.Delay(80).ConfigureAwait(false);
-
-                        _inputSimulator?.Keyboard.KeyPress(VirtualKeyCode.RETURN);
-                        Trace.WriteLine("SendTextToWebViewAsync: Enter sent via InputSimulator after JS insert.");
-                        return;
-                    }
-                    catch (Exception ex)
-                    {
-                        Trace.WriteLine($"Enter fallback via InputSimulator failed: {ex}");
-                        // Continue to full fallback below.
-                    }
-                }
-            }
-            else
-            {
-                if (jsSucceeded)
-                    return;
-            }
-
-            // Full fallback: type text via InputSimulator and optionally press Enter.
-            try
-            {
-                // Ensure focus on UI thread.
-                try
-                {
-                    if (!this.IsDisposed && this.IsHandleCreated)
-                    {
-                        this.BeginInvoke((MethodInvoker)(() =>
-                        {
-                            try
-                            {
-                                webView?.Focus();
-                                SetForegroundWindow(this.Handle);
-                            }
-                            catch { }
-                        }));
-                    }
-                }
-                catch { }
-
-                await Task.Delay(150).ConfigureAwait(false);
-
-                if (!string.IsNullOrEmpty(text))
-                {
-                    _inputSimulator?.Keyboard.TextEntry(text);
-                    await Task.Delay(40).ConfigureAwait(false);
-                }
-
-                if (pressEnter)
-                {
-                    _inputSimulator?.Keyboard.KeyPress(VirtualKeyCode.RETURN);
-                    Trace.WriteLine("SendTextToWebViewAsync: fallback Enter sent via InputSimulator.");
-                }
-            }
-            catch (Exception ex)
-            {
-                Trace.WriteLine($"Fallback via InputSimulator failed: {ex}");
-            }
         }
 
-        // Initialize the tray icon and context menu entries.
+        private void MinimizeToTray()
+        {
+            this.WindowState   = FormWindowState.Minimized;
+            this.Opacity       = 0;
+            this.ShowInTaskbar = false;
+        }
+
+        // ------------------------------------------------------------------
+        // Tray-Icon
+        // ------------------------------------------------------------------
+
         private void InitializeTrayIcon()
         {
-            trayMenu = new ContextMenuStrip();
-            trayMenu.ShowItemToolTips = true;
+            trayMenu = new ContextMenuStrip { ShowItemToolTips = true };
 
             trayMenu.Items.Add(Properties.Resources.ShowWindow, null, (s, e) => Reactivate());
             trayMenu.Items.Add(Properties.Resources.Reload, null, async (s, e) =>
             {
                 try
                 {
-                    if (webView?.CoreWebView2 != null)
-                        webView.CoreWebView2.Reload();
-                    else
-                        await LoadUrlAsync(baseUrl, bringToFront: false);
+                    if (_webView?.CoreWebView2 != null) _webView.CoreWebView2.Reload();
+                    else await LoadUrlAsync(baseUrl, bringToFront: false);
                 }
-                catch
-                {
-                    // Non-fatal.
-                }
+                catch { }
             });
-
             trayMenu.Items.Add(new ToolStripSeparator());
 
-            // Inactivity submenu.
-            var inactivityMenu = new ToolStripMenuItem(Properties.Resources.Inaktivity);
-            int current = Properties.Settings.Default.InactivityTimeoutSeconds;
-
-            foreach (var sec in inactivityOptions)
-            {
-                var item = new ToolStripMenuItem(string.Format(Properties.Resources._0Seconds, sec))
-                {
-                    Tag = sec,
-                    CheckOnClick = false,
-                    Checked = (current == sec)
-                };
-
-                if (sec == 0)
-                {
-                    item.Text = string.Format(Properties.Resources._0Deactivated, sec);
-                }
-
-                item.Click += InactivityMenuItem_Click;
-                inactivityMenu.DropDownItems.Add(item);
-            }
-
-            trayMenu.Items.Add(inactivityMenu);
-            trayMenu.Items.Add(new ToolStripSeparator());
-
-            // Macros menu
+            // ---------- Makros (oberste Ebene: meistgenutzte Funktion) ----------
             InitializeMacrosMenu();
             if (macrosMenu != null) trayMenu.Items.Add(macrosMenu);
             trayMenu.Items.Add(new ToolStripSeparator());
 
+            // ---------- Einstellungen ----------
+            var settingsMenu = new ToolStripMenuItem(Properties.Resources.Settings);
+
+            //   Einstellungen → App
+            var appMenu = new ToolStripMenuItem(Properties.Resources.MenuApp);
+
+            var inactivityMenu = new ToolStripMenuItem(Properties.Resources.Inaktivity);
+            _inactivityMenu = inactivityMenu;   // Referenz merken: liegt jetzt verschachtelt
+            int current = Properties.Settings.Default.InactivityTimeoutSeconds;
+            foreach (var sec in inactivityOptions)
+            {
+                var item = new ToolStripMenuItem(sec == 0
+                    ? string.Format(Properties.Resources._0Deactivated, sec)
+                    : string.Format(Properties.Resources._0Seconds, sec))
+                {
+                    Tag           = sec,
+                    CheckOnClick  = false,
+                    Checked       = current == sec
+                };
+                item.Click += InactivityMenuItem_Click;
+                inactivityMenu.DropDownItems.Add(item);
+            }
+            appMenu.DropDownItems.Add(inactivityMenu);
+
+            var macroIoMenu = new ToolStripMenuItem(Properties.Resources.MacrosImportExport);
+            macroIoMenu.DropDownItems.Add(Properties.Resources.MacrosExport, null, (s, e) => ExportMacros());
+            macroIoMenu.DropDownItems.Add(Properties.Resources.MacrosImport, null, (s, e) => ImportMacros());
+            appMenu.DropDownItems.Add(macroIoMenu);
+
+            var autostartItem = new ToolStripMenuItem(Properties.Resources.StartWithWindows)
+            {
+                CheckOnClick = false,
+                Checked      = AutostartManager.IsEnabled()
+            };
+            autostartItem.Click += (s, e) =>
+            {
+                bool desired = !autostartItem.Checked;
+                if (AutostartManager.SetEnabled(desired))
+                    autostartItem.Checked = AutostartManager.IsEnabled();
+            };
+            appMenu.DropDownItems.Add(autostartItem);
+
+            settingsMenu.DropDownItems.Add(appMenu);
+
+            //   Einstellungen → Grok (öffnet Groks eigene Einstellungsseite)
             foreach (var page in menuPages)
             {
-                var item = trayMenu.Items.Add(page.name);
+                var item = new ToolStripMenuItem(page.name);
                 item.Click += async (s, e) => await LoadUrlAsync(baseUrl + page.url);
+                settingsMenu.DropDownItems.Add(item);
             }
 
-            trayMenu.Items.Add(Properties.Resources.ClearCache, null, async (s, e) => await ClearCacheAsync());
-            trayMenu.Items.Add(new ToolStripSeparator());
+            trayMenu.Items.Add(settingsMenu);
 
+            // ---------- Werkzeuge ----------
+            var toolsMenu = new ToolStripMenuItem(Properties.Resources.MenuTools);
+
+            _rateLimitMenu = new ToolStripMenuItem(Properties.Resources.RateLimits);
+            _rateLimitMenu.DropDownItems.Add(new ToolStripMenuItem(Properties.Resources.RateLimitLoading) { Enabled = false });
+            var refreshItem = new ToolStripMenuItem(Properties.Resources.RateLimitRefresh);
+            refreshItem.Click += async (s, e) =>
+            {
+                if (_rateLimitManager != null)
+                    await _rateLimitManager.RefreshAsync();
+            };
+            _rateLimitMenu.DropDownItems.Add(new ToolStripSeparator());
+            _rateLimitMenu.DropDownItems.Add(refreshItem);
+            toolsMenu.DropDownItems.Add(_rateLimitMenu);
+
+            toolsMenu.DropDownItems.Add(new ToolStripSeparator());
+            toolsMenu.DropDownItems.Add(Properties.Resources.OpenImageFromClipboard, null,
+                async (s, e) => await OpenImageFromClipboardAsync());
+            toolsMenu.DropDownItems.Add(Properties.Resources.OpenLastImage, null,
+                (s, e) => OpenLastImage());
+
+            toolsMenu.DropDownItems.Add(new ToolStripSeparator());
+            toolsMenu.DropDownItems.Add(Properties.Resources.ClearCache, null,
+                async (s, e) => await ClearCacheAsync());
+
+            trayMenu.Items.Add(toolsMenu);
+
+            // ---------- Über / Beenden ----------
+            trayMenu.Items.Add(new ToolStripSeparator());
             trayMenu.Items.Add(Properties.Resources.AboutWrok, null, (s, e) =>
             {
-                using (var dlg = new AboutForm())
-                {
-                    dlg.ShowDialog(this);
-                }
+                using var dlg = new AboutForm();
+                dlg.ShowDialog(this);
             });
-
-            trayMenu.Items.Add(new ToolStripSeparator()); trayMenu.Items.Add(Properties.Resources.Exit, null, (s, e) => Application.Exit());
+            trayMenu.Items.Add(new ToolStripSeparator());
+            trayMenu.Items.Add(Properties.Resources.Exit, null, (s, e) => Application.Exit());
 
             var initialIcon = IsDarkMode() ? Properties.Resources.wrok_white : Properties.Resources.wrok_black;
-
             try
             {
                 trayIcon = new NotifyIcon
                 {
-                    Text = Properties.Resources.WrokClickToOpen,
+                    Text             = Properties.Resources.WrokClickToOpen,
                     ContextMenuStrip = trayMenu,
-                    Visible = true,
-                    Icon = (Icon)initialIcon.Clone()
+                    Visible          = true,
+                    Icon             = (System.Drawing.Icon)initialIcon.Clone()
                 };
             }
             catch
             {
-                try
+                trayIcon = new NotifyIcon
                 {
-                    trayIcon = new NotifyIcon
-                    {
-                        Text = Properties.Resources.WrokClickToOpen,
-                        ContextMenuStrip = trayMenu,
-                        Visible = true,
-                        Icon = initialIcon
-                    };
-                }
-                catch
-                {
-                    // Ignore icon creation errors.
-                }
+                    Text             = Properties.Resources.WrokClickToOpen,
+                    ContextMenuStrip = trayMenu,
+                    Visible          = true,
+                    Icon             = initialIcon
+                };
             }
+
+            try { this.Icon = (System.Drawing.Icon)initialIcon.Clone(); }
+            catch { this.Icon = initialIcon; }
+
+            if (trayIcon != null)
+                trayIcon.MouseClick += (s, e) => { if (e.Button == MouseButtons.Left) Reactivate(); };
+        }
+
+        private void EnsureTrayIconVisible()
+        {
+            try
+            {
+                if (trayIcon == null) { InitializeTrayIcon(); ApplyThemeIcon(); }
+                if (trayIcon != null && !trayIcon.Visible) trayIcon.Visible = true;
+            }
+            catch { }
+        }
+
+        private void DisposeTrayIcon()
+        {
+            if (trayIcon == null) return;
+            try { trayIcon.Visible = false; } catch { }
+            try
+            {
+                var ico = trayIcon.Icon;
+                trayIcon.Dispose();
+                trayIcon = null;
+                try { ico?.Dispose(); } catch { }
+            }
+            catch { trayIcon = null; }
+        }
+
+        private void UpdateTrayMenuInactivityState()
+        {
+            // Direkte Referenz statt Suche: das Untermenü hängt seit der Menü-
+            // Umstrukturierung unter „Einstellungen → App" und wäre auf der
+            // obersten Ebene nicht mehr auffindbar.
+            if (_inactivityMenu == null) return;
+
+            int current = Properties.Settings.Default.InactivityTimeoutSeconds;
+            foreach (var item in _inactivityMenu.DropDownItems.OfType<ToolStripMenuItem>())
+                if (item.Tag is int sec)
+                    item.Checked = sec == current;
+        }
+
+        // ------------------------------------------------------------------
+        // Makros-Menü
+        // ------------------------------------------------------------------
+
+        private void InitializeMacrosMenu()
+        {
+            macrosMenu ??= new ToolStripMenuItem(Properties.Resources.Macros);
+            RefreshMacrosMenu();
+        }
+
+        private void RefreshMacrosMenu()
+        {
+            if (macrosMenu == null) return;
+            macrosMenu.DropDownItems.Clear();
+
+            var macros = _macroManager.GetMacros();
+            for (int i = 1; i <= MacroManager.MacroCount; i++)
+            {
+                var entry      = macros[i - 1];
+                int displayNum = i == 10 ? 0 : i;
+
+                var macroItem = new ToolStripMenuItem(entry.DisplayName(displayNum)) { Tag = i - 1 };
+                string hotkeyDisplay = string.Format(Properties.Resources.Ctrl0, displayNum);
+                string preview = string.IsNullOrWhiteSpace(entry.Text)
+                    ? Properties.Resources.EmptyMacro
+                    : (entry.Text.Length > 80 ? entry.Text[..80] + "…" : entry.Text);
+                macroItem.ToolTipText = string.Format(Properties.Resources.EditWithRightClickRunWith0, hotkeyDisplay) + "\n" + preview;
+
+                macroItem.MouseDown += async (sender, me) =>
+                {
+                    try
+                    {
+                        if (sender is not ToolStripMenuItem tsi) return;
+                        int idx = tsi.Tag is int ii ? ii : -1;
+                        if (idx < 0) return;
+
+                        if (me.Button == MouseButtons.Left)
+                        {
+                            bool pressEnter = !((ModifierKeys & Keys.Shift) == Keys.Shift ||
+                                                (ModifierKeys & Keys.Alt)   == Keys.Alt);
+                            await SendMacroTextAsync(_macroManager.GetMacros()[idx].Text, pressEnter);
+                        }
+                        else if (me.Button == MouseButtons.Right)
+                        {
+                            EditMacroAndSave(idx);
+                        }
+                    }
+                    catch { }
+                };
+                macrosMenu.DropDownItems.Add(macroItem);
+            }
+        }
+
+        private void EditMacroAndSave(int index)
+        {
+            try
+            {
+                var macros  = _macroManager.GetMacros();
+                var current = index >= 0 && index < macros.Count
+                    ? macros[index] : new MacroEntry(string.Empty, string.Empty);
+
+                string name = current.Name;
+                string text = current.Text;
+                string dlgTitle = index >= 0
+                    ? string.Format(Properties.Resources.EditMacro + " #{0}", index + 1)
+                    : Properties.Resources.NewMacro;
+
+                if (!ShowEditMacroDialog(dlgTitle, ref name, ref text)) return;
+
+                _macroManager.UpdateMacro(index, new MacroEntry(name.Trim(), text.Trim()));
+                RefreshMacrosMenu();
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "EditMacroAndSave fehlgeschlagen");
+            }
+        }
+
+        private bool ShowEditMacroDialog(string title, ref string name, ref string text)
+        {
+            using var dlg = new Form
+            {
+                Text             = title,
+                FormBorderStyle  = FormBorderStyle.SizableToolWindow,
+                StartPosition    = FormStartPosition.CenterParent,
+                MinimizeBox      = false,
+                MaximizeBox      = false,
+                MinimumSize      = new Size(360, 260),
+                ClientSize       = new Size(520, 320)
+            };
+
+            var lblName = new Label { Text = Properties.Resources.MacroName + ":", AutoSize = true, Location = new Point(10, 14), Font = new Font("Segoe UI", 9F) };
+            var tbName  = new TextBox
+            {
+                Left            = lblName.Right + 6,
+                Top             = 10,
+                Width           = dlg.ClientSize.Width - lblName.Right - 16,
+                Anchor          = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                Text            = name ?? string.Empty,
+                Font            = new Font("Segoe UI", 9F),
+                PlaceholderText = string.Format(Properties.Resources.Macro0, "?")
+            };
+            int textTop = tbName.Bottom + 10;
+            var tb = new TextBox
+            {
+                Multiline    = true,
+                ScrollBars   = ScrollBars.Vertical,
+                AcceptsReturn = false,
+                AcceptsTab   = false,
+                WordWrap     = true,
+                Anchor       = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
+                Left         = 10,
+                Top          = textTop,
+                Width        = dlg.ClientSize.Width - 20,
+                Height       = dlg.ClientSize.Height - textTop - 46,
+                Text         = text ?? string.Empty,
+                Font         = new Font("Segoe UI", 10F)
+            };
+            var lblCount  = new Label { AutoSize = true, Font = new Font("Segoe UI", 8F), ForeColor = SystemColors.GrayText, Anchor = AnchorStyles.Bottom | AnchorStyles.Left, Text = $"{tb.Text.Length} Zeichen" };
+            var btnOk     = new Button { Text = Properties.Resources.OK,     DialogResult = DialogResult.OK,     Size = new Size(80, 26), Anchor = AnchorStyles.Bottom | AnchorStyles.Right };
+            var btnCancel = new Button { Text = Properties.Resources.Cancel, DialogResult = DialogResult.Cancel, Size = new Size(80, 26), Anchor = AnchorStyles.Bottom | AnchorStyles.Right };
+
+            var varTip = new ToolTip { AutoPopDelay = 15000, InitialDelay = 400, ReshowDelay = 200 };
+            varTip.SetToolTip(tb, Properties.Resources.MacroVariablesHint);
+
+            tb.TextChanged += (s, e) => lblCount.Text = $"{tb.Text.Length} Zeichen";
+
+            void LayoutBottom()
+            {
+                int y = dlg.ClientSize.Height - btnOk.Height - 8;
+                tb.Height       = y - tb.Top - 6;
+                btnCancel.Location = new Point(dlg.ClientSize.Width - btnCancel.Width - 10, y);
+                btnOk.Location     = new Point(btnCancel.Left - btnOk.Width - 6, y);
+                lblCount.Location  = new Point(10, y + (btnOk.Height - lblCount.Height) / 2);
+                tbName.Width       = dlg.ClientSize.Width - lblName.Right - 16;
+            }
+
+            dlg.Resize += (s, e) => LayoutBottom();
+            dlg.Controls.AddRange(new Control[] { lblName, tbName, tb, lblCount, btnOk, btnCancel });
+
+            tb.KeyDown += (s, e) =>
+            {
+                if (e.KeyCode == Keys.Enter && !e.Shift) { e.SuppressKeyPress = true; dlg.DialogResult = DialogResult.OK; dlg.Close(); }
+            };
+            tbName.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; tb.Focus(); } };
+
+            dlg.CancelButton = btnCancel;
+            dlg.Shown += (s, e) =>
+            {
+                LayoutBottom();
+                if (string.IsNullOrWhiteSpace(tbName.Text)) tbName.Focus();
+                else { tb.SelectionStart = tb.Text.Length; tb.Focus(); }
+            };
+            btnOk.Click += (s, e) => dlg.Close();
+
+            if (dlg.ShowDialog(this) == DialogResult.OK) { name = tbName.Text; text = tb.Text; return true; }
+            return false;
+        }
+
+        // ------------------------------------------------------------------
+        // Inaktivitäts-Timer
+        // ------------------------------------------------------------------
+
+        private void ApplyInactivitySettings()
+        {
+            if (!Properties.Settings.Default.InactivityConfigured)
+            {
+                inactivityTimeout = TimeSpan.Zero;
+                inactivityEnabled = false;
+                Properties.Settings.Default.InactivityTimeoutSeconds = 0;
+                Properties.Settings.Default.InactivityConfigured     = true;
+                Properties.Settings.Default.Save();
+            }
+            else
+            {
+                var savedSeconds  = Properties.Settings.Default.InactivityTimeoutSeconds;
+                inactivityTimeout = TimeSpan.FromSeconds(savedSeconds);
+                inactivityEnabled = savedSeconds > 0;
+            }
+        }
+
+        private void InitializeInactivityTimer()
+        {
+            if (inactivityTimer != null)
+            {
+                try { inactivityTimer.Stop(); inactivityTimer.Tick -= InactivityTimer_Tick; }
+                catch { }
+                inactivityTimer = null;
+            }
+            inactivityTimer = new System.Windows.Forms.Timer
+            {
+                Interval = inactivityTimeout.TotalMilliseconds > 0
+                    ? (int)Math.Min(1000, inactivityTimeout.TotalMilliseconds)
+                    : 60_000
+            };
+            inactivityTimer.Tick += InactivityTimer_Tick;
+            if (inactivityEnabled && inactivityTimeout.TotalMilliseconds > 0)
+            {
+                lock (_activityLock) { _lastActivity = DateTime.UtcNow; }
+                inactivityTimer.Start();
+            }
+        }
+
+        private void InactivityTimer_Tick(object? sender, EventArgs e)
+        {
+            if (!inactivityEnabled || inactivityTimeout.TotalMilliseconds <= 0) return;
+
+            TimeSpan elapsed;
+            lock (_activityLock) { elapsed = DateTime.UtcNow - _lastActivity; }
 
             try
             {
-                this.Icon = (Icon)initialIcon.Clone();
+                if (this.Visible && (this.Focused || this.Bounds.Contains(Cursor.Position)))
+                { lock (_activityLock) { _lastActivity = DateTime.UtcNow; } return; }
             }
-            catch
+            catch { }
+
+            if (elapsed >= inactivityTimeout)
             {
-                this.Icon = initialIcon;
+                try { inactivityTimer?.Stop(); } catch { }
+                MinimizeToTray();
             }
+        }
+
+        public void ResetInactivityTimer()
+        {
+            if (!inactivityEnabled || inactivityTimer == null) return;
+            lock (_activityLock) { _lastActivity = DateTime.UtcNow; }
+            try { if (!inactivityTimer.Enabled) inactivityTimer.Start(); } catch { }
+        }
+
+        private void InactivityMenuItem_Click(object? sender, EventArgs e)
+        {
+            if (sender is not ToolStripMenuItem clicked) return;
+            int seconds = Convert.ToInt32(clicked.Tag ?? 0);
+
+            Properties.Settings.Default.InactivityTimeoutSeconds = seconds;
+            Properties.Settings.Default.Save();
+
+            inactivityTimeout = TimeSpan.FromSeconds(seconds);
+            inactivityEnabled = seconds > 0;
+            if (inactivityEnabled) { lock (_activityLock) { _lastActivity = DateTime.UtcNow; } inactivityTimer?.Start(); }
+            else try { inactivityTimer?.Stop(); } catch { }
+
+            if (clicked.OwnerItem is ToolStripMenuItem parent)
+                foreach (var item in parent.DropDownItems.OfType<ToolStripMenuItem>())
+                    item.Checked = item == clicked;
+        }
+
+        // ------------------------------------------------------------------
+        // Thema / Dark Mode
+        // ------------------------------------------------------------------
+
+        public static bool IsDarkMode()
+        {
+            try
+            {
+                var key   = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
+                var value = key?.GetValue("AppsUseLightTheme");
+                return value is int i && i == 0;
+            }
+            catch (Exception ex) { Trace.WriteLine($"IsDarkMode fallback: {ex}"); return true; }
+        }
+
+        private void RefreshTheme()
+        {
+            try { bool dark = IsDarkMode(); ApplyThemeIcon(); SetTitleBarDarkMode(dark); }
+            catch { }
+        }
+
+        private void ApplyThemeIcon()
+        {
+            var sourceIcon = IsDarkMode() ? Properties.Resources.wrok_white : Properties.Resources.wrok_black;
+            System.Drawing.Icon newIcon;
+            try { newIcon = (System.Drawing.Icon)sourceIcon.Clone(); } catch { newIcon = sourceIcon; }
 
             if (trayIcon != null)
             {
-                trayIcon.MouseClick += (s, e) =>
+                try
                 {
-                    if (e.Button == MouseButtons.Left)
-                        Reactivate();
-                };
-            }
-
-            UpdateTrayMenuInactivityState();
-        }
-
-        // Show the window and ensure content is loaded if necessary.
-        private void Reactivate()
-        {
-            LoadWindowSettings();
-
-            // If using center screen positioning (no saved geometry), center now.
-            if (this.StartPosition == FormStartPosition.CenterScreen)
-            {
-                try { this.CenterToScreen(); } catch { }
-            }
-
-            this.Show();
-            this.WindowState = Properties.Settings.Default.IsMaximized ? FormWindowState.Maximized : FormWindowState.Normal;
-            this.Opacity = 1.0;
-            this.ShowInTaskbar = true;
-            this.BringToFront();
-            this.Activate();
-            ResetInactivityTimer();
-
-            try
-            {
-                if (webView != null)
-                {
-                    bool needLoad = false;
-
-                    if (webView.CoreWebView2 == null)
-                    {
-                        needLoad = true;
-                    }
-                    else
-                    {
-                        try
-                        {
-                            var src = webView.CoreWebView2.Source?.ToString() ?? string.Empty;
-                            if (!src.Contains(baseUrl, StringComparison.OrdinalIgnoreCase))
-                                needLoad = true;
-                        }
-                        catch
-                        {
-                            needLoad = true;
-                        }
-                    }
-
-                    if (needLoad)
-                        _ = LoadUrlAsync(baseUrl, bringToFront: true);
+                    var old = trayIcon.Icon;
+                    trayIcon.Visible = false;
+                    trayIcon.Icon    = newIcon;
+                    trayIcon.Visible = true;
+                    if (old != null && !ReferenceEquals(old, sourceIcon)) try { old.Dispose(); } catch { }
                 }
+                catch { try { trayIcon.Icon = newIcon; } catch { } }
             }
-            catch
-            {
-                // Ignore errors during reactivation.
-            }
+            try { this.Icon = (System.Drawing.Icon)newIcon.Clone(); } catch { this.Icon = newIcon; }
         }
 
-        // Load a URL and optionally bring the window to the front.
-        private async Task LoadUrlAsync(string url, bool bringToFront = true)
+        private void SetTitleBarDarkMode(bool enabled)
         {
             try
             {
-                if (webView == null)
-                    return;
+                int val = enabled ? 1 : 0;
+                int hr  = DwmSetWindowAttribute(this.Handle, DWMWA_USE_IMMERSIVE_DARK_MODE, ref val, Marshal.SizeOf<int>());
+                if (hr != 0)
+                    try { DwmSetWindowAttribute(this.Handle, DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1, ref val, Marshal.SizeOf<int>()); } catch { }
+            }
+            catch { }
+        }
 
-                if (webView.CoreWebView2 == null)
+        private void SystemEvents_UserPreferenceChanged(object? sender, UserPreferenceChangedEventArgs e)
+        {
+            if (e.Category == UserPreferenceCategory.Color ||
+                e.Category == UserPreferenceCategory.General ||
+                e.Category == UserPreferenceCategory.VisualStyle)
+                try { if (!this.IsDisposed) this.BeginInvoke((MethodInvoker)RefreshTheme); } catch { }
+        }
+
+        // ------------------------------------------------------------------
+        // Rate Limits
+        // ------------------------------------------------------------------
+
+        private async Task InitializeRateLimitManagerAsync()
+        {
+            // Kurz warten bis WebView initialisiert ist
+            await Task.Delay(3000);
+            if (_webViewManager == null) return;
+
+            _rateLimitManager = new RateLimitManager(_webViewManager, UpdateRateLimitMenu);
+            _rateLimitManager.StartAutoRefresh();
+            await _rateLimitManager.RefreshAsync();
+        }
+
+        private void UpdateRateLimitMenu()
+        {
+            if (_rateLimitMenu == null) return;
+            if (this.IsDisposed || !this.IsHandleCreated) return;
+
+            try
+            {
+                this.BeginInvoke((System.Windows.Forms.MethodInvoker)(() =>
                 {
                     try
                     {
-                        await webView.EnsureCoreWebView2Async(null);
+                        var result = _rateLimitManager?.LastResult;
+
+                        // Alle Items außer Separator und Refresh-Button entfernen
+                        var toRemove = _rateLimitMenu.DropDownItems
+                            .OfType<ToolStripItem>()
+                            .Where(i => i is not ToolStripSeparator &&
+                                        i.Text != Properties.Resources.RateLimitRefresh)
+                            .ToList();
+                        foreach (var item in toRemove)
+                            _rateLimitMenu.DropDownItems.Remove(item);
+
+                        if (result == null)
+                        {
+                            _rateLimitMenu.DropDownItems.Insert(0,
+                                new ToolStripMenuItem(Properties.Resources.RateLimitLoading) { Enabled = false });
+                            return;
+                        }
+
+                        if (result.FetchError != null)
+                        {
+                            _rateLimitMenu.DropDownItems.Insert(0,
+                                new ToolStripMenuItem(
+                                    string.Format(Properties.Resources.RateLimitError0, result.FetchError))
+                                { Enabled = false });
+                            return;
+                        }
+
+                        int insertAt = 0;
+
+                        // Grok 3
+                        insertAt = InsertRateLimitItems(_rateLimitMenu, insertAt,
+                            "Grok 3", result.Grok3);
+
+                        // Grok 4 Heavy
+                        insertAt = InsertRateLimitItems(_rateLimitMenu, insertAt,
+                            "Grok 4 Heavy", result.Grok4Heavy);
+
+                        // Zeitstempel
+                        var tsItem = new ToolStripMenuItem(
+                            string.Format(Properties.Resources.RateLimitUpdatedAt0,
+                                result.FetchedAt.ToString("HH:mm:ss")))
+                        { Enabled = false, Font = new Font("Segoe UI", 7.5f) };
+                        _rateLimitMenu.DropDownItems.Insert(insertAt, tsItem);
                     }
-                    catch
+                    catch (Exception ex)
                     {
+                        Trace.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [MainForm] UpdateRateLimitMenu failed: {ex}");
                     }
-                }
+                }));
+            }
+            catch { }
+        }
 
-                var core = webView.CoreWebView2;
+        private static int InsertRateLimitItems(ToolStripMenuItem menu, int insertAt, string label, RateLimitEntry? entry)
+        {
+            if (entry == null) return insertAt;
 
-                if (core != null)
+            string text;
+            if (entry.IsError)
+            {
+                text = entry.Error == "UNAUTHORIZED"
+                    ? string.Format(Properties.Resources.RateLimitModel0NotLoggedIn, label)
+                    : string.Format(Properties.Resources.RateLimitModel0Error1, label, entry.Error);
+            }
+            else if (entry.IsUnknown)
+            {
+                text = string.Format(Properties.Resources.RateLimitModel0Unknown, label);
+            }
+            else
+            {
+                text = string.Format(Properties.Resources.RateLimitModel0Remaining1Of2,
+                    label, entry.RemainingQueries, entry.TotalQueries);
+            }
+
+            var item = new ToolStripMenuItem(text) { Enabled = false };
+
+            if (!entry.IsError && !entry.IsUnknown && !string.IsNullOrEmpty(entry.ResetInfo))
+            {
+                var resetItem = new ToolStripMenuItem($"  {entry.ResetInfo}") { Enabled = false,
+                    Font = new Font("Segoe UI", 7.5f) };
+                menu.DropDownItems.Insert(insertAt++, item);
+                menu.DropDownItems.Insert(insertAt++, resetItem);
+            }
+            else
+            {
+                menu.DropDownItems.Insert(insertAt++, item);
+            }
+
+            return insertAt;
+        }
+
+        // ------------------------------------------------------------------
+        // Makros Import / Export
+        // ------------------------------------------------------------------
+
+        private void ExportMacros()
+        {
+            using var dlg = new SaveFileDialog
+            {
+                Title            = "Makros exportieren",
+                Filter           = "JSON-Datei (*.json)|*.json",
+                FileName         = $"Wrok-Makros_{DateTime.Now:yyyyMMdd}.json",
+                DefaultExt       = "json",
+                OverwritePrompt  = true
+            };
+            if (dlg.ShowDialog(this) != DialogResult.OK) return;
+
+            bool ok = _macroManager.Export(dlg.FileName);
+            if (ok)
+                MessageBox.Show($"Makros erfolgreich exportiert nach:\n{dlg.FileName}",
+                    "Export erfolgreich", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            else
+                MessageBox.Show("Export fehlgeschlagen. Bitte Pfad und Berechtigungen prüfen.",
+                    "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+
+        private void ImportMacros()
+        {
+            using var dlg = new OpenFileDialog
+            {
+                Title  = "Makros importieren",
+                Filter = "JSON-Datei (*.json)|*.json",
+            };
+            if (dlg.ShowDialog(this) != DialogResult.OK) return;
+
+            var confirm = MessageBox.Show(
+                "Die aktuellen Makros werden durch die importierten ersetzt.\nFortfahren?",
+                "Makros importieren", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            if (confirm != DialogResult.Yes) return;
+
+            bool ok = _macroManager.Import(dlg.FileName);
+            if (ok)
+            {
+                RefreshMacrosMenu();
+                MessageBox.Show("Makros erfolgreich importiert.",
+                    "Import erfolgreich", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            else
+                MessageBox.Show("Import fehlgeschlagen. Bitte prüfen ob die Datei ein gültiges Wrok-Makro-Format hat.",
+                    "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+
+        // ------------------------------------------------------------------
+        // Cache leeren
+        // ------------------------------------------------------------------
+
+        private enum ClearCacheChoice { Cancel, CacheOnly, All }
+
+        private async Task ClearCacheAsync()
+        {
+            try
+            {
+                if (_webView?.CoreWebView2 == null)
+                { MessageBox.Show(Properties.Resources.WebView2IsNotInitializedYet, Properties.Resources.Error, MessageBoxButtons.OK, MessageBoxIcon.Error); return; }
+
+                var choice = ShowClearCacheChoiceDialog();
+                if (choice == ClearCacheChoice.Cancel) return;
+
+                if (choice == ClearCacheChoice.CacheOnly)
                 {
-                    bool online = await HasInternetConnectionAsync(attempts: 3, timeoutSeconds: 5);
-
-                    if (online)
-                    {
-                        try
-                        {
-                            core.Navigate(url);
-                        }
-                        catch (Exception ex)
-                        {
-                            Log(ex, "core.Navigate failed");
-                            await ShowNoNetImageAsync();
-                        }
-                    }
-                    else
-                    {
-                        await ShowNoNetImageAsync();
-                    }
+                    // Nur Cache (Bilder, Skripte, …) – Cookies und Login bleiben erhalten.
+                    await _webView.CoreWebView2.Profile.ClearBrowsingDataAsync(
+                        CoreWebView2BrowsingDataKinds.DiskCache |
+                        CoreWebView2BrowsingDataKinds.CacheStorage);
+                    MessageBox.Show(
+                        Properties.Resources.PicturesScriptsAndOtherDataDeletedNYouAreStillLoggedIn,
+                        Properties.Resources.CacheCleared, MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 else
                 {
-                    await ShowNoNetImageAsync();
+                    // Alles (inkl. Cookies, Login-Daten, lokalem Speicher).
+                    await _webView.CoreWebView2.Profile.ClearBrowsingDataAsync();
+                    MessageBox.Show(
+                        Properties.Resources.CookiesLoginDataAndSettingsDeletedNYouAreLoggedOut,
+                        Properties.Resources.AllDataDeleted, MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                try
-                {
-                    await ShowNoNetImageAsync();
-                }
-                catch
-                {
-                }
+                Trace.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [MainForm] ClearCacheAsync fehlgeschlagen: {ex}");
+                MessageBox.Show(string.Format(Properties.Resources.ErrorWhileDeletingCache + "\n{0}", ex.Message), Properties.Resources.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-
-            if (!bringToFront)
-                return;
-
-            this.Show();
-            this.WindowState = Properties.Settings.Default.IsMaximized ? FormWindowState.Maximized : FormWindowState.Normal;
-            this.Opacity = 1.0;
-            this.ShowInTaskbar = true;
-            this.BringToFront();
-            this.Activate();
-            ResetInactivityTimer();
         }
 
-        // Check internet connectivity by probing known URLs.
-        private async Task<bool> HasInternetConnectionAsync(int attempts = 2, int timeoutSeconds = 4)
+        /// <summary>
+        /// Zeigt einen kleinen Dialog mit drei Schaltflächen
+        /// (Nur Cache / Alles löschen / Abbrechen) und gibt die Auswahl zurück.
+        /// </summary>
+        private ClearCacheChoice ShowClearCacheChoiceDialog()
         {
-            try
+            using var dlg = new Form
             {
-                if (!System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable())
-                    return false;
-            }
-            catch
-            {
-                // If the quick check fails, proceed with the network requests anyway.
-            }
-
-            var urls = new[]
-            {
-                "https://clients3.google.com/generate_204",
-                "http://detectportal.firefox.com/success.txt",
-                "https://www.bing.com/"
+                Text            = Properties.Resources.ClearBrowsingData,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                StartPosition   = FormStartPosition.CenterParent,
+                MinimizeBox     = false,
+                MaximizeBox     = false,
+                ShowInTaskbar   = false,
+                ClientSize      = new Size(420, 120)
             };
 
-            var client = _httpClient;
-
-            for (int attempt = 0; attempt < Math.Max(1, attempts); attempt++)
+            var lbl = new Label
             {
-                foreach (var u in urls)
-                {
-                    try
-                    {
-                        using var req = new HttpRequestMessage(HttpMethod.Head, u);
-                        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
+                Text     = Properties.Resources.ChooseWhatToBeDeleted,
+                AutoSize = false,
+                Left     = 16,
+                Top      = 16,
+                Width    = dlg.ClientSize.Width - 32,
+                Height   = 40,
+                Font     = new Font("Segoe UI", 9.5F)
+            };
 
-                        try
-                        {
-                            using var resp = await client.SendAsync(
-                                req,
-                                HttpCompletionOption.ResponseHeadersRead,
-                                cts.Token);
+            var btnCacheOnly = new Button { Text = Properties.Resources.ClearCacheOnly, DialogResult = DialogResult.Yes,    Size = new Size(120, 30), Top = 70 };
+            var btnAll       = new Button { Text = Properties.Resources.DeleteAll,      DialogResult = DialogResult.No,     Size = new Size(120, 30), Top = 70 };
+            var btnCancel    = new Button { Text = Properties.Resources.Cancel,         DialogResult = DialogResult.Cancel, Size = new Size(90,  30), Top = 70 };
 
-                            if (resp.IsSuccessStatusCode ||
-                                resp.StatusCode == System.Net.HttpStatusCode.NoContent)
-                                return true;
-                        }
-                        catch
-                        {
-                            using var req2 = new HttpRequestMessage(HttpMethod.Get, u);
-                            using var resp2 = await client.SendAsync(
-                                req2,
-                                HttpCompletionOption.ResponseHeadersRead,
-                                cts.Token);
+            btnCacheOnly.Left = 16;
+            btnAll.Left       = btnCacheOnly.Right + 8;
+            btnCancel.Left    = dlg.ClientSize.Width - btnCancel.Width - 16;
 
-                            if (resp2.IsSuccessStatusCode ||
-                                resp2.StatusCode == System.Net.HttpStatusCode.NoContent)
-                                return true;
-                        }
-                    }
-                    catch
-                    {
-                        // Ignore and try next URL.
-                    }
-                }
+            dlg.Controls.AddRange(new Control[] { lbl, btnCacheOnly, btnAll, btnCancel });
+            dlg.AcceptButton = btnCacheOnly;
+            dlg.CancelButton = btnCancel;
 
-                if (attempt + 1 < attempts)
-                    await Task.Delay(300 + attempt * 200);
-            }
-
-            return false;
+            return dlg.ShowDialog(this) switch
+            {
+                DialogResult.Yes => ClearCacheChoice.CacheOnly,
+                DialogResult.No  => ClearCacheChoice.All,
+                _                => ClearCacheChoice.Cancel
+            };
         }
+
+        // ------------------------------------------------------------------
+        // Form-Events
+        // ------------------------------------------------------------------
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             if (e.CloseReason == CloseReason.UserClosing)
             {
                 SaveWindowSettings();
-                e.Cancel = true;
-                this.WindowState = FormWindowState.Minimized;
-                this.Opacity = 0;
+                e.Cancel           = true;
+                this.WindowState   = FormWindowState.Minimized;
+                this.Opacity       = 0;
                 this.ShowInTaskbar = false;
             }
-
             base.OnFormClosing(e);
         }
 
@@ -1105,91 +1028,58 @@ namespace Wrok
             SystemEvents.UserPreferenceChanged += SystemEvents_UserPreferenceChanged;
             base.OnHandleCreated(e);
 
-            _inputSimulator = new InputSimulator();
+            _webViewManager?.CreateInputSimulator();
 
-            try
+            bool ok = RegisterHotKey(this.Handle, HOTKEY_ID, MOD_CONTROL, (uint)Keys.Space);
+            if (!ok) Debug.WriteLine($"RegisterHotKey fehlgeschlagen id={HOTKEY_ID} err={Marshal.GetLastWin32Error()}");
+
+            // Strg+Shift+P → Bild aus Zwischenablage öffnen
+            ok = RegisterHotKey(this.Handle, HOTKEY_ID_IMAGE, MOD_CONTROL | MOD_SHIFT, (uint)Keys.P);
+            if (!ok) Trace.WriteLine($"RegisterHotKey fehlgeschlagen id={HOTKEY_ID_IMAGE} (Strg+Shift+P) err={Marshal.GetLastWin32Error()}");
+
+            // Makro 0 (intern) → Strg+1, Makro 1 → Strg+2, ..., Makro 8 → Strg+9, Makro 9 → Strg+0
+            var macroKeys = new uint[]
             {
-                bool ok;
-
-                // Register global hotkeys. Minimize/toggle: Ctrl+Space
-                ok = RegisterHotKey(this.Handle, HOTKEY_ID, MOD_CONTROL, (uint)Keys.Space);
-                if (!ok) Debug.WriteLine($"RegisterHotKey failed id={HOTKEY_ID} err={Marshal.GetLastWin32Error()}");
-
-                ok = RegisterHotKey(this.Handle, HOTKEY_MACRO_1, MOD_CONTROL, (uint)Keys.D1);
-                if (!ok) Debug.WriteLine($"RegisterHotKey failed id={HOTKEY_MACRO_1} err={Marshal.GetLastWin32Error()}");
-
-                ok = RegisterHotKey(this.Handle, HOTKEY_MACRO_2, MOD_CONTROL, (uint)Keys.D2);
-                if (!ok) Debug.WriteLine($"RegisterHotKey failed id={HOTKEY_MACRO_2} err={Marshal.GetLastWin32Error()}");
-
-                ok = RegisterHotKey(this.Handle, HOTKEY_MACRO_3, MOD_CONTROL, (uint)Keys.D3);
-                if (!ok) Debug.WriteLine($"RegisterHotKey failed id={HOTKEY_MACRO_3} err={Marshal.GetLastWin32Error()}");
-
-                ok = RegisterHotKey(this.Handle, HOTKEY_MACRO_4, MOD_CONTROL, (uint)Keys.D4);
-                if (!ok) Debug.WriteLine($"RegisterHotKey failed id={HOTKEY_MACRO_4} err={Marshal.GetLastWin32Error()}");
-
-                ok = RegisterHotKey(this.Handle, HOTKEY_MACRO_5, MOD_CONTROL, (uint)Keys.D5);
-                if (!ok) Debug.WriteLine($"RegisterHotKey failed id={HOTKEY_MACRO_5} err={Marshal.GetLastWin32Error()}");
-
-                // NOTE: dynamic Ctrl+^ registration is intentionally skipped to avoid layout/OEM issues.
-            }
-            catch (Exception ex)
+                (uint)Keys.D1, (uint)Keys.D2, (uint)Keys.D3, (uint)Keys.D4, (uint)Keys.D5,
+                (uint)Keys.D6, (uint)Keys.D7, (uint)Keys.D8, (uint)Keys.D9, (uint)Keys.D0
+            };
+            for (int i = 0; i < MacroManager.MacroCount; i++)
             {
-                Debug.WriteLine(String.Format(Properties.Resources.ParsingClickScriptResultFailed0, ex));
+                ok = RegisterHotKey(this.Handle, MacroManager.HotkeyBase + i, MOD_CONTROL, macroKeys[i]);
+                if (!ok) Debug.WriteLine($"RegisterHotKey fehlgeschlagen macro={i + 1} err={Marshal.GetLastWin32Error()}");
             }
 
             RefreshTheme();
             EnsureTrayIconVisible();
         }
+
         protected override void OnHandleDestroyed(EventArgs e)
         {
-            // Remove message filter if present.
+            _rateLimitManager?.StopAutoRefresh();
             if (activityFilter != null)
             {
-                try
-                {
-                    Application.RemoveMessageFilter(activityFilter);
-                }
-                catch
-                {
-                    // Ignore.
-                }
-
+                try { Application.RemoveMessageFilter(activityFilter); } catch { }
                 activityFilter = null;
             }
+            try { UnregisterHotKey(this.Handle, HOTKEY_ID); } catch { }
+            try { UnregisterHotKey(this.Handle, HOTKEY_ID_IMAGE); } catch { }
+            for (int i = 0; i < MacroManager.MacroCount; i++)
+                try { UnregisterHotKey(this.Handle, MacroManager.HotkeyBase + i); } catch { }
 
-            try
-            {
-                UnregisterHotKey(this.Handle, HOTKEY_ID);
-            }
-            catch
-            {
-            }
-
-            // Unregister macro hotkeys.
-            try { UnregisterHotKey(this.Handle, HOTKEY_MACRO_1); } catch { }
-            try { UnregisterHotKey(this.Handle, HOTKEY_MACRO_2); } catch { }
-            try { UnregisterHotKey(this.Handle, HOTKEY_MACRO_3); } catch { }
-            try { UnregisterHotKey(this.Handle, HOTKEY_MACRO_4); } catch { }
-            try { UnregisterHotKey(this.Handle, HOTKEY_MACRO_5); } catch { }
-
-            _inputSimulator = null;
-
+            _webViewManager?.DisposeInputSimulator();
             SystemEvents.UserPreferenceChanged -= SystemEvents_UserPreferenceChanged;
-
-            if (!this.RecreatingHandle)
-            {
-                DisposeTrayIcon();
-            }
-
+            if (!this.RecreatingHandle) DisposeTrayIcon();
             base.OnHandleDestroyed(e);
         }
 
-        // Message constants used for theme/settings handling.
-        private const int WM_THEMECHANGED = 0x031A;
-        private const int WM_SETTINGCHANGE = 0x001A;
-        private const int WM_SHOWWINDOW = 0x0018;
+        protected override void OnShown(EventArgs e)
+        {
+            base.OnShown(e);
+            var s = Properties.Settings.Default;
+            if (s.WindowWidth <= 0 || s.WindowHeight <= 0)
+                try { this.CenterToScreen(); } catch { }
+        }
 
-        // Handle window messages; start macro execution on UI thread to allow focus changes.
         protected override void WndProc(ref Message m)
         {
             switch (m.Msg)
@@ -1198,39 +1088,30 @@ namespace Wrok
                     try
                     {
                         int id = m.WParam.ToInt32();
-
                         if (id == HOTKEY_ID)
                         {
-                            // Toggle: if minimized, reactivate; otherwise minimize to tray.
-                            this.BeginInvoke((MethodInvoker)(() =>
+                            this.BeginInvoke((System.Windows.Forms.MethodInvoker)(() =>
                             {
                                 try
                                 {
                                     if (this.WindowState == FormWindowState.Minimized || this.Opacity == 0.0)
-                                    {
                                         Reactivate();
-                                    }
                                     else
-                                    {
                                         MinimizeToTray();
-                                    }
                                 }
-                                catch (Exception ex)
-                                {
-                                    Trace.WriteLine($"Hotkey toggle failed: {ex}");
-                                }
+                                catch (Exception ex) { Trace.WriteLine(String.Format(Wrok.Properties.Resources.HotkeyToggleFailed, ex)); }
                             }));
+                        }
+                        else if (id == HOTKEY_ID_IMAGE)
+                        {
+                            this.BeginInvoke((System.Windows.Forms.MethodInvoker)(() => _ = OpenImageFromClipboardAsync()));
                         }
                         else
                         {
-                            // Macro hotkey pressed — run asynchronously on UI thread.
-                            this.BeginInvoke((MethodInvoker)(() => _ = PerformMacroAsync(id)));
+                            this.BeginInvoke((System.Windows.Forms.MethodInvoker)(() => _ = PerformMacroAsync(id)));
                         }
                     }
-                    catch
-                    {
-                        // Ignore.
-                    }
+                    catch { }
                     break;
 
                 case WM_THEMECHANGED:
@@ -1241,816 +1122,363 @@ namespace Wrok
                 case WM_SHOWWINDOW:
                     try
                     {
-                        this.BeginInvoke((MethodInvoker)(() =>
+                        this.BeginInvoke((System.Windows.Forms.MethodInvoker)(() =>
                         {
-                            if (this.WindowState == FormWindowState.Minimized)
-                                this.WindowState = FormWindowState.Normal;
-
-                            this.Show();
-                            this.BringToFront();
-                            this.Activate();
+                            if (this.WindowState == FormWindowState.Minimized) this.WindowState = FormWindowState.Normal;
+                            this.Show(); this.BringToFront(); this.Activate();
                         }));
                     }
                     catch { }
                     break;
             }
-
             base.WndProc(ref m);
         }
 
-        private void MainForm_Load(object? sender, EventArgs e)
+        // ------------------------------------------------------------------
+        // Makro senden (zentral: Variablen + {input}-Auflösung)
+        // ------------------------------------------------------------------
+
+        // {input} oder {input:Eigene Frage}
+        private static readonly System.Text.RegularExpressions.Regex InputTokenRegex =
+            new(@"\{input(?::([^}]*))?\}",
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase |
+                System.Text.RegularExpressions.RegexOptions.Compiled);
+
+        /// <summary>
+        /// Löst Variablen und {input}-Platzhalter auf und sendet den Text ins WebView.
+        /// Bricht ab (sendet nichts), wenn der Nutzer eine {input}-Abfrage abbricht.
+        /// </summary>
+        private async Task SendMacroTextAsync(string rawText, bool pressEnter)
         {
+            if (_webViewManager == null || string.IsNullOrWhiteSpace(rawText)) return;
+
+            string text = MacroManager.ExpandVariables(rawText);
+            if (!TryResolveInputs(ref text)) return; // Nutzer hat abgebrochen
+
+            await _webViewManager.SendTextAsync(text, pressEnter);
         }
 
-        // Inactivity timer initialization.
-        private void InitializeInactivityTimer()
+        /// <summary>
+        /// Ersetzt alle {input}/{input:Label}-Platzhalter durch Nutzereingaben.
+        /// Gleiche Tokens werden nur einmal abgefragt. Gibt false zurück, wenn der
+        /// Nutzer eine Abfrage abbricht (dann soll nichts gesendet werden).
+        /// </summary>
+        private bool TryResolveInputs(ref string text)
         {
-            if (inactivityTimer != null)
+            var matches = InputTokenRegex.Matches(text);
+            if (matches.Count == 0) return true;
+
+            var answers = new Dictionary<string, string>(StringComparer.Ordinal);
+            foreach (System.Text.RegularExpressions.Match m in matches)
             {
-                try
-                {
-                    inactivityTimer.Stop();
-                    inactivityTimer.Tick -= InactivityTimer_Tick;
-                }
-                catch
-                {
-                }
-                inactivityTimer = null;
+                string token = m.Value;
+                if (answers.ContainsKey(token)) continue;
+
+                string label = m.Groups[1].Success && !string.IsNullOrWhiteSpace(m.Groups[1].Value)
+                    ? m.Groups[1].Value.Trim()
+                    : Properties.Resources.MacroInputPrompt;
+
+                if (!ShowInputDialog(label, out string value)) return false;
+                answers[token] = value;
             }
 
-            inactivityTimer = new System.Windows.Forms.Timer();
-
-            // Use a short interval (up to 1s) to reduce race conditions when activity happens near timeout.
-            var intervalMs = inactivityTimeout.TotalMilliseconds > 0
-                ? (int)Math.Min(1000, inactivityTimeout.TotalMilliseconds)
-                : 60_000;
-
-            inactivityTimer.Interval = intervalMs;
-            inactivityTimer.Tick += InactivityTimer_Tick;
-
-            if (inactivityEnabled && inactivityTimeout.TotalMilliseconds > 0)
-            {
-                lock (_activityLock)
-                {
-                    _lastActivity = DateTime.UtcNow;
-                }
-                inactivityTimer.Start();
-            }
-            else
-            {
-                inactivityTimer.Stop();
-            }
+            foreach (var kv in answers)
+                text = text.Replace(kv.Key, kv.Value);
+            return true;
         }
 
-        private void InactivityTimer_Tick(object? sender, EventArgs e)
+        /// <summary>Kleiner einzeiliger Eingabedialog. Enter = OK, Esc = Abbrechen.</summary>
+        private bool ShowInputDialog(string prompt, out string value)
         {
-            if (inactivityTimer == null)
-                return;
+            value = string.Empty;
 
-            if (!inactivityEnabled)
-                return;
+            // Wird das Makro per globalem Hotkey ausgelöst, ist Wrok evtl. minimiert
+            // oder im Hintergrund. Dann muss der Dialog selbst nach vorn kommen –
+            // sonst erscheint er hinter dem aktiven Fenster und bekommt keinen Fokus.
+            bool ownerUsable = this.Visible && this.WindowState != FormWindowState.Minimized;
 
-            if (inactivityTimeout.TotalMilliseconds <= 0)
-                return;
-
-            TimeSpan elapsed;
-            lock (_activityLock)
+            using var dlg = new Form
             {
-                elapsed = DateTime.UtcNow - _lastActivity;
-            }
-
-            // If the window is visible and focused or mouse is over it, treat as activity to avoid unwanted minimization.
-            try
-            {
-                if (this.Visible && (this.Focused || this.Bounds.Contains(Cursor.Position)))
-                {
-                    lock (_activityLock) { _lastActivity = DateTime.UtcNow; }
-                    return;
-                }
-            }
-            catch
-            {
-                // Ignore defensively.
-            }
-
-            if (elapsed >= inactivityTimeout)
-            {
-                try { inactivityTimer.Stop(); } catch { }
-                MinimizeToTray();
-            }
-            // sonst: nichts tun, nächster Tick überprüft erneut
-        }
-
-        private void ResetInactivityTimer()
-        {
-            if (!inactivityEnabled)
-                return;
-
-            if (inactivityTimer == null)
-                return;
-
-            lock (_activityLock)
-            {
-                _lastActivity = DateTime.UtcNow;
-            }
-
-            try
-            {
-                // Sicherstellen, dass der Timer läuft (kein Stop/Start nötig)
-                if (!inactivityTimer.Enabled)
-                    inactivityTimer.Start();
-            }
-            catch
-            {
-            }
-        }
-
-        public void SetInactivityTimeout(TimeSpan timeout)
-        {
-            inactivityTimeout = timeout;
-
-            if (inactivityTimer != null)
-            {
-                inactivityTimer.Interval = (int)Math.Min(
-                    Math.Max(1, inactivityTimeout.TotalMilliseconds),
-                    int.MaxValue);
-
-                lock (_activityLock)
-                {
-                    _lastActivity = DateTime.UtcNow;
-                }
-
-                ResetInactivityTimer();
-            }
-        }
-
-        public void EnableInactivityTimer(bool enabled)
-        {
-            inactivityEnabled = enabled;
-
-            if (inactivityTimer == null)
-                return;
-
-            if (enabled)
-            {
-                lock (_activityLock)
-                {
-                    _lastActivity = DateTime.UtcNow;
-                }
-
-                inactivityTimer.Start();
-            }
-            else
-            {
-                try
-                {
-                    inactivityTimer.Stop();
-                }
-                catch
-                {
-                }
-            }
-        }
-
-        // Nachrichtenschleife zum Zurücksetzen des Inaktivität Timers
-        private class ActivityMessageFilter : IMessageFilter
-        {
-            private readonly WeakReference<MainForm> _formRef;
-
-            public ActivityMessageFilter(MainForm form)
-            {
-                _formRef = new WeakReference<MainForm>(form);
-            }
-
-            public bool PreFilterMessage(ref Message m)
-            {
-                const int WM_MOUSEMOVE = 0x0200;
-                const int WM_LBUTTONDOWN = 0x0201;
-                const int WM_RBUTTONDOWN = 0x0204;
-                const int WM_MBUTTONDOWN = 0x0207;
-                const int WM_MOUSEWHEEL = 0x020A;
-                const int WM_KEYDOWN = 0x0100;
-                const int WM_SYSKEYDOWN = 0x0104;
-
-                if (m.Msg == WM_MOUSEMOVE ||
-                    m.Msg == WM_LBUTTONDOWN ||
-                    m.Msg == WM_RBUTTONDOWN ||
-                    m.Msg == WM_MBUTTONDOWN ||
-                    m.Msg == WM_MOUSEWHEEL ||
-                    m.Msg == WM_KEYDOWN ||
-                    m.Msg == WM_SYSKEYDOWN)
-                {
-                    if (_formRef.TryGetTarget(out var target))
-                    {
-                        target.ResetInactivityTimer();
-                    }
-                }
-
-                return false;
-            }
-        }
-
-        // Inaktivitätsmenüeinträge im Tray-Menü behandeln
-        private void InactivityMenuItem_Click(object? sender, EventArgs e)
-        {
-            if (sender is not ToolStripMenuItem clicked)
-                return;
-
-            int seconds = Convert.ToInt32(clicked.Tag ?? 0);
-            Properties.Settings.Default.InactivityTimeoutSeconds = seconds;
-            Properties.Settings.Default.Save();
-
-            if (seconds > 0)
-            {
-                SetInactivityTimeout(TimeSpan.FromSeconds(seconds));
-                EnableInactivityTimer(true);
-            }
-            else
-            {
-                EnableInactivityTimer(false);
-            }
-
-            if (clicked.OwnerItem is ToolStripMenuItem parent)
-            {
-                foreach (ToolStripItem item in parent.DropDownItems)
-                {
-                    if (item is ToolStripMenuItem menuItem)
-                    {
-                        menuItem.Checked = (menuItem == clicked);
-                    }
-                }
-            }
-        }
-
-        // Zeige statische Offline-Seite im WebView2-Steuerelement an.
-        private async Task ShowNoNetImageAsync()
-        {
-            if (webView == null)
-                return;
-
-            if (webView.CoreWebView2 == null)
-            {
-                try
-                {
-                    await webView.EnsureCoreWebView2Async(null);
-                }
-                catch
-                {
-                }
-            }
-
-            try
-            {
-                string base64 = BitmapToBase64(Properties.Resources.nonet);
-
-                var html = $@"
-<html>
-  <head>
-    <meta charset=""utf-8"" />
-    <title>offline / keine Verbindung</title>
-    <style>
-      body {{
-        margin: 0;
-        padding: 0;
-        background: #202020;
-        color: #ffffff;
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        height: 100vh;
-      }}
-      .wrapper {{
-        text-align: center;
-      }}
-      img {{
-        max-width: 256px;
-        height: auto;
-        margin-bottom: 1rem;
-      }}
-      h1 {{
-        margin: 0 0 0.5rem 0;
-        font-size: 1.2rem;
-      }}
-      p {{
-        margin: 0;
-        opacity: 0.8;
-      }}
-    </style>
-  </head>
-  <body>
-    <div class=""wrapper"">
-      <img src=""data:image/png;base64,{base64}"" alt=""offline"" />
-      <h1>offline / keine Verbindung</h1>
-      <p>Bitte überprüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.</p>
-    </div>
-  </body>
-</html>
-";
-
-                var core = webView.CoreWebView2;
-                core?.NavigateToString(html);
-            }
-            catch
-            {
-            }
-        }
-
-        private string BitmapToBase64(Bitmap bmp)
-        {
-            try
-            {
-                using var ms = new MemoryStream();
-                bmp.Save(ms, ImageFormat.Png);
-                return Convert.ToBase64String(ms.ToArray());
-            }
-            catch
-            {
-                return string.Empty;
-            }
-        }
-
-        // Rückfrage ob Dunkelmodus aktiv ist
-        public static bool IsDarkMode()
-        {
-            try
-            {
-                var key = Registry.CurrentUser.OpenSubKey(
-                    @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
-                var value = key?.GetValue("AppsUseLightTheme");
-                return value is int i && i == 0; // 0 = Dunkelmodus
-            }
-            catch (Exception ex)
-            {
-                Trace.WriteLine($"IsDarkMode fallback: {ex}");
-                return true;
-            }
-        }
-
-        // Aktualisiere Icons und Titelleistenattributen nach aktuellen Themaeinstellungen
-        private void RefreshTheme()
-        {
-            try
-            {
-                bool dark = IsDarkMode();
-                ApplyThemeIcon();
-                SetTitleBarDarkMode(dark);
-            }
-            catch
-            {
-                // Intentionally silent on theme update errors.
-            }
-        }
-
-        private void SystemEvents_UserPreferenceChanged(object? sender, UserPreferenceChangedEventArgs e)
-        {
-            // React to theme/visual changes from Windows and refresh UI accordingly.
-            if (e.Category == UserPreferenceCategory.Color ||
-                e.Category == UserPreferenceCategory.General ||
-                e.Category == UserPreferenceCategory.VisualStyle)
-            {
-                try
-                {
-                    if (!this.IsDisposed)
-                    {
-                        this.BeginInvoke((MethodInvoker)(RefreshTheme));
-                    }
-                }
-                catch
-                {
-                }
-            }
-        }
-
-        // Update tray/window icons according to current theme.
-        private void ApplyThemeIcon()
-        {
-            var sourceIcon = IsDarkMode() ? Properties.Resources.wrok_white : Properties.Resources.wrok_black;
-            Icon newIcon;
-
-            try
-            {
-                newIcon = (Icon)sourceIcon.Clone();
-            }
-            catch
-            {
-                newIcon = sourceIcon;
-            }
-
-            if (trayIcon != null)
-            {
-                try
-                {
-                    var old = trayIcon.Icon;
-                    trayIcon.Visible = false;
-                    trayIcon.Icon = newIcon;
-                    trayIcon.Visible = true;
-
-                    if (old != null && !ReferenceEquals(old, sourceIcon))
-                    {
-                        try
-                        {
-                            old.Dispose();
-                        }
-                        catch
-                        {
-                        }
-                    }
-                }
-                catch
-                {
-                    try
-                    {
-                        trayIcon.Icon = newIcon;
-                    }
-                    catch
-                    {
-                    }
-                }
-            }
-
-            try
-            {
-                this.Icon = (Icon)newIcon.Clone();
-            }
-            catch
-            {
-                this.Icon = newIcon;
-            }
-        }
-
-        // P/Invoke für DWM Titelleistenattribute
-        [DllImport("dwmapi.dll", PreserveSig = true)]
-        private static extern int DwmSetWindowAttribute(
-            IntPtr hwnd,
-            int attr,
-            ref int attrValue,
-            int attrSize);
-
-        private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
-        private const int DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1 = 19;
-
-        private void SetTitleBarDarkMode(bool enabled)
-        {
-            try
-            {
-                int val = enabled ? 1 : 0;
-                int hr = DwmSetWindowAttribute(
-                    this.Handle,
-                    DWMWA_USE_IMMERSIVE_DARK_MODE,
-                    ref val,
-                    Marshal.SizeOf<int>());
-
-                if (hr != 0)
-                {
-                    try
-                    {
-                        DwmSetWindowAttribute(
-                            this.Handle,
-                            DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1,
-                            ref val,
-                            Marshal.SizeOf<int>());
-                    }
-                    catch
-                    {
-                    }
-                }
-            }
-            catch
-            {
-            }
-        }
-
-        private void MinimizeToTray()
-        {
-            this.WindowState = FormWindowState.Minimized;
-            this.Opacity = 0;
-            this.ShowInTaskbar = false;
-        }
-
-        private void DisposeTrayIcon()
-        {
-            if (trayIcon == null)
-                return;
-
-            try
-            {
-                trayIcon.Visible = false;
-            }
-            catch
-            {
-            }
-
-            try
-            {
-                var ico = trayIcon.Icon;
-                trayIcon.Dispose();
-                trayIcon = null;
-
-                if (ico != null)
-                {
-                    try
-                    {
-                        ico.Dispose();
-                    }
-                    catch
-                    {
-                    }
-                }
-            }
-            catch
-            {
-                trayIcon = null;
-            }
-        }
-
-        private void EnsureTrayIconVisible()
-        {
-            try
-            {
-                if (trayIcon == null)
-                {
-                    InitializeTrayIcon();
-                    ApplyThemeIcon();
-                }
-
-                if (trayIcon != null && !trayIcon.Visible)
-                    trayIcon.Visible = true;
-            }
-            catch
-            {
-            }
-        }
-
-        // Update the checked state of inactivity menu items.
-        private void UpdateTrayMenuInactivityState()
-        {
-            if (trayMenu == null)
-                return;
-
-            ToolStripMenuItem? inactivityMenu = null;
-
-            foreach (ToolStripItem item in trayMenu.Items)
-            {
-                if (item is ToolStripMenuItem mi &&
-                    mi.DropDownItems.Count > 0 &&
-                    mi.Text == Properties.Resources.Inaktivity)
-                {
-                    inactivityMenu = mi;
-                    break;
-                }
-            }
-
-            if (inactivityMenu == null)
-                return;
-
-            int current = Properties.Settings.Default.InactivityTimeoutSeconds;
-
-            foreach (ToolStripItem item in inactivityMenu.DropDownItems)
-            {
-                if (item is ToolStripMenuItem mi && mi.Tag is int sec)
-                {
-                    mi.Checked = (sec == current);
-                }
-            }
-        }
-
-        private void InitializeMacrosMenu()
-        {
-            try
-            {
-                if (macrosMenu == null)
-                {
-                    macrosMenu = new ToolStripMenuItem(Properties.Resources.Macros);
-                }
-
-                RefreshMacrosMenu();
-            }
-            catch
-            {
-                // Keep silent according to project guidelines.
-            }
-        }
-
-        private void RefreshMacrosMenu()
-        {
-            if (macrosMenu == null)
-                return;
-
-            macrosMenu.DropDownItems.Clear();
-
-            var col = Properties.Settings.Default.Macros;
-            if (col == null)
-            {
-                col = new StringCollection();
-                Properties.Settings.Default.Macros = col;
-            }
-
-            const int requiredMacros = 5;
-            bool addedDefaults = false;
-            for (int i = 0; i < requiredMacros; i++)
-            {
-                if (i >= col.Count)
-                {
-                    col.Add(String.Format(Properties.Resources.Macro0, i + 1));
-                    addedDefaults = true;
-                }
-            }
-
-            if (addedDefaults)
-                SaveMacros();
-
-            for (int i = 0; i < requiredMacros; i++)
-            {
-                string text = col[i] ?? string.Empty;
-                var display = string.IsNullOrWhiteSpace(text) ? String.Format(Properties.Resources.Macro0, i + 1) : text;
-                var macroItem = new ToolStripMenuItem(display) { Tag = i };
-
-                // Help text explaining default behavior and modifiers.
-                string hotkeyDisplay = i < 5 ? String.Format(Properties.Resources.Ctrl0, i + 1) : "";
-                macroItem.ToolTipText = String.Format(Properties.Resources.EditWithRightClickRunWith0, hotkeyDisplay)
-                                      + " " + Properties.Resources.LeftClickSendsAndSubmitsShiftClickSendsWithoutEnter;
-
-                macroItem.MouseDown += async (sender, me) =>
-                {
-                    try
-                    {
-                        if (!(sender is ToolStripMenuItem tsi)) return;
-                        int idx = tsi.Tag is int ii ? ii : -1;
-                        if (idx < 0) return;
-
-                        if (me.Button == MouseButtons.Left)
-                        {
-                            // Default send + Enter; hold Shift or Alt to send without Enter.
-                            bool pressEnter = true;
-                            if ((ModifierKeys & Keys.Shift) == Keys.Shift ||
-                                (ModifierKeys & Keys.Alt) == Keys.Alt)
-                            {
-                                pressEnter = false;
-                            }
-
-                            try
-                            {
-                                var macros = Properties.Settings.Default.Macros;
-                                var mtext = (macros != null && idx < macros.Count) ? (macros[idx] ?? string.Empty) : string.Empty;
-                                await SendTextToWebViewAsync(mtext, pressEnter).ConfigureAwait(false);
-                            }
-                            catch (Exception ex)
-                            {
-                                Trace.WriteLine(String.Format(Properties.Resources.MacroClickSendFailed0, ex));
-                            }
-                        }
-                        else if (me.Button == MouseButtons.Right)
-                        {
-                            try { EditMacroAndSave(idx); }
-                            catch (Exception ex) { Trace.WriteLine(String.Format(Properties.Resources.EditMacroAndSaveFailed0, ex)); }
-                        }
-                    }
-                    catch { }
-                };
-
-                macrosMenu.DropDownItems.Add(macroItem);
-            }
-        }
-
-        private void EditMacroAndSave(int index)
-        {
-            try
-            {
-                var col = Properties.Settings.Default.Macros;
-                if (col == null)
-                {
-                    col = new StringCollection();
-                    Properties.Settings.Default.Macros = col;
-                }
-
-                string initial = string.Empty;
-                if (index >= 0 && index < col.Count)
-                    initial = col[index] ?? string.Empty;
-
-                string edited = initial;
-                bool ok = ShowEditMacroDialog(index >= 0 ? (Properties.Resources.EditMacro) : (Properties.Resources.NewMacro), ref edited);
-
-                if (!ok)
-                    return;
-
-                edited = edited?.Trim() ?? string.Empty;
-
-                if (index >= 0)
-                {
-                    col[index] = edited;
-                }
-                else
-                {
-                    col.Add(edited);
-                }
-
-                SaveMacros();
-                RefreshMacrosMenu();
-            }
-            catch
-            {
-                // Ignore per guidelines.
-            }
-        }
-
-        private bool ShowEditMacroDialog(string title, ref string text)
-        {
-            using var dlg = new Form()
-            {
-                Text = title,
+                Text            = Properties.Resources.MacroInputTitle,
                 FormBorderStyle = FormBorderStyle.FixedDialog,
-                StartPosition = FormStartPosition.CenterParent,
-                MinimizeBox = false,
-                MaximizeBox = false,
-                ClientSize = new Size(480, 120)
+                StartPosition   = ownerUsable ? FormStartPosition.CenterParent
+                                              : FormStartPosition.CenterScreen,
+                MinimizeBox     = false,
+                MaximizeBox     = false,
+                ShowInTaskbar   = false,
+                TopMost         = true,
+                ClientSize      = new Size(420, 110)
             };
 
-            var tb = new TextBox()
+            var lbl = new Label
             {
-                Left = 10,
-                Top = 10,
-                Width = dlg.ClientSize.Width - 20,
-                Text = text ?? string.Empty
+                Text     = prompt,
+                AutoSize = false,
+                Left     = 16,
+                Top      = 14,
+                Width    = dlg.ClientSize.Width - 32,
+                Height   = 20,
+                Font     = new Font("Segoe UI", 9.5F)
             };
-
-            var btnOk = new Button()
+            var tb = new TextBox
             {
-                Text = Properties.Resources.OK,
-                DialogResult = DialogResult.OK,
-                Anchor = AnchorStyles.Bottom | AnchorStyles.Right
+                Left   = 16,
+                Top    = 40,
+                Width  = dlg.ClientSize.Width - 32,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                Font   = new Font("Segoe UI", 10F)
             };
-            var btnCancel = new Button()
-            {
-                Text = Properties.Resources.Cancel,
-                DialogResult = DialogResult.Cancel,
-                Anchor = AnchorStyles.Bottom | AnchorStyles.Right
-            };
+            var btnOk     = new Button { Text = Properties.Resources.OK,     DialogResult = DialogResult.OK,     Size = new Size(80, 28), Top = 72 };
+            var btnCancel = new Button { Text = Properties.Resources.Cancel, DialogResult = DialogResult.Cancel, Size = new Size(80, 28), Top = 72 };
+            btnCancel.Left = dlg.ClientSize.Width - btnCancel.Width - 16;
+            btnOk.Left     = btnCancel.Left - btnOk.Width - 8;
 
-            btnOk.SetBounds(dlg.ClientSize.Width - 180, 60, 80, 26);
-            btnCancel.SetBounds(dlg.ClientSize.Width - 90, 60, 80, 26);
-
-            dlg.Controls.Add(tb);
-            dlg.Controls.Add(btnOk);
-            dlg.Controls.Add(btnCancel);
+            dlg.Controls.AddRange(new Control[] { lbl, tb, btnOk, btnCancel });
             dlg.AcceptButton = btnOk;
             dlg.CancelButton = btnCancel;
-
-            var res = dlg.ShowDialog(this);
-            if (res == DialogResult.OK)
+            dlg.Shown += (s, e) =>
             {
-                text = tb.Text;
-                return true;
-            }
+                try
+                {
+                    dlg.Activate();
+                    SetForegroundWindow(dlg.Handle);
+                }
+                catch (Exception ex) { Trace.WriteLine($"ShowInputDialog: Fokus fehlgeschlagen: {ex}"); }
+                tb.Focus();
+            };
 
-            return false;
+            // Ohne sichtbaren Owner ohne Owner-Fenster anzeigen, sonst hängt der
+            // modale Dialog an einem minimierten/unsichtbaren Fenster.
+            var result = ownerUsable ? dlg.ShowDialog(this) : dlg.ShowDialog();
+            if (result != DialogResult.OK) return false;
+            value = tb.Text;
+            return true;
         }
 
-        private void SaveMacros()
+        // ------------------------------------------------------------------
+        // Bild aus Zwischenablage öffnen
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// Öffnet die Bild-URL aus der Zwischenablage (Rechtsklick im WebView →
+        /// „Bildadresse kopieren") ohne Rückfrage direkt im Viewer-Fenster.
+        /// Enthält die Zwischenablage keine gültige URL, wird auf das zuletzt
+        /// gespeicherte Bild zurückgefallen – so macht Strg+Shift+P immer etwas Sinnvolles.
+        /// </summary>
+        private async Task OpenImageFromClipboardAsync()
+        {
+            if (_webViewManager == null) return;
+
+            string url = string.Empty;
+            try
+            {
+                if (Clipboard.ContainsText())
+                    url = (Clipboard.GetText() ?? string.Empty).Trim();
+            }
+            catch (Exception ex) { Log(ex, "Zwischenablage konnte nicht gelesen werden"); }
+
+            if (!IsHttpUrl(url))
+            {
+                OpenLastImage();
+                return;
+            }
+
+            // Der Download kann einen Moment dauern – Wartecursor als Rückmeldung.
+            try { Cursor.Current = Cursors.AppStarting; } catch { }
+            try
+            {
+                // Grok-URLs haben keine Dateiendung – Typ über den Content-Type klären.
+                var contentType = await _webViewManager.ProbeContentTypeAsync(url, TimeSpan.FromSeconds(10));
+
+                if (contentType != null &&
+                    contentType.Contains("video", StringComparison.OrdinalIgnoreCase))
+                {
+                    ShowVideoViewer(url);
+                    return;
+                }
+
+                if (!await _webViewManager.ShowImageViewerAsync(url))
+                    MessageBox.Show(this, Properties.Resources.ImageLoadFailed,
+                        Properties.Resources.Error, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            finally
+            {
+                try { Cursor.Current = Cursors.Default; } catch { }
+            }
+        }
+
+        // ------------------------------------------------------------------
+        // Medien anzeigen und nebeneinander anordnen
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// Zeigt ein Bild im Viewer-Fenster und ordnet es links auf voller
+        /// Bildschirmhöhe an; Wrok füllt den Rest rechts daneben. Es gibt immer
+        /// höchstens ein Medienfenster – ein neues Medium ersetzt das bisherige.
+        /// Wrok bleibt nach dem Schließen in der Anordnung stehen: Medien haben
+        /// meist dieselbe Größe, das nächste öffnet dadurch ohne Sprung.
+        /// </summary>
+        internal void ShowImageViewer(Bitmap bmp, string sourceUrl)
+        {
+            CloseCurrentMedia();
+
+            var viewer = new ImageViewerForm(bmp, sourceUrl);
+            RegisterMediaViewer(viewer);
+
+            ArrangeSideBySide(viewer, viewer.WidthForHeight(WorkArea.Height));
+            viewer.Show();
+        }
+
+        /// <summary>
+        /// Zeigt ein Video im Endlos-Loop. Die echten Abmessungen sind erst nach
+        /// dem Laden der Metadaten bekannt – das Fenster wird dann nachjustiert.
+        /// </summary>
+        internal void ShowVideoViewer(string url)
+        {
+            if (_webViewManager == null) return;
+
+            CloseCurrentMedia();
+
+            var viewer = new VideoViewerForm(url, _webViewManager.CoreEnvironment);
+            RegisterMediaViewer(viewer);
+
+            // Vorläufig hochkant anordnen; sobald die Metadaten da sind, korrigieren.
+            ArrangeSideBySide(viewer, (int)(WorkArea.Height * 9.0 / 16.0));
+
+            viewer.VideoSizeKnown += size =>
+            {
+                if (viewer.IsDisposed) return;
+                try
+                {
+                    viewer.BeginInvoke((MethodInvoker)(() =>
+                    {
+                        if (!viewer.IsDisposed)
+                            ArrangeSideBySide(viewer, viewer.WidthForHeight(WorkArea.Height, size));
+                    }));
+                }
+                catch (Exception ex) { Log(ex, "Video-Anordnung nach Metadaten fehlgeschlagen"); }
+            };
+
+            viewer.Show();
+
+            Properties.Settings.Default.LastImageUrl  = url;
+            Properties.Settings.Default.LastImagePath = string.Empty;   // Video: nur URL
+            Properties.Settings.Default.Save();
+        }
+
+        private Rectangle WorkArea => Screen.FromControl(this).WorkingArea;
+
+        private void CloseCurrentMedia()
+        {
+            if (_mediaViewer is { IsDisposed: false } previous)
+            {
+                try { previous.Close(); }
+                catch (Exception ex) { Log(ex, "Vorheriges Medienfenster schließen fehlgeschlagen"); }
+            }
+        }
+
+        private void RegisterMediaViewer(Form viewer)
+        {
+            _mediaViewer = viewer;
+            viewer.FormClosed += (_, _) =>
+            {
+                if (ReferenceEquals(_mediaViewer, viewer)) _mediaViewer = null;
+            };
+        }
+
+        private void ArrangeSideBySide(Form viewer, int desiredWidth)
         {
             try
             {
-                if (Properties.Settings.Default.Macros == null)
-                    Properties.Settings.Default.Macros = new StringCollection();
+                var wa = WorkArea;
 
-                Properties.Settings.Default.Save();
+                // Breite aus dem Seitenverhältnis bei voller Bildschirmhöhe –
+                // aber gedeckelt, damit rechts genug für Wrok übrig bleibt.
+                int viewerWidth = Math.Clamp(desiredWidth, 240, (int)(wa.Width * 0.6));
+
+                viewer.StartPosition = FormStartPosition.Manual;
+                viewer.Bounds = new Rectangle(wa.Left, wa.Top, viewerWidth, wa.Height);
+
+                // Ist Wrok gar nicht sichtbar (Tray/minimiert), nur das Medium setzen.
+                if (!this.Visible || this.WindowState == FormWindowState.Minimized)
+                    return;
+
+                try
+                {
+                    _suppressWindowSave = true;
+                    if (this.WindowState != FormWindowState.Normal)
+                        this.WindowState = FormWindowState.Normal;
+
+                    this.Bounds = new Rectangle(wa.Left + viewerWidth, wa.Top,
+                                                wa.Width - viewerWidth, wa.Height);
+                }
+                finally { _suppressWindowSave = false; }
             }
             catch (Exception ex)
             {
-                Trace.WriteLine(String.Format(Properties.Resources.SaveMacrosFailed0, ex));
+                Log(ex, "ArrangeSideBySide fehlgeschlagen");
             }
         }
 
-        // Execute a macro based on the registered hotkey ID.
+        /// <summary>
+        /// Öffnet das zuletzt angezeigte Bild aus dem lokalen Zwischenspeicher.
+        /// Funktioniert ohne Netzwerk und ohne gültige Session, da die Bilddatei
+        /// beim letzten Öffnen mitgespeichert wurde.
+        /// </summary>
+        private void OpenLastImage()
+        {
+            var path = Properties.Settings.Default.LastImagePath;
+            var lastUrl = Properties.Settings.Default.LastImageUrl;
+
+            // Kein lokaler Pfad, aber eine URL gemerkt → das war ein Video.
+            // Videos werden nicht zwischengespeichert, sondern neu gestreamt.
+            if (string.IsNullOrWhiteSpace(path) && IsHttpUrl(lastUrl))
+            {
+                ShowVideoViewer(lastUrl);
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+            {
+                MessageBox.Show(this, Properties.Resources.NoLastImage,
+                    Properties.Resources.OpenLastImage, MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            try
+            {
+                // Datei-Stream sofort wieder freigeben: Bitmap aus einem Stream behält
+                // sonst eine Referenz darauf und sperrt die Datei fürs Überschreiben.
+                Bitmap bmp;
+                using (var fs = File.OpenRead(path))
+                using (var decoded = new Bitmap(fs))
+                    bmp = new Bitmap(decoded);
+
+                ShowImageViewer(bmp, string.IsNullOrWhiteSpace(lastUrl) ? path : lastUrl);
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "OpenLastImage fehlgeschlagen");
+                MessageBox.Show(this, Properties.Resources.ImageLoadFailed,
+                    Properties.Resources.Error, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private static bool IsHttpUrl(string? s) =>
+            Uri.TryCreate(s, UriKind.Absolute, out var u) &&
+            (u.Scheme == Uri.UriSchemeHttp || u.Scheme == Uri.UriSchemeHttps);
+
+        // ------------------------------------------------------------------
+        // Makro-Hotkey ausführen
+        // ------------------------------------------------------------------
+
         private async Task PerformMacroAsync(int hotkeyId)
         {
             try
             {
-                var col = Properties.Settings.Default.Macros;
-                if (col == null || col.Count == 0)
-                    return;
+                string? raw = _macroManager.GetRawTextForHotkey(hotkeyId);
+                if (raw == null || _webViewManager == null) return;
 
-                int macroIndex = -1;
-
-                switch (hotkeyId)
-                {
-                    case HOTKEY_MACRO_1: macroIndex = 0; break;
-                    case HOTKEY_MACRO_2: macroIndex = 1; break;
-                    case HOTKEY_MACRO_3: macroIndex = 2; break;
-                    case HOTKEY_MACRO_4: macroIndex = 3; break;
-                    case HOTKEY_MACRO_5: macroIndex = 4; break;
-                    default: return;
-                }
-
-                if (macroIndex < 0 || macroIndex >= col.Count)
-                    return;
-
-                string text = col[macroIndex] ?? string.Empty;
-                if (string.IsNullOrWhiteSpace(text))
-                    return;
-
-                // Default behavior mirrors left-click: insert text and send Enter.
-                // Hold Shift or Alt while pressing the hotkey to suppress Enter.
                 bool pressEnter = true;
                 try
                 {
@@ -2058,84 +1486,49 @@ namespace Wrok
                     if ((mods & Keys.Shift) == Keys.Shift || (mods & Keys.Alt) == Keys.Alt)
                         pressEnter = false;
                 }
-                catch
-                {
-                    // Keep default if modifier check fails.
-                }
+                catch { }
 
-                await SendTextToWebViewAsync(text, pressEnter);
+                await SendMacroTextAsync(raw, pressEnter);
             }
             catch (Exception ex)
             {
-                Trace.WriteLine($"PerformMacroAsync failed: {ex}");
+                Trace.WriteLine($"PerformMacroAsync fehlgeschlagen: {ex}");
             }
         }
 
-        private void Log(Exception ex, string message)
+        // ------------------------------------------------------------------
+        // ActivityMessageFilter (innere Klasse)
+        // ------------------------------------------------------------------
+
+        private class ActivityMessageFilter : IMessageFilter
         {
-            try
-            {
-                Trace.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [Wrok] {message}: {ex}");
-            }
-            catch
-            {
-                // Ensure logging cannot throw.
-            }
-        }
+            private readonly WeakReference<MainForm> _formRef;
+            public ActivityMessageFilter(MainForm form) => _formRef = new(form);
 
-        // Clear the WebView2 browsing data and inform the user.
-        private async Task ClearCacheAsync()
-        {
-            try
+            public bool PreFilterMessage(ref Message m)
             {
-                if (webView?.CoreWebView2 == null)
-                {
-                    MessageBox.Show(Properties.Resources.WebView2IsNotInitializedYet, Properties.Resources.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
+                const int WM_MOUSEMOVE   = 0x0200;
+                const int WM_LBUTTONDOWN = 0x0201;
+                const int WM_RBUTTONDOWN = 0x0204;
+                const int WM_MBUTTONDOWN = 0x0207;
+                const int WM_MOUSEWHEEL  = 0x020A;
+                const int WM_KEYDOWN     = 0x0100;
+                const int WM_SYSKEYDOWN  = 0x0104;
 
-                await webView.CoreWebView2.Profile.ClearBrowsingDataAsync();
+                if (m.Msg is WM_MOUSEMOVE or WM_LBUTTONDOWN or WM_RBUTTONDOWN or
+                             WM_MBUTTONDOWN or WM_MOUSEWHEEL or WM_KEYDOWN or WM_SYSKEYDOWN)
+                    if (_formRef.TryGetTarget(out var target))
+                        target.ResetInactivityTimer();
 
-                MessageBox.Show(Properties.Resources.CacheHasBeenDeleted, Properties.Resources.ClearCache, MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-            catch (Exception ex)
-            {
-                Trace.WriteLine(String.Format(Properties.Resources.ClearCacheFailed + "{0}", ex));
-                MessageBox.Show(
-                    string.Format(Properties.Resources.ErrorWhileDeletingCache + "\n{0}", ex.Message),
-                    Properties.Resources.Error,
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
+                return false;
             }
         }
 
-        // Track that first OnShown centering has been applied to avoid repeated centering.
-        private bool _centeredOnFirstShow = false;
+        // ------------------------------------------------------------------
+        // Logging
+        // ------------------------------------------------------------------
 
-        // Ensure window is centered on first show when no stored geometry exists.
-        protected override void OnShown(EventArgs e)
-        {
-            base.OnShown(e);
-
-            if (_centeredOnFirstShow)
-                return;
-
-            try
-            {
-                var s = Properties.Settings.Default;
-                if (s.WindowWidth <= 0 || s.WindowHeight <= 0)
-                {
-                    try { this.CenterToScreen(); } catch { }
-                }
-            }
-            catch
-            {
-                // Ignore errors here.
-            }
-            finally
-            {
-                _centeredOnFirstShow = true;
-            }
-        }
+        private static void Log(Exception ex, string message) =>
+            Trace.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [MainForm] {message}: {ex}");
     }
 }

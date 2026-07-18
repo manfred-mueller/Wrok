@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Wrok"
-#define MyAppVersion "0.9.1"
+#define MyAppVersion "1.0.0"
 #define MyAppExeName MyAppName + ".exe"
 #define MyAppPublisher "NASS e.K."
 #define MyAppURL "https://www.nass-ek.de"
@@ -20,12 +20,21 @@ DefaultDirName={autopf}\{#MyAppName}
 DisableDirPage=yes
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
+; Explizit: Installation fuer alle Benutzer nach Program Files.
+; Muss zu "Scope: machine" im WinGet-Manifest passen.
+PrivilegesRequired=admin
+; Laufende Instanz beim Update automatisch schliessen, sonst sind die Dateien
+; gesperrt und eine stille WinGet-Aktualisierung schlaegt fehl.
+AppMutex=Global\Wrok_SingleInstanceMutex
+CloseApplications=force
+RestartApplications=no
+VersionInfoVersion={#MyAppVersion}
 LicenseFile=D:\Dokumente\gpl_de.txt
 ArchitecturesInstallIn64BitMode=x64
 ArchitecturesAllowed=x64
 OutputDir=bin\x64\Release
 OutputBaseFilename={#MyAppName}-Setup-{#MyAppVersion}
-SetupIconFile=wrok_black.ico
+SetupIconFile=Properties\wrok_black.ico
 UninstallDisplayIcon={app}\{#MyAppExeName},0
 DisableWelcomePage=False
 WizardImageFile=D:\Bilder\wz_nass-ek.bmp
@@ -33,15 +42,16 @@ WizardSmallImageFile=D:\Bilder\wz_leer_small.bmp
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
-ChangesAssociations=yes
+SignTool=Certum
 
 [Languages]
 Name: "de"; MessagesFile: "compiler:Languages\German.isl"
+Name: "en"; MessagesFile: "compiler:Default.isl"
 
 [Files]
 Source: "bin\Release\net8.0-windows\win-x64\publish\Wrok.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "wrok_black.ico"; DestDir: "{app}"; Flags: ignoreversion
-Source: "wrok_white.ico"; DestDir: "{app}"; Flags: ignoreversion
+Source: "Properties\wrok_black.ico"; DestDir: "{app}"; Flags: ignoreversion
+Source: "Properties\wrok_white.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}";
@@ -72,8 +82,10 @@ begin
     { Anf hrungszeichen entfernen, damit wir eigene Parameter anh ngen k nnen }
     UninstPath := RemoveQuotes(UninstPath);
 
-    { Alte Version still deinstallieren }
-    if not Exec(UninstPath, '/SILENT /NORESTART', '', SW_SHOW,
+    { Alte Version wirklich lautlos deinstallieren.
+      /SILENT zeigt weiterhin ein Fortschrittsfenster und SW_SHOW blendet es ein –
+      bei einer stillen WinGet-Installation darf nichts sichtbar werden. }
+    if not Exec(UninstPath, '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART', '', SW_HIDE,
                 ewWaitUntilTerminated, ResultCode) then
     begin
       Log('Fehler beim Starten des Uninstallers. R ckgabecode: ' + IntToStr(ResultCode));

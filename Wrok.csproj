@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup Label="Globals">
     <WebView2LoaderPreference>Static</WebView2LoaderPreference>
@@ -13,7 +13,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <StartupObject>Wrok.Program</StartupObject>
-    <ApplicationIcon>wrok_black.ico</ApplicationIcon>
+    <ApplicationIcon>Properties\wrok_black.ico</ApplicationIcon>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
 
     <!-- DIESE 4 ZEILEN SIND ENTSCHEIDEND FÜR SINGLE-FILE + COSTURA -->
@@ -23,16 +23,27 @@
     <PublishTrimmed>false</PublishTrimmed>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <DebugType>full</DebugType>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <DebugType>full</DebugType>
+  </PropertyGroup>
+
+  <!-- MSB3277: WindowsBase-Versionskonflikt durch WebView2-WPF-DLL – funktional harmlos -->
+  <PropertyGroup>
+    <MSBuildWarningsAsMessages>MSB3277</MSBuildWarningsAsMessages>
+  </PropertyGroup>
+
   <ItemGroup>
-    <Content Include="wrok_black.ico" />
+    <Content Include="Properties\wrok_black.ico" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Costura.Fody" Version="6.0.0">
       <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="InputSimulator" Version="1.0.4" />
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.3650.58" />
     <PackageReference Include="Resource.Embedder" Version="2.2.0" />
   </ItemGroup>
@@ -53,8 +64,11 @@
 
   <ItemGroup>
     <EmbeddedResource Update="Properties\Resources.resx">
-      <Generator>ResXFileCodeGenerator</Generator>
+      <Generator>PublicResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <EmbeddedResource Update="Properties\Resources.de.resx">
+      <DependentUpon>Resources.resx</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
 
@@ -69,5 +83,11 @@
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
     <Exec Command="D:\Tools\sign.cmd $(TargetPath)  &amp;&amp; iscc $(SolutionDir)InstallScript.iss &quot;/Ssigntool=D:\Tools\signtool.exe sign /a /n $qOpen Source Developer, Mueller Manfred$q /t http://time.certum.pl/ /fd sha256 /v $f&quot;" />
   </Target>
+
+
+  <!-- JS-Helper als eingebettete Ressource -->
+  <ItemGroup>
+    <EmbeddedResource Include="WrokHelper.js" />
+  </ItemGroup>
 
 </Project>
