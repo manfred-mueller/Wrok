@@ -69,6 +69,24 @@ jobs:
     needs: release
     runs-on: windows-latest   # wingetcreate ist ein Windows-Programm
     steps:
+      - name: Fork von winget-pkgs mit Upstream abgleichen
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.WINGET_TOKEN }}
+        run: |
+          # winget-pkgs bekommt taeglich hunderte Commits; der eigene Fork faellt
+          # schnell zurueck. wingetcreate bricht dann mit "could not be synced" ab.
+          # --force setzt den Fork hart auf den Upstream-Stand zurueck. Das ist hier
+          # unbedenklich, weil im Fork keine eigene Arbeit liegt, sondern nur die
+          # kurzlebigen Branches der eingereichten Pull Requests.
+          $owner = '${{ github.repository_owner }}'
+          try {
+            gh repo sync "$owner/winget-pkgs" --source microsoft/winget-pkgs --force
+            Write-Host "Fork abgeglichen."
+          } catch {
+            Write-Warning "Abgleich fehlgeschlagen - existiert der Fork schon? wingetcreate legt ihn sonst selbst an."
+          }
+
       - name: Manifest aktualisieren und PR einreichen
         shell: pwsh
         env:
