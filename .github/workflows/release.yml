@@ -8,6 +8,11 @@ on:
   push:
     paths:
       - "bin/x64/Release/Wrok-Setup-*.exe"
+  # Manuell anstossbar (Actions -> Create Release from Setup -> Run workflow).
+  # Braucht keine Eingaben: Version und Tag kommen wie immer aus dem Dateinamen
+  # der eingecheckten Setup-Datei. Ein bereits vorhandener Tag wird ersetzt,
+  # ein erneuter Lauf ist also gefahrlos wiederholbar.
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -66,6 +71,9 @@ jobs:
     steps:
       - name: Manifest aktualisieren und PR einreichen
         shell: pwsh
+        env:
+          # Statt --token: verhindert, dass der Token im Log auftauchen kann.
+          WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_TOKEN }}
         run: |
           $version = '${{ needs.release.outputs.version }}'
           $tag     = '${{ needs.release.outputs.tag }}'
@@ -91,8 +99,14 @@ jobs:
           # wingetcreate laedt den Installer selbst und berechnet den SHA256.
           Invoke-WebRequest -Uri 'https://aka.ms/wingetcreate/latest' -OutFile wingetcreate.exe -UseBasicParsing
 
+          # Architektur und Scope MUESSEN mitgegeben werden: Der Dateiname enthaelt
+          # keinen Architektur-Hinweis, wingetcreate raet daher auf x86 und kann den
+          # Installer dem vorhandenen x64-Eintrag nicht eindeutig zuordnen.
+          # Format: '<Url>|<Architektur>|<Scope>' - Anfuehrungszeichen noetig,
+          # sonst deutet PowerShell das | als Pipe.
+          $urlWithOverride = "$url|x64|machine"
+
           .\wingetcreate.exe update NASS.Wrok `
             --version $version `
-            --urls $url `
-            --submit `
-            --token '${{ secrets.WINGET_TOKEN }}'
+            --urls $urlWithOverride `
+            --submit
