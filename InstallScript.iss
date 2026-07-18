@@ -2,11 +2,30 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Wrok"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.0.1"
 #define MyAppExeName MyAppName + ".exe"
 #define MyAppPublisher "NASS e.K."
 #define MyAppURL "https://www.nass-ek.de"
 #define ProgramFiles GetEnv("ProgramFiles")
+
+; Muss zu PublishDir in Properties\PublishProfiles\FolderProfile.pubxml passen.
+; ACHTUNG: Das ist die PUBLISH-Ausgabe, nicht der normale Build. Vor dem
+; Kompilieren des Setups muss in Visual Studio "Veroeffentlichen" gelaufen sein.
+#define MyAppExeSource "bin\x64\Release\publish\" + MyAppExeName
+
+; --- Schutz gegen veraltete oder fehlende Ausgaben ---------------------------
+; Fruehere Setups haben stillschweigend eine alte Exe eingepackt, weil noch ein
+; Rest eines aelteren Builds am gesuchten Ort lag. Beides wird jetzt abgefangen.
+
+#if !FileExists(MyAppExeSource)
+  #error Publish-Ausgabe fehlt. Bitte zuerst veroeffentlichen (Profil FolderProfile).
+#endif
+
+#define ExeFileVersion GetVersionNumbersString(MyAppExeSource)
+#if ExeFileVersion != MyAppVersion + ".0"
+  #pragma message "Exe-Dateiversion: " + ExeFileVersion + " / MyAppVersion: " + MyAppVersion
+  #error Version der Exe passt nicht zu MyAppVersion. Publish veraltet oder AssemblyInfo.cs nicht angepasst?
+#endif
 
 [Setup]
 AppId={{A5101A1F-25B3-4297-B279-A34FE3354AA3}
@@ -49,7 +68,7 @@ Name: "de"; MessagesFile: "compiler:Languages\German.isl"
 Name: "en"; MessagesFile: "compiler:Default.isl"
 
 [Files]
-Source: "bin\Release\net8.0-windows\win-x64\publish\Wrok.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#MyAppExeSource}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "Properties\wrok_black.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "Properties\wrok_white.ico"; DestDir: "{app}"; Flags: ignoreversion
 
