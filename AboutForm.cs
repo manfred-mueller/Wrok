@@ -223,9 +223,24 @@ namespace Wrok
             dlg.ShowDialog(this);
         }
 
+        /// <summary>
+        /// Liefert den Handbuchtext mit Windows-Zeilenenden.
+        ///
+        /// Nötig, weil die Anzeige eine multiline TextBox ist: Das Windows-EDIT-Control
+        /// braucht \r\n und verschluckt einzelne \n – insbesondere Leerzeilen zwischen
+        /// Abschnitten. Und in der .resx lässt sich das nicht lösen, denn XML-Parser
+        /// normalisieren Zeilenenden in Inhalten laut Spezifikation immer auf \n.
+        /// Die Umwandlung gehört deshalb hierher.
+        /// </summary>
         private string GetManualText()
         {
-            return Wrok.Properties.Resources.MacroHelp;
+            var text = Wrok.Properties.Resources.MacroHelp ?? string.Empty;
+
+            // Erst vereinheitlichen, dann durchgängig auf \r\n bringen –
+            // so entstehen auch bei gemischten Eingaben keine doppelten Umbrüche.
+            return text.Replace("\r\n", "\n")
+                       .Replace("\r", "\n")
+                       .Replace("\n", "\r\n");
         }
     }
 }

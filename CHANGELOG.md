@@ -1,5 +1,19 @@
 ﻿# Changelog
 
+## [1.1.0] - 2026-07-19
+
+### Features
+- **Makro-Profile:** Drei benennbare Sätze zu je zehn Makros. Im Tray unter *Makros → Profile*: Linksklick wechselt, Rechtsklick benennt um — dasselbe Muster wie bei den Makros selbst. Der Wechsel tauscht die komplette Hotkey-Belegung aus, praktisch für verschiedene Figuren oder Szenarien. Bestehende Makros wandern automatisch nach Profil 1.
+- **Profilbewusster Import/Export:** Exportiert wird wahlweise nur das aktive Profil oder alle Profile samt Namen; der Dateiname nennt das jeweilige Profil. Beim Import wird die Datei zuerst untersucht: Enthält sie alle Profile, folgt eine Rückfrage vor dem Ersetzen; enthält sie eine einzelne Makroliste, wird das Zielprofil abgefragt (vorausgewählt ist das aktive). Ungültige Dateien werden erkannt, bevor irgendetwas verändert wird. Exportdateien früherer Versionen bleiben lesbar.
+- **Mehrzeilige `{input}`-Eingabe:** Der Abfragedialog ist jetzt mehrzeilig und in der Größe veränderbar. Enter erzeugt einen Zeilenumbruch, **Strg+Enter** sendet, Esc bricht ab — für längere Erzählpassagen im Rollenspiel.
+
+### Fixes
+- **Header-Manipulation auf Dokument-Anfragen beschränkt.** Bisher wurden `Accept`, `Sec-Fetch-Dest: document` und `Sec-Fetch-Mode: navigate` auf *jede* Anfrage gesetzt — auch auf Bilder, API-Aufrufe und Datei-Uploads, für die diese Werte falsch sind. Zusätzlich entfallen `Accept-Encoding` und `Sec-Fetch-Site`, die Chromium selbst korrekt bestimmt. Nebeneffekt: kein Sprung mehr in verwalteten Code bei jeder einzelnen Anfrage.
+- **Desktopsymbol wurde nicht angelegt.** Der `[Tasks]`-Eintrag war nicht mit dem `[Icons]`-Eintrag verknüpft, und `Flags: unchecked` hätte bei stiller Installation über WinGet ohnehin verhindert, dass das Symbol entsteht. Der Task ist jetzt verdrahtet und standardmäßig aktiv.
+- Setup-Skript: Publish-Pfad korrigiert (`bin\x64\Release\publish`), dazu Prüfungen gegen fehlende oder versionsfremde Publish-Ausgaben — zuvor konnte stillschweigend ein veraltetes Binary eingepackt werden.
+- Installer wird jetzt nach dem *Veröffentlichen* gebaut statt nach dem *Erstellen*.
+
+
 ## [1.0.0] - 2026-07-18
 
 ### Features

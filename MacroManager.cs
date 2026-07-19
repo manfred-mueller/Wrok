@@ -20,6 +20,31 @@ namespace Wrok
                 : Name;
     }
 
+    /// <summary>
+    /// Ein Satz Makros unter einem Namen – etwa je Figur oder Szenario.
+    /// Das Umschalten tauscht alle zehn Makros samt Hotkey-Belegung aus.
+    /// </summary>
+    internal record MacroProfile(string Name, List<MacroEntry> Macros)
+    {
+        public string DisplayName(int oneBasedIndex) =>
+            string.IsNullOrWhiteSpace(Name)
+                ? string.Format(Properties.Resources.MacroProfileDefault, oneBasedIndex)
+                : Name;
+    }
+
+    /// <summary>Was eine Importdatei enthält.</summary>
+    internal enum MacroImportKind
+    {
+        Invalid,
+        /// <summary>Schlichte Makroliste – muss einem Zielprofil zugeordnet werden.</summary>
+        SingleProfile,
+        /// <summary>Vollständiger Satz inklusive Profilnamen.</summary>
+        AllProfiles
+    }
+
+    /// <summary>Dateiformat für den Export aller Profile.</summary>
+    internal record MacroProfileExport(int WrokMacroExport, List<MacroProfile> Profiles);
+
     // ---------------------------------------------------------------------------
     // MacroManager
     // ---------------------------------------------------------------------------
@@ -37,25 +62,94 @@ namespace Wrok
         // Basis-ID für Makro-Hotkeys (muss mit MainForm übereinstimmen).
         public const int HotkeyBase = 0x9100;
 
-        private List<MacroEntry>? _cache;
+        /// <summary>Anzahl der Makro-Profile (z. B. je Figur oder Szenario).</summary>
+        public const int ProfileCount = 3;
+
+        /// <summary>Version des Exportformats für alle Profile.</summary>
+        private const int ExportFormatVersion = 2;
+
+        private List<MacroProfile>? _profiles;
+        private int _activeIndex = -1;
         private readonly object _lock = new();
+
+        // -------------------------------------------------------------------
+        // Profile
+        // -------------------------------------------------------------------
+
+        /// <summary>Index des aktiven Profils.</summary>
+        public int ActiveProfile
+        {
+            get { lock (_lock) { EnsureLoaded(); return _activeIndex; } }
+        }
+
+        /// <summary>Namen aller Profile, in Reihenfolge.</summary>
+        public List<string> GetProfileNames()
+        {
+            lock (_lock)
+            {
+                EnsureLoaded();
+                return _profiles!.Select(p => p.Name).ToList();
+            }
+        }
+
+        /// <summary>Wechselt das aktive Profil. Die Makros wechseln damit komplett.</summary>
+        public void SwitchProfile(int index)
+        {
+            lock (_lock)
+            {
+                EnsureLoaded();
+                if (index < 0 || index >= _profiles!.Count || index == _activeIndex) return;
+
+                _activeIndex = index;
+                Properties.Settings.Default.ActiveMacroProfile = index;
+                Properties.Settings.Default.Save();
+            }
+        }
+
+        /// <summary>
+        /// Leert ein Profil vollstaendig: Name und alle Makros. Das Profil selbst
+        /// bleibt bestehen – es gibt immer genau ProfileCount Stueck.
+        /// </summary>
+        public void ResetProfile(int index)
+        {
+            lock (_lock)
+            {
+                EnsureLoaded();
+                if (index < 0 || index >= _profiles!.Count) return;
+
+                _profiles[index] = new MacroProfile(string.Empty, EmptyMacros());
+                Persist();
+            }
+        }
+
+        /// <summary>Benennt ein Profil um und persistiert sofort.</summary>
+        public void RenameProfile(int index, string name)
+        {
+            lock (_lock)
+            {
+                EnsureLoaded();
+                if (index < 0 || index >= _profiles!.Count) return;
+
+                _profiles[index] = _profiles[index] with { Name = name.Trim() };
+                Persist();
+            }
+        }
 
         // -------------------------------------------------------------------
         // Öffentliche API
         // -------------------------------------------------------------------
 
-        /// <summary>Gibt die gecachte Makroliste zurück (lazy load).</summary>
+        /// <summary>Gibt die Makroliste des aktiven Profils zurück (lazy load).</summary>
         public List<MacroEntry> GetMacros()
         {
             lock (_lock)
             {
-                if (_cache == null)
-                    _cache = LoadFromSettings();
-                return _cache;
+                EnsureLoaded();
+                return _profiles![_activeIndex].Macros;
             }
         }
 
-        /// <summary>Aktualisiert einen Eintrag und persistiert sofort.</summary>
+        /// <summary>Aktualisiert einen Eintrag im aktiven Profil und persistiert sofort.</summary>
         public void UpdateMacro(int index, MacroEntry entry)
         {
             lock (_lock)
@@ -63,17 +157,18 @@ namespace Wrok
                 var macros = GetMacros();
                 if (index >= 0 && index < macros.Count)
                     macros[index] = entry;
-                PersistToSettings(macros);
+                Persist();
             }
         }
 
-        /// <summary>Ersetzt die gesamte Liste und persistiert sofort.</summary>
+        /// <summary>Ersetzt die Makros des aktiven Profils und persistiert sofort.</summary>
         public void SaveAll(List<MacroEntry> macros)
         {
             lock (_lock)
             {
-                _cache = macros;
-                PersistToSettings(macros);
+                EnsureLoaded();
+                _profiles![_activeIndex] = _profiles[_activeIndex] with { Macros = macros };
+                Persist();
             }
         }
 
@@ -141,49 +236,127 @@ namespace Wrok
         // Import / Export
         // -------------------------------------------------------------------
 
+        private static readonly JsonSerializerOptions ExportOptions =
+            new() { WriteIndented = true, PropertyNameCaseInsensitive = true };
+
         /// <summary>
-        /// Exportiert die aktuelle Makroliste als JSON-Datei.
-        /// Gibt true zurück wenn erfolgreich.
+        /// Exportiert nur das aktive Profil als schlichte Makroliste.
+        /// Dieses Format ist absichtlich identisch mit dem früherer Versionen,
+        /// damit alte Exportdateien weiterhin eingelesen werden können.
         /// </summary>
-        public bool Export(string filePath)
+        public bool ExportActiveProfile(string filePath)
         {
             try
             {
-                var macros = GetMacros();
-                var json   = JsonSerializer.Serialize(macros, new JsonSerializerOptions { WriteIndented = true });
+                var json = JsonSerializer.Serialize(GetMacros(), ExportOptions);
                 File.WriteAllText(filePath, json, System.Text.Encoding.UTF8);
                 return true;
             }
             catch (Exception ex)
             {
-                Trace.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [MacroManager] Export fehlgeschlagen: {ex}");
+                Trace.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [MacroManager] Export (Profil) fehlgeschlagen: {ex}");
+                return false;
+            }
+        }
+
+        /// <summary>Exportiert alle Profile samt Namen in eine Datei.</summary>
+        public bool ExportAllProfiles(string filePath)
+        {
+            try
+            {
+                lock (_lock)
+                {
+                    EnsureLoaded();
+                    var payload = new MacroProfileExport(ExportFormatVersion, _profiles!);
+                    var json    = JsonSerializer.Serialize(payload, ExportOptions);
+                    File.WriteAllText(filePath, json, System.Text.Encoding.UTF8);
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [MacroManager] Export (alle) fehlgeschlagen: {ex}");
                 return false;
             }
         }
 
         /// <summary>
-        /// Importiert Makros aus einer JSON-Datei und überschreibt die aktuelle Liste.
-        /// Gibt true zurück wenn erfolgreich.
+        /// Stellt fest, was in einer Datei steckt, ohne etwas zu verändern.
+        /// So kann der Aufrufer vorher fragen, wohin importiert werden soll.
         /// </summary>
-        public bool Import(string filePath)
+        public static MacroImportKind Inspect(string filePath)
+        {
+            try
+            {
+                var json = File.ReadAllText(filePath, System.Text.Encoding.UTF8).TrimStart();
+                if (json.StartsWith("[", StringComparison.Ordinal))
+                    return JsonSerializer.Deserialize<List<MacroEntry>>(json, ExportOptions) != null
+                        ? MacroImportKind.SingleProfile : MacroImportKind.Invalid;
+
+                var all = JsonSerializer.Deserialize<MacroProfileExport>(json, ExportOptions);
+                return all?.Profiles is { Count: > 0 }
+                    ? MacroImportKind.AllProfiles : MacroImportKind.Invalid;
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [MacroManager] Inspect fehlgeschlagen: {ex}");
+                return MacroImportKind.Invalid;
+            }
+        }
+
+        /// <summary>Importiert eine Makroliste in das angegebene Profil.</summary>
+        public bool ImportIntoProfile(string filePath, int profileIndex)
         {
             try
             {
                 var json = File.ReadAllText(filePath, System.Text.Encoding.UTF8);
-                var list = JsonSerializer.Deserialize<List<MacroEntry>>(json);
+                var list = JsonSerializer.Deserialize<List<MacroEntry>>(json, ExportOptions);
                 if (list == null) return false;
 
-                while (list.Count < MacroCount)
-                    list.Add(new MacroEntry(string.Empty, string.Empty));
-                if (list.Count > MacroCount)
-                    list = list.Take(MacroCount).ToList();
+                lock (_lock)
+                {
+                    EnsureLoaded();
+                    if (profileIndex < 0 || profileIndex >= _profiles!.Count) return false;
 
-                SaveAll(list);
+                    _profiles[profileIndex] = _profiles[profileIndex] with { Macros = Normalize(list) };
+                    Persist();
+                }
                 return true;
             }
             catch (Exception ex)
             {
-                Trace.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [MacroManager] Import fehlgeschlagen: {ex}");
+                Trace.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [MacroManager] Import (Profil) fehlgeschlagen: {ex}");
+                return false;
+            }
+        }
+
+        /// <summary>Ersetzt sämtliche Profile durch die Datei.</summary>
+        public bool ImportAllProfiles(string filePath)
+        {
+            try
+            {
+                var json = File.ReadAllText(filePath, System.Text.Encoding.UTF8);
+                var all  = JsonSerializer.Deserialize<MacroProfileExport>(json, ExportOptions);
+                if (all?.Profiles is not { Count: > 0 }) return false;
+
+                lock (_lock)
+                {
+                    var imported = all.Profiles
+                                      .Select(p => p with { Macros = Normalize(p.Macros) })
+                                      .ToList();
+
+                    while (imported.Count < ProfileCount)
+                        imported.Add(new MacroProfile(string.Empty, EmptyMacros()));
+
+                    _profiles = imported.Take(ProfileCount).ToList();
+                    if (_activeIndex < 0 || _activeIndex >= _profiles.Count) _activeIndex = 0;
+                    Persist();
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [MacroManager] Import (alle) fehlgeschlagen: {ex}");
                 return false;
             }
         }
@@ -192,9 +365,71 @@ namespace Wrok
         // Private Helpers
         // -------------------------------------------------------------------
 
-        private List<MacroEntry> LoadFromSettings()
+        /// <summary>Lädt Profile beim ersten Zugriff. Aufrufer hält bereits _lock.</summary>
+        private void EnsureLoaded()
         {
-            // 1. Neues Format: MacrosJson (JSON-String)
+            if (_profiles != null) return;
+
+            _profiles = LoadProfiles();
+
+            int saved = Properties.Settings.Default.ActiveMacroProfile;
+            _activeIndex = (saved >= 0 && saved < _profiles.Count) ? saved : 0;
+        }
+
+        private static List<MacroEntry> EmptyMacros() =>
+            Enumerable.Range(0, MacroCount)
+                      .Select(_ => new MacroEntry(string.Empty, string.Empty))
+                      .ToList();
+
+        private static List<MacroEntry> Normalize(List<MacroEntry>? list)
+        {
+            list ??= new List<MacroEntry>();
+            while (list.Count < MacroCount)
+                list.Add(new MacroEntry(string.Empty, string.Empty));
+            if (list.Count > MacroCount)
+                list = list.Take(MacroCount).ToList();
+            return list;
+        }
+
+        private List<MacroProfile> LoadProfiles()
+        {
+            // 1. Aktuelles Format: alle Profile in einem JSON.
+            try
+            {
+                var json = Properties.Settings.Default.MacroProfilesJson;
+                if (!string.IsNullOrWhiteSpace(json))
+                {
+                    var list = JsonSerializer.Deserialize<List<MacroProfile>>(json);
+                    if (list != null && list.Count > 0)
+                    {
+                        var result = list.Select(p => p with { Macros = Normalize(p.Macros) }).ToList();
+                        while (result.Count < ProfileCount)
+                            result.Add(new MacroProfile(string.Empty, EmptyMacros()));
+                        return result.Take(ProfileCount).ToList();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [MacroManager] LoadProfiles fehlgeschlagen: {ex}");
+            }
+
+            // 2. Migration: bisherige Makros werden zu Profil 1, der Rest bleibt leer.
+            var profiles = new List<MacroProfile>();
+            var existing = LoadLegacyMacros();
+
+            profiles.Add(new MacroProfile(string.Empty, existing));
+            while (profiles.Count < ProfileCount)
+                profiles.Add(new MacroProfile(string.Empty, EmptyMacros()));
+
+            PersistProfiles(profiles);
+            return profiles;
+        }
+
+        /// <summary>Liest die Makros aus den beiden Vorgängerformaten (vor den Profilen).</summary>
+        private static List<MacroEntry> LoadLegacyMacros()
+        {
+            // a) MacrosJson (eine einzelne Liste)
             try
             {
                 var json = Properties.Settings.Default.MacrosJson;
@@ -203,18 +438,17 @@ namespace Wrok
                     var list = JsonSerializer.Deserialize<List<MacroEntry>>(json);
                     if (list != null)
                     {
-                        while (list.Count < MacroCount)
-                            list.Add(new MacroEntry(string.Empty, string.Empty));
-                        return list;
+                        Trace.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [MacroManager] Übernehme bisherige Makros in Profil 1.");
+                        return Normalize(list);
                     }
                 }
             }
             catch (Exception ex)
             {
-                Trace.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [MacroManager] LoadFromSettings (JSON) failed: {ex}");
+                Trace.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [MacroManager] Legacy-JSON fehlgeschlagen: {ex}");
             }
 
-            // 2. Migration: altes Format Macros (StringCollection) → MacrosJson
+            // b) Noch älter: StringCollection
             try
             {
                 var legacy = Properties.Settings.Default.Macros;
@@ -226,17 +460,10 @@ namespace Wrok
                     foreach (var item in legacy)
                         migrated.Add(new MacroEntry(string.Empty, item ?? string.Empty));
 
-                    while (migrated.Count < MacroCount)
-                        migrated.Add(new MacroEntry(string.Empty, string.Empty));
-
-                    // Sofort ins neue Format persistieren
-                    PersistToSettings(migrated);
-
-                    // Altes Feld leeren damit nicht doppelt migriert wird
                     Properties.Settings.Default.Macros = new System.Collections.Specialized.StringCollection();
                     Properties.Settings.Default.Save();
 
-                    return migrated;
+                    return Normalize(migrated);
                 }
             }
             catch (Exception ex)
@@ -244,22 +471,26 @@ namespace Wrok
                 Trace.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [MacroManager] Migration fehlgeschlagen: {ex}");
             }
 
-            // 3. Erster Start oder korrupte Daten → leere Standardeinträge.
-            return Enumerable.Range(0, MacroCount)
-                             .Select(_ => new MacroEntry(string.Empty, string.Empty))
-                             .ToList();
+            // c) Erster Start
+            return EmptyMacros();
         }
 
-        private static void PersistToSettings(List<MacroEntry> macros)
+        /// <summary>Persistiert den aktuellen Profilstand. Aufrufer hält bereits _lock.</summary>
+        private void Persist()
+        {
+            if (_profiles != null) PersistProfiles(_profiles);
+        }
+
+        private static void PersistProfiles(List<MacroProfile> profiles)
         {
             try
             {
-                Properties.Settings.Default.MacrosJson = JsonSerializer.Serialize(macros);
+                Properties.Settings.Default.MacroProfilesJson = JsonSerializer.Serialize(profiles);
                 Properties.Settings.Default.Save();
             }
             catch (Exception ex)
             {
-                Trace.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [MacroManager] PersistToSettings failed: {ex}");
+                Trace.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [MacroManager] PersistProfiles fehlgeschlagen: {ex}");
             }
         }
     }

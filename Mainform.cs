@@ -305,8 +305,10 @@ namespace Wrok
             appMenu.DropDownItems.Add(inactivityMenu);
 
             var macroIoMenu = new ToolStripMenuItem(Properties.Resources.MacrosImportExport);
-            macroIoMenu.DropDownItems.Add(Properties.Resources.MacrosExport, null, (s, e) => ExportMacros());
-            macroIoMenu.DropDownItems.Add(Properties.Resources.MacrosImport, null, (s, e) => ImportMacros());
+            macroIoMenu.DropDownItems.Add(Properties.Resources.MacrosExportActive, null, (s, e) => ExportMacros(allProfiles: false));
+            macroIoMenu.DropDownItems.Add(Properties.Resources.MacrosExportAll,    null, (s, e) => ExportMacros(allProfiles: true));
+            macroIoMenu.DropDownItems.Add(new ToolStripSeparator());
+            macroIoMenu.DropDownItems.Add(Properties.Resources.MacrosImport,       null, (s, e) => ImportMacros());
             appMenu.DropDownItems.Add(macroIoMenu);
 
             var autostartItem = new ToolStripMenuItem(Properties.Resources.StartWithWindows)
@@ -447,10 +449,119 @@ namespace Wrok
             RefreshMacrosMenu();
         }
 
+        /// <summary>
+        /// Untermenü zum Wechseln zwischen den Makro-Profilen.
+        /// Linksklick wechselt, Rechtsklick benennt um – dieselbe Logik wie bei
+        /// den Makros selbst, damit man sich nur ein Muster merken muss.
+        /// </summary>
+        private void BuildProfilesMenu(ToolStripMenuItem parent)
+        {
+            parent.DropDownItems.Clear();
+
+            // ShowItemToolTips des Hauptmenues vererbt sich nicht auf Untermenues –
+            // ohne das hier bliebe der Bedienhinweis unsichtbar.
+            parent.DropDown.ShowItemToolTips = true;
+
+            var names  = _macroManager.GetProfileNames();
+            int active = _macroManager.ActiveProfile;
+
+            for (int i = 0; i < names.Count; i++)
+            {
+                string label = string.IsNullOrWhiteSpace(names[i])
+                    ? string.Format(Properties.Resources.MacroProfileDefault, i + 1)
+                    : names[i];
+
+                var item = new ToolStripMenuItem(label)
+                {
+                    Tag         = i,
+                    Checked     = i == active,
+                    ToolTipText = Properties.Resources.MacroProfileHint
+                };
+
+                item.MouseDown += (sender, me) =>
+                {
+                    if (sender is not ToolStripMenuItem tsi || tsi.Tag is not int idx) return;
+
+                    if (me.Button == MouseButtons.Left)
+                    {
+                        _macroManager.SwitchProfile(idx);
+                        RefreshMacrosMenu();   // Makros UND Profilhäkchen neu aufbauen
+                    }
+                    else if (me.Button == MouseButtons.Right)
+                    {
+                        RenameProfileAndSave(idx);
+                    }
+                };
+
+                parent.DropDownItems.Add(item);
+            }
+
+            // Zuruecksetzen bezieht sich bewusst auf das AKTIVE Profil: So bleibt
+            // die Bedienung der Eintraege oben eindeutig (links wechseln, rechts
+            // umbenennen), und die Rueckfrage nennt das betroffene Profil beim Namen.
+            parent.DropDownItems.Add(new ToolStripSeparator());
+            parent.DropDownItems.Add(Properties.Resources.MacroProfileReset, null,
+                (s, e) => ResetActiveProfile());
+        }
+
+        private void ResetActiveProfile()
+        {
+            try
+            {
+                int active = _macroManager.ActiveProfile;
+                var names  = _macroManager.GetProfileNames();
+
+                string label = string.IsNullOrWhiteSpace(names[active])
+                    ? string.Format(Properties.Resources.MacroProfileDefault, active + 1)
+                    : names[active];
+
+                if (MessageBox.Show(this,
+                        string.Format(Properties.Resources.MacroProfileResetConfirm, label),
+                        Properties.Resources.MacroProfileReset,
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+                    return;
+
+                _macroManager.ResetProfile(active);
+                RefreshMacrosMenu();
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "ResetActiveProfile fehlgeschlagen");
+            }
+        }
+
+        private void RenameProfileAndSave(int index)
+        {
+            try
+            {
+                var names = _macroManager.GetProfileNames();
+                if (index < 0 || index >= names.Count) return;
+
+                string current = names[index];
+                if (!ShowSingleLineDialog(Properties.Resources.MacroProfileRename,
+                                          Properties.Resources.MacroProfileName,
+                                          current, out string entered)) return;
+
+                _macroManager.RenameProfile(index, entered);
+                RefreshMacrosMenu();
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "RenameProfileAndSave fehlgeschlagen");
+            }
+        }
+
         private void RefreshMacrosMenu()
         {
             if (macrosMenu == null) return;
             macrosMenu.DropDownItems.Clear();
+            macrosMenu.DropDown.ShowItemToolTips = true;   // siehe BuildProfilesMenu
+
+            // Profilwahl zuerst – sie bestimmt, welche Makros darunter stehen.
+            var profilesMenu = new ToolStripMenuItem(Properties.Resources.MacroProfiles);
+            BuildProfilesMenu(profilesMenu);
+            macrosMenu.DropDownItems.Add(profilesMenu);
+            macrosMenu.DropDownItems.Add(new ToolStripSeparator());
 
             var macros = _macroManager.GetMacros();
             for (int i = 1; i <= MacroManager.MacroCount; i++)
@@ -827,6 +938,18 @@ namespace Wrok
             catch { }
         }
 
+        /// <summary>
+        /// Farbe fuer knappe Kontingente, sonst null (dann bleibt die Standardfarbe).
+        /// Die Toene sind so gewaehlt, dass sie auf hellem wie dunklem Menuehintergrund
+        /// lesbar bleiben – reines Rot waere auf Dunkel schlecht erkennbar.
+        /// </summary>
+        private static Color? SeverityColor(RateLimitEntry entry) => entry.Severity switch
+        {
+            RateLimitSeverity.Critical => Color.FromArgb(220, 60, 60),    // rot
+            RateLimitSeverity.Warning  => Color.FromArgb(200, 130, 0),    // orange
+            _                          => null
+        };
+
         private static int InsertRateLimitItems(ToolStripMenuItem menu, int insertAt, string label, RateLimitEntry? entry)
         {
             if (entry == null) return insertAt;
@@ -850,6 +973,17 @@ namespace Wrok
 
             var item = new ToolStripMenuItem(text) { Enabled = false };
 
+            // Farbe erst ab "knapp": Solange reichlich Kontingent da ist, bleibt der
+            // Eintrag unauffaellig grau wie die uebrigen deaktivierten Menuepunkte.
+            // Deaktivierte Items zeichnet WinForms sonst grundsaetzlich ausgegraut,
+            // deshalb muss die Farbe ueber ForeColor gesetzt werden.
+            var accent = SeverityColor(entry);
+            if (accent.HasValue)
+            {
+                item.ForeColor = accent.Value;
+                item.Font      = new Font(item.Font ?? SystemFonts.MenuFont!, FontStyle.Bold);
+            }
+
             if (!entry.IsError && !entry.IsUnknown && !string.IsNullOrEmpty(entry.ResetInfo))
             {
                 var resetItem = new ToolStripMenuItem($"  {entry.ResetInfo}") { Enabled = false,
@@ -869,51 +1003,154 @@ namespace Wrok
         // Makros Import / Export
         // ------------------------------------------------------------------
 
-        private void ExportMacros()
+        /// <param name="allProfiles">
+        /// true = alle Profile samt Namen, false = nur das aktive Profil.
+        /// </param>
+        private void ExportMacros(bool allProfiles)
         {
+            // Dateiname macht sichtbar, was drinsteckt.
+            int    active   = _macroManager.ActiveProfile;
+            var    names    = _macroManager.GetProfileNames();
+            string profile  = string.IsNullOrWhiteSpace(names[active])
+                ? $"Profil{active + 1}"
+                : names[active];
+            string suggested = allProfiles
+                ? $"Wrok-Makros_alle_{DateTime.Now:yyyyMMdd}.json"
+                : $"Wrok-Makros_{profile}_{DateTime.Now:yyyyMMdd}.json";
+
             using var dlg = new SaveFileDialog
             {
-                Title            = "Makros exportieren",
-                Filter           = "JSON-Datei (*.json)|*.json",
-                FileName         = $"Wrok-Makros_{DateTime.Now:yyyyMMdd}.json",
-                DefaultExt       = "json",
-                OverwritePrompt  = true
+                Title           = Properties.Resources.ExportMacrosTitle,
+                Filter          = Properties.Resources.ExportMacrosFilter,
+                FileName        = SanitizeFileName(suggested),
+                DefaultExt      = "json",
+                OverwritePrompt = true
             };
             if (dlg.ShowDialog(this) != DialogResult.OK) return;
 
-            bool ok = _macroManager.Export(dlg.FileName);
+            bool ok = allProfiles
+                ? _macroManager.ExportAllProfiles(dlg.FileName)
+                : _macroManager.ExportActiveProfile(dlg.FileName);
+
             if (ok)
-                MessageBox.Show($"Makros erfolgreich exportiert nach:\n{dlg.FileName}",
-                    "Export erfolgreich", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(this, string.Format(Properties.Resources.ExportSuccessMsg, dlg.FileName),
+                    Properties.Resources.ExportSuccessTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
             else
-                MessageBox.Show("Export fehlgeschlagen. Bitte Pfad und Berechtigungen prüfen.",
-                    "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(this, Properties.Resources.ExportFailedMsg,
+                    Properties.Resources.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+
+        private static string SanitizeFileName(string name)
+        {
+            foreach (char c in Path.GetInvalidFileNameChars())
+                name = name.Replace(c, '_');
+            return name;
         }
 
         private void ImportMacros()
         {
             using var dlg = new OpenFileDialog
             {
-                Title  = "Makros importieren",
-                Filter = "JSON-Datei (*.json)|*.json",
+                Title  = Properties.Resources.ImportMacrosTitle,
+                Filter = Properties.Resources.ExportMacrosFilter,
             };
             if (dlg.ShowDialog(this) != DialogResult.OK) return;
 
-            var confirm = MessageBox.Show(
-                "Die aktuellen Makros werden durch die importierten ersetzt.\nFortfahren?",
-                "Makros importieren", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-            if (confirm != DialogResult.Yes) return;
+            // Erst nachsehen, was in der Datei steckt – davon haengt ab, was zu
+            // fragen ist. Bis hierhin wurde nichts veraendert.
+            var kind = MacroManager.Inspect(dlg.FileName);
+            bool ok;
 
-            bool ok = _macroManager.Import(dlg.FileName);
+            switch (kind)
+            {
+                case MacroImportKind.AllProfiles:
+                    if (MessageBox.Show(this, Properties.Resources.ImportAllConfirmMsg,
+                            Properties.Resources.ImportConfirmTitle,
+                            MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+                        return;
+                    ok = _macroManager.ImportAllProfiles(dlg.FileName);
+                    break;
+
+                case MacroImportKind.SingleProfile:
+                    if (!ShowProfileChooser(out int target)) return;
+                    ok = _macroManager.ImportIntoProfile(dlg.FileName, target);
+                    break;
+
+                default:
+                    MessageBox.Show(this, Properties.Resources.ImportInvalidMsg,
+                        Properties.Resources.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+            }
+
             if (ok)
             {
                 RefreshMacrosMenu();
-                MessageBox.Show("Makros erfolgreich importiert.",
-                    "Import erfolgreich", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(this, Properties.Resources.ImportSuccessMsg,
+                    Properties.Resources.ImportSuccessTitle, MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             else
-                MessageBox.Show("Import fehlgeschlagen. Bitte prüfen ob die Datei ein gültiges Wrok-Makro-Format hat.",
-                    "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(this, Properties.Resources.ImportFailedMsg,
+                    Properties.Resources.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+
+        /// <summary>
+        /// Laesst das Zielprofil fuer einen Import waehlen. Vorausgewaehlt ist das
+        /// aktive Profil, damit der haeufigste Fall ein Enter-Druck bleibt.
+        /// </summary>
+        private bool ShowProfileChooser(out int index)
+        {
+            index = _macroManager.ActiveProfile;
+
+            var names = _macroManager.GetProfileNames();
+            var items = names.Select((n, i) => string.IsNullOrWhiteSpace(n)
+                    ? string.Format(Properties.Resources.MacroProfileDefault, i + 1)
+                    : $"{i + 1} – {n}")
+                .ToArray();
+
+            using var dlg = new Form
+            {
+                Text            = Properties.Resources.ImportTargetTitle,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                StartPosition   = FormStartPosition.CenterParent,
+                MinimizeBox     = false,
+                MaximizeBox     = false,
+                ShowInTaskbar   = false,
+                ClientSize      = new Size(400, 150)
+            };
+
+            var lbl = new Label
+            {
+                Text     = Properties.Resources.ImportTargetPrompt,
+                AutoSize = false,
+                Left     = 16,
+                Top      = 14,
+                Width    = dlg.ClientSize.Width - 32,
+                Height   = 40,
+                Font     = new Font("Segoe UI", 9.5F)
+            };
+            var combo = new ComboBox
+            {
+                Left          = 16,
+                Top           = 62,
+                Width         = dlg.ClientSize.Width - 32,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font          = new Font("Segoe UI", 10F)
+            };
+            combo.Items.AddRange(items);
+            combo.SelectedIndex = index;
+
+            var btnOk     = new Button { Text = Properties.Resources.OK,     DialogResult = DialogResult.OK,     Size = new Size(80, 28), Top = 106 };
+            var btnCancel = new Button { Text = Properties.Resources.Cancel, DialogResult = DialogResult.Cancel, Size = new Size(80, 28), Top = 106 };
+            btnCancel.Left = dlg.ClientSize.Width - btnCancel.Width - 16;
+            btnOk.Left     = btnCancel.Left - btnOk.Width - 8;
+
+            dlg.Controls.AddRange(new Control[] { lbl, combo, btnOk, btnCancel });
+            dlg.AcceptButton = btnOk;
+            dlg.CancelButton = btnCancel;
+
+            if (dlg.ShowDialog(this) != DialogResult.OK) return false;
+            index = combo.SelectedIndex;
+            return index >= 0;
         }
 
         // ------------------------------------------------------------------
@@ -1187,7 +1424,62 @@ namespace Wrok
             return true;
         }
 
-        /// <summary>Kleiner einzeiliger Eingabedialog. Enter = OK, Esc = Abbrechen.</summary>
+        /// <summary>
+        /// Schlichter einzeiliger Eingabedialog (Profilnamen o. Ä.).
+        /// Enter bestätigt, Esc bricht ab.
+        /// </summary>
+        private bool ShowSingleLineDialog(string title, string prompt, string initial, out string value)
+        {
+            value = string.Empty;
+
+            using var dlg = new Form
+            {
+                Text            = title,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                StartPosition   = FormStartPosition.CenterParent,
+                MinimizeBox     = false,
+                MaximizeBox     = false,
+                ShowInTaskbar   = false,
+                ClientSize      = new Size(400, 120)
+            };
+
+            var lbl = new Label
+            {
+                Text     = prompt,
+                AutoSize = true,
+                Left     = 16,
+                Top      = 16,
+                Font     = new Font("Segoe UI", 9.5F)
+            };
+            var tb = new TextBox
+            {
+                Left   = 16,
+                Top    = 44,
+                Width  = dlg.ClientSize.Width - 32,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                Font   = new Font("Segoe UI", 10F),
+                Text   = initial ?? string.Empty
+            };
+            var btnOk     = new Button { Text = Properties.Resources.OK,     DialogResult = DialogResult.OK,     Size = new Size(80, 28), Top = 80 };
+            var btnCancel = new Button { Text = Properties.Resources.Cancel, DialogResult = DialogResult.Cancel, Size = new Size(80, 28), Top = 80 };
+            btnCancel.Left = dlg.ClientSize.Width - btnCancel.Width - 16;
+            btnOk.Left     = btnCancel.Left - btnOk.Width - 8;
+
+            dlg.Controls.AddRange(new Control[] { lbl, tb, btnOk, btnCancel });
+            dlg.AcceptButton = btnOk;
+            dlg.CancelButton = btnCancel;
+            dlg.Shown += (s, e) => { tb.Focus(); tb.SelectAll(); };
+
+            if (dlg.ShowDialog(this) != DialogResult.OK) return false;
+            value = tb.Text;
+            return true;
+        }
+
+        /// <summary>
+        /// Mehrzeiliger Eingabedialog für {input}. Strg+Enter sendet, Esc bricht ab.
+        /// Bewusst mehrzeilig: Im Rollenspiel sind die Einwürfe oft längere
+        /// Erzählpassagen, die in einem einzeiligen Feld nicht überblickbar wären.
+        /// </summary>
         private bool ShowInputDialog(string prompt, out string value)
         {
             value = string.Empty;
@@ -1200,14 +1492,15 @@ namespace Wrok
             using var dlg = new Form
             {
                 Text            = Properties.Resources.MacroInputTitle,
-                FormBorderStyle = FormBorderStyle.FixedDialog,
+                FormBorderStyle = FormBorderStyle.SizableToolWindow,
                 StartPosition   = ownerUsable ? FormStartPosition.CenterParent
                                               : FormStartPosition.CenterScreen,
                 MinimizeBox     = false,
                 MaximizeBox     = false,
                 ShowInTaskbar   = false,
                 TopMost         = true,
-                ClientSize      = new Size(420, 110)
+                MinimumSize     = new Size(360, 220),
+                ClientSize      = new Size(560, 300)
             };
 
             var lbl = new Label
@@ -1215,29 +1508,63 @@ namespace Wrok
                 Text     = prompt,
                 AutoSize = false,
                 Left     = 16,
-                Top      = 14,
+                Top      = 12,
                 Width    = dlg.ClientSize.Width - 32,
                 Height   = 20,
+                Anchor   = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
                 Font     = new Font("Segoe UI", 9.5F)
             };
             var tb = new TextBox
             {
-                Left   = 16,
-                Top    = 40,
-                Width  = dlg.ClientSize.Width - 32,
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-                Font   = new Font("Segoe UI", 10F)
+                Multiline     = true,
+                AcceptsReturn = true,     // Enter erzeugt einen Zeilenumbruch
+                WordWrap      = true,
+                ScrollBars    = ScrollBars.Vertical,
+                Left          = 16,
+                Top           = 36,
+                Width         = dlg.ClientSize.Width - 32,
+                Height        = dlg.ClientSize.Height - 36 - 46,
+                Anchor        = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
+                Font          = new Font("Segoe UI", 10F)
             };
-            var btnOk     = new Button { Text = Properties.Resources.OK,     DialogResult = DialogResult.OK,     Size = new Size(80, 28), Top = 72 };
-            var btnCancel = new Button { Text = Properties.Resources.Cancel, DialogResult = DialogResult.Cancel, Size = new Size(80, 28), Top = 72 };
-            btnCancel.Left = dlg.ClientSize.Width - btnCancel.Width - 16;
-            btnOk.Left     = btnCancel.Left - btnOk.Width - 8;
+            var lblHint = new Label
+            {
+                Text      = Properties.Resources.InputDialogHint,
+                AutoSize  = true,
+                Anchor    = AnchorStyles.Bottom | AnchorStyles.Left,
+                ForeColor = SystemColors.GrayText,
+                Font      = new Font("Segoe UI", 8F)
+            };
+            var btnOk     = new Button { Text = Properties.Resources.OK,     DialogResult = DialogResult.OK,     Size = new Size(80, 28), Anchor = AnchorStyles.Bottom | AnchorStyles.Right };
+            var btnCancel = new Button { Text = Properties.Resources.Cancel, DialogResult = DialogResult.Cancel, Size = new Size(80, 28), Anchor = AnchorStyles.Bottom | AnchorStyles.Right };
 
-            dlg.Controls.AddRange(new Control[] { lbl, tb, btnOk, btnCancel });
-            dlg.AcceptButton = btnOk;
+            void LayoutBottom()
+            {
+                int y = dlg.ClientSize.Height - btnOk.Height - 10;
+                tb.Height          = y - tb.Top - 8;
+                btnCancel.Location = new Point(dlg.ClientSize.Width - btnCancel.Width - 16, y);
+                btnOk.Location     = new Point(btnCancel.Left - btnOk.Width - 8, y);
+                lblHint.Location   = new Point(16, y + (btnOk.Height - lblHint.Height) / 2);
+            }
+
+            dlg.Controls.AddRange(new Control[] { lbl, tb, lblHint, btnOk, btnCancel });
+            // KEIN AcceptButton: Enter soll eine neue Zeile erzeugen, nicht senden.
             dlg.CancelButton = btnCancel;
+            dlg.Resize += (s, e) => LayoutBottom();
+
+            tb.KeyDown += (s, e) =>
+            {
+                if (e.KeyCode == Keys.Enter && e.Control)
+                {
+                    e.SuppressKeyPress = true;
+                    dlg.DialogResult = DialogResult.OK;
+                    dlg.Close();
+                }
+            };
+
             dlg.Shown += (s, e) =>
             {
+                LayoutBottom();
                 try
                 {
                     dlg.Activate();

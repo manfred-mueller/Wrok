@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Wrok"
-#define MyAppVersion "1.0.1"
+#define MyAppVersion "1.1.0"
 #define MyAppExeName MyAppName + ".exe"
 #define MyAppPublisher "NASS e.K."
 #define MyAppURL "https://www.nass-ek.de"
@@ -48,16 +48,20 @@ AppMutex=Global\Wrok_SingleInstanceMutex
 CloseApplications=force
 RestartApplications=no
 VersionInfoVersion={#MyAppVersion}
-LicenseFile=D:\Dokumente\gpl_de.txt
-ArchitecturesInstallIn64BitMode=x64
-ArchitecturesAllowed=x64
+; Relative Pfade: Der Build bleibt damit in sich geschlossen und funktioniert
+; unabhaengig von einem bestimmten Rechner oder Laufwerk.
+LicenseFile=LICENSE.txt
+ArchitecturesInstallIn64BitMode=x64compatible
+ArchitecturesAllowed=x64compatible
 OutputDir=bin\x64\Release
 OutputBaseFilename={#MyAppName}-Setup-{#MyAppVersion}
 SetupIconFile=Properties\wrok_black.ico
 UninstallDisplayIcon={app}\{#MyAppExeName},0
 DisableWelcomePage=False
-WizardImageFile=D:\Bilder\wz_nass-ek.bmp
-WizardSmallImageFile=D:\Bilder\wz_leer_small.bmp
+; Aus wrok_white.ico erzeugt, damit der Assistent dasselbe Symbol zeigt wie
+; Anwendung und Deinstallation.
+WizardImageFile=Properties\wizard_large.bmp
+WizardSmallImageFile=Properties\wizard_small.bmp
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
@@ -72,12 +76,22 @@ Source: "{#MyAppExeSource}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "Properties\wrok_black.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "Properties\wrok_white.ico"; DestDir: "{app}"; Flags: ignoreversion
 
+[Tasks]
+; BEWUSST OHNE "Flags: unchecked": Bei einer stillen Installation (WinGet) werden
+; nur standardmaessig angehakte Tasks ausgefuehrt. Mit "unchecked" bekaeme kein
+; einziger WinGet-Nutzer ein Desktopsymbol.
+Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; \
+    GroupDescription: "{cm:AdditionalIcons}"
+
 [Icons]
-Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}";
-Name: "{autodesktop}\Wrok"; Filename: "{app}\Wrok.exe"; IconFilename: "{app}\wrok_black.ico"
+Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; \
+    IconFilename: "{app}\wrok_black.ico"
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; \
+    IconFilename: "{app}\wrok_black.ico"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\Wrok.exe"; Description: "{cm:LaunchProgram,Wrok}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; \
+    Flags: nowait postinstall skipifsilent
 
 [Code]
 

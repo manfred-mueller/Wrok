@@ -172,6 +172,53 @@
   <data name="MacroInputTitle" xml:space="preserve">
     <value>Macro input</value>
   </data>
+  <data name="InputDialogHint" xml:space="preserve">
+    <value>Ctrl+Enter sends · Esc cancels</value>
+  </data>
+  <data name="MacroProfiles" xml:space="preserve">
+    <value>Profiles</value>
+  </data>
+  <data name="MacrosExportActive" xml:space="preserve">
+    <value>Export active profile…</value>
+  </data>
+  <data name="MacrosExportAll" xml:space="preserve">
+    <value>Export all profiles…</value>
+  </data>
+  <data name="ImportTargetTitle" xml:space="preserve">
+    <value>Import macros</value>
+  </data>
+  <data name="ImportTargetPrompt" xml:space="preserve">
+    <value>Import into which profile?
+Its current macros will be replaced.</value>
+  </data>
+  <data name="ImportAllConfirmMsg" xml:space="preserve">
+    <value>This file contains all profiles. Every profile, including its name, will be replaced.
+
+Continue?</value>
+  </data>
+  <data name="ImportInvalidMsg" xml:space="preserve">
+    <value>The file is not a valid Wrok macro export.</value>
+  </data>
+  <data name="MacroProfileRename" xml:space="preserve">
+    <value>Rename profile</value>
+  </data>
+  <data name="MacroProfileReset" xml:space="preserve">
+    <value>Reset active profile…</value>
+  </data>
+  <data name="MacroProfileResetConfirm" xml:space="preserve">
+    <value>Profile “{0}” will be cleared: its name and all ten macros.
+
+Continue?</value>
+  </data>
+  <data name="MacroProfileName" xml:space="preserve">
+    <value>Profile name:</value>
+  </data>
+  <data name="MacroProfileHint" xml:space="preserve">
+    <value>Left-click switches · right-click renames</value>
+  </data>
+  <data name="MacroProfileDefault" xml:space="preserve">
+    <value>Profile {0}</value>
+  </data>
   <data name="OpenImageFromClipboard" xml:space="preserve">
     <value>Open image from clipboard…</value>
   </data>
@@ -358,30 +405,60 @@ Shift+Click sends without Enter.</value>
   </data>
   <data name="MacroHelp" xml:space="preserve">
     <value>Macros
-- Edit: Right-click on a macro in the tray menu -&gt; Edit.
-- Send via menu: Left-click on a macro to insert the text and send it (Send+Enter).
-- Send without Enter: Left-click + Shift (or Alt) sends the text WITHOUT pressing Enter.
-- Hotkeys: Ctrl+1 .. Ctrl+5 send the respective macro. By default, Enter is sent after pasting (as with left-clicking).
-  Hold Shift or Alt while pressing the hotkey to suppress Enter.
-- Variables: macro text may contain {date}, {time}, {username}, {clipboard} and {input}.
-  {input} (or {input:Your question}) asks you for a value right before sending — handy for role-play.
+- Edit: right-click a macro in the tray menu.
+- Send via menu: left-click inserts the text and sends it (text + Enter).
+- Send without Enter: left-click + Shift (or Alt) sends the text WITHOUT a trailing Enter.
+- Hotkeys: Ctrl+1 .. Ctrl+0 send the respective macro. Enter follows by default, as with left-click;
+  hold Shift or Alt while pressing to suppress it.
 
-Boss-Key
-- To minimize the window press Ctrl+Space (press it again to restore the window).
+Macro profiles
+- Three named sets of ten macros each, for different characters or scenarios.
+- Switch: Macros -&gt; Profiles -&gt; left-click a profile. Switching swaps the whole
+  Ctrl+1 .. Ctrl+0 assignment at once.
+- Rename: right-click a profile.
+- Reset: Macros -&gt; Profiles -&gt; "Reset active profile" clears the name and all ten macros
+  of the active profile. Profiles cannot be removed - there are always exactly three.
+- Import and export refer to the active profile unless "Export all profiles" is chosen.
+
+Macro variables
+- Macro text may contain {date}, {time}, {username}, {clipboard} and {input}.
+- {input} or {input:Your question} asks for a value right before sending.
+- The input dialog is multi-line: Enter inserts a line break, Ctrl+Enter sends, Esc aborts.
+- Cancelling discards the whole send.
+
+Media viewer
+- Clicking an image or video in Grok opens it in its own window, placed on the left at full
+  screen height while Wrok fills the rest. Videos play muted in an endless loop.
+- Alternatively: right-click the media -&gt; "Copy image address", then press Ctrl+Shift+P.
+- Ctrl+Shift+P without a usable clipboard reopens the last media item. Images are cached
+  locally for this and need neither network nor an active session.
+- Inside the window: Esc closes, + / - and the mouse wheel zoom, Ctrl+F fits,
+  Ctrl+S saves, Ctrl+P pins. Drag with the left button to pan.
+
+Boss key
+- Ctrl+Space minimizes the window instantly; press again to restore it.
+
+Tray menu
+- Settings -&gt; App: inactivity, macro import/export, start with Windows.
+- Settings -&gt; Grok: opens Grok's own settings page.
+- Tools: rate limits, open image, clear cache.
 
 Clear cache
-- Tray menu → ‘Clear cache’ deletes WebView2 browser data (cache, cookies, locally stored data).
-- When to use: for display errors, login problems, or when a ‘clean’ session is needed.
-- Note: After clearing, you may need to log in again or reload the page.
+- Tools -&gt; "Clear cache" offers two options:
+  "Clear cache only" removes images and scripts; you stay signed in.
+  "Delete all" also removes cookies and settings; you will be signed out.
+- Useful for display errors, login problems, or when a clean session is needed.
 
 Troubleshooting / Tips
-- If text is not being sent: Make sure the page is fully loaded and the editor is visible.
-- Open DevTools: In debugging situations, WebView2 DevTools can be opened to check DOM/Console.
-- Messages and logs can be found at %LOCALAPPDATA%\\Wrok\\logs\\app.log
+- If text is not sent: make sure the page is fully loaded and the input field is visible.
+- F12 opens the WebView2 developer tools (DOM and console).
+- Zoom the page: Ctrl + Plus/Minus/0 or Ctrl + mouse wheel. The zoom level is remembered.
+- Messages and errors are written to %LOCALAPPDATA%\Wrok\logs\app.log
 
 Brief overview of operation
-- Click and hotkey behavior is the same: insert text, then attempt to send via button click or OS Enter.
-  Some web editors ignore synthetic JS keyboard events; therefore a real Enter is sent via InputSimulator if necessary.</value>
+- Click and hotkey behave the same: insert the text, then send by clicking the send button or
+  by a real Enter. Some web editors ignore synthetic keyboard events, so Wrok falls back to a
+  genuine keystroke from the operating system when needed.</value>
   </data>
   <data name="EmptyMacro" xml:space="preserve">
     <value>Empty</value>

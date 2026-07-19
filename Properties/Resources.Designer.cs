@@ -459,49 +459,15 @@ namespace Wrok.Properties {
                 return ResourceManager.GetString("ImageLoadFailed", resourceCulture);
             }
         }
-
+        
         /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Open last image ähnelt.
+        ///   Sucht eine lokalisierte Zeichenfolge, die This file contains all profiles. Every profile, including its name, will be replaced.
+        ///
+        ///Continue? ähnelt.
         /// </summary>
-        public static string OpenLastImage {
+        public static string ImportAllConfirmMsg {
             get {
-                return ResourceManager.GetString("OpenLastImage", resourceCulture);
-            }
-        }
-
-        /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Tools ähnelt.
-        /// </summary>
-        public static string MenuTools {
-            get {
-                return ResourceManager.GetString("MenuTools", resourceCulture);
-            }
-        }
-
-        /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die App ähnelt.
-        /// </summary>
-        public static string MenuApp {
-            get {
-                return ResourceManager.GetString("MenuApp", resourceCulture);
-            }
-        }
-
-        /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Grok ähnelt.
-        /// </summary>
-        public static string MenuGrok {
-            get {
-                return ResourceManager.GetString("MenuGrok", resourceCulture);
-            }
-        }
-
-        /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die No image saved yet. ähnelt.
-        /// </summary>
-        public static string NoLastImage {
-            get {
-                return ResourceManager.GetString("NoLastImage", resourceCulture);
+                return ResourceManager.GetString("ImportAllConfirmMsg", resourceCulture);
             }
         }
         
@@ -534,6 +500,15 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die The file is not a valid Wrok macro export. ähnelt.
+        /// </summary>
+        public static string ImportInvalidMsg {
+            get {
+                return ResourceManager.GetString("ImportInvalidMsg", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die Import macros ähnelt.
         /// </summary>
         public static string ImportMacrosTitle {
@@ -557,6 +532,25 @@ namespace Wrok.Properties {
         public static string ImportSuccessTitle {
             get {
                 return ResourceManager.GetString("ImportSuccessTitle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Import into which profile?
+        ///Its current macros will be replaced. ähnelt.
+        /// </summary>
+        public static string ImportTargetPrompt {
+            get {
+                return ResourceManager.GetString("ImportTargetPrompt", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Import macros ähnelt.
+        /// </summary>
+        public static string ImportTargetTitle {
+            get {
+                return ResourceManager.GetString("ImportTargetTitle", resourceCulture);
             }
         }
         
@@ -593,6 +587,15 @@ namespace Wrok.Properties {
         public static string InjectHelperScriptToCurrentDocumentFailed {
             get {
                 return ResourceManager.GetString("InjectHelperScriptToCurrentDocumentFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Ctrl+Enter sends · Esc cancels ähnelt.
+        /// </summary>
+        public static string InputDialogHint {
+            get {
+                return ResourceManager.GetString("InputDialogHint", resourceCulture);
             }
         }
         
@@ -680,12 +683,15 @@ namespace Wrok.Properties {
         
         /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die Macros
-        ///- Edit: Right-click on a macro in the tray menu -&gt; Edit.
-        ///- Send via menu: Left-click on a macro to insert the text and send it (Send+Enter).
-        ///- Send without Enter: Left-click + Shift (or Alt) sends the text WITHOUT pressing Enter.
-        ///- Hotkeys: Ctrl+1 .. Ctrl+5 send the respective macro. By default, Enter is sent after pasting (as with left-clicking).
-        ///  Hold Shift or Alt while pressing the hotkey to suppress Enter.
-        ///- Variables: macro text may contain {date}, {time}, {username}, {clipboard} and {inp [Rest der Zeichenfolge wurde abgeschnitten]&quot;; ähnelt.
+        ///- Edit: right-click a macro in the tray menu.
+        ///- Send via menu: left-click inserts the text and sends it (text + Enter).
+        ///- Send without Enter: left-click + Shift (or Alt) sends the text WITHOUT a trailing Enter.
+        ///- Hotkeys: Ctrl+1 .. Ctrl+0 send the respective macro. Enter follows by default, as with left-click;
+        ///  hold Shift or Alt while pressing to suppress it.
+        ///
+        ///Macro profiles
+        ///- Three named sets of ten macros each, for different characters or scenarios.
+        ///- Switch: Macros -&gt; Profiles -&gt; left-click a pro [Rest der Zeichenfolge wurde abgeschnitten]&quot;; ähnelt.
         /// </summary>
         public static string MacroHelp {
             get {
@@ -721,6 +727,69 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Profile {0} ähnelt.
+        /// </summary>
+        public static string MacroProfileDefault {
+            get {
+                return ResourceManager.GetString("MacroProfileDefault", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Left-click switches · right-click renames ähnelt.
+        /// </summary>
+        public static string MacroProfileHint {
+            get {
+                return ResourceManager.GetString("MacroProfileHint", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Profile name: ähnelt.
+        /// </summary>
+        public static string MacroProfileName {
+            get {
+                return ResourceManager.GetString("MacroProfileName", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Rename profile ähnelt.
+        /// </summary>
+        public static string MacroProfileRename {
+            get {
+                return ResourceManager.GetString("MacroProfileRename", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Reset active profile… ähnelt.
+        /// </summary>
+        public static string MacroProfileReset {
+            get {
+                return ResourceManager.GetString("MacroProfileReset", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Profile “{0}” will be cleared ähnelt.
+        /// </summary>
+        public static string MacroProfileResetConfirm {
+            get {
+                return ResourceManager.GetString("MacroProfileResetConfirm", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Profiles ähnelt.
+        /// </summary>
+        public static string MacroProfiles {
+            get {
+                return ResourceManager.GetString("MacroProfiles", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die Macros ähnelt.
         /// </summary>
         public static string Macros {
@@ -735,6 +804,24 @@ namespace Wrok.Properties {
         public static string MacrosExport {
             get {
                 return ResourceManager.GetString("MacrosExport", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Export active profile… ähnelt.
+        /// </summary>
+        public static string MacrosExportActive {
+            get {
+                return ResourceManager.GetString("MacrosExportActive", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Export all profiles… ähnelt.
+        /// </summary>
+        public static string MacrosExportAll {
+            get {
+                return ResourceManager.GetString("MacrosExportAll", resourceCulture);
             }
         }
         
@@ -775,6 +862,33 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die App ähnelt.
+        /// </summary>
+        public static string MenuApp {
+            get {
+                return ResourceManager.GetString("MenuApp", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Grok ähnelt.
+        /// </summary>
+        public static string MenuGrok {
+            get {
+                return ResourceManager.GetString("MenuGrok", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Tools ähnelt.
+        /// </summary>
+        public static string MenuTools {
+            get {
+                return ResourceManager.GetString("MenuTools", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die New macro ähnelt.
         /// </summary>
         public static string NewMacro {
@@ -789,6 +903,17 @@ namespace Wrok.Properties {
         public static string NewMacroMenuItem {
             get {
                 return ResourceManager.GetString("NewMacroMenuItem", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die No image available.
+        ///
+        ///Tip: right-click an image in Grok, choose “Copy image address”, then press Ctrl+Shift+P. It will be available here after every restart. ähnelt.
+        /// </summary>
+        public static string NoLastImage {
+            get {
+                return ResourceManager.GetString("NoLastImage", resourceCulture);
             }
         }
         
@@ -853,6 +978,15 @@ namespace Wrok.Properties {
         public static string OpenImageFromClipboard {
             get {
                 return ResourceManager.GetString("OpenImageFromClipboard", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Open last image ähnelt.
+        /// </summary>
+        public static string OpenLastImage {
+            get {
+                return ResourceManager.GetString("OpenLastImage", resourceCulture);
             }
         }
         

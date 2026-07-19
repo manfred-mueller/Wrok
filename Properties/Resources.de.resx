@@ -172,6 +172,53 @@
   <data name="MacroInputTitle" xml:space="preserve">
     <value>Makro-Eingabe</value>
   </data>
+  <data name="InputDialogHint" xml:space="preserve">
+    <value>Strg+Enter sendet · Esc bricht ab</value>
+  </data>
+  <data name="MacroProfiles" xml:space="preserve">
+    <value>Profile</value>
+  </data>
+  <data name="MacrosExportActive" xml:space="preserve">
+    <value>Aktives Profil exportieren…</value>
+  </data>
+  <data name="MacrosExportAll" xml:space="preserve">
+    <value>Alle Profile exportieren…</value>
+  </data>
+  <data name="ImportTargetTitle" xml:space="preserve">
+    <value>Makros importieren</value>
+  </data>
+  <data name="ImportTargetPrompt" xml:space="preserve">
+    <value>In welches Profil soll importiert werden?
+Dessen bisherige Makros werden ersetzt.</value>
+  </data>
+  <data name="ImportAllConfirmMsg" xml:space="preserve">
+    <value>Die Datei enthält alle Profile. Sämtliche Profile werden samt Namen ersetzt.
+
+Fortfahren?</value>
+  </data>
+  <data name="ImportInvalidMsg" xml:space="preserve">
+    <value>Die Datei ist kein gültiger Wrok-Makro-Export.</value>
+  </data>
+  <data name="MacroProfileRename" xml:space="preserve">
+    <value>Profil umbenennen</value>
+  </data>
+  <data name="MacroProfileReset" xml:space="preserve">
+    <value>Aktives Profil zurücksetzen…</value>
+  </data>
+  <data name="MacroProfileResetConfirm" xml:space="preserve">
+    <value>Profil „{0}“ wird geleert: Name und alle zehn Makros.
+
+Fortfahren?</value>
+  </data>
+  <data name="MacroProfileName" xml:space="preserve">
+    <value>Profilname:</value>
+  </data>
+  <data name="MacroProfileHint" xml:space="preserve">
+    <value>Linksklick wechselt · Rechtsklick benennt um</value>
+  </data>
+  <data name="MacroProfileDefault" xml:space="preserve">
+    <value>Profil {0}</value>
+  </data>
   <data name="OpenImageFromClipboard" xml:space="preserve">
     <value>Bild aus Zwischenablage öffnen…</value>
   </data>
@@ -358,30 +405,60 @@ Umschalt+Klick trägt ein ohne zu senden.</value>
   </data>
   <data name="MacroHelp" xml:space="preserve">
     <value>Makros
-- Bearbeiten: Rechtsklick auf ein Makro im Tray‑Menü -&gt; Bearbeiten.
-- Senden per Menü: Linksklick auf ein Makro fügt den Text ein und sendet ihn (Send+Enter).
-- Senden ohne Enter: Linksklick + Shift (oder Alt) sendet den Text OHNE abschließendes Enter.
-- Hotkeys: Strg+1 .. Strg+5 senden das jeweilige Makro. Standardmäßig wird nach dem Einfügen Enter gesendet (wie Linksklick).
-  Halte Shift oder Alt beim Hotkey, um Enter zu unterdrücken.
-- Variablen: Makrotext kann {date}, {time}, {username}, {clipboard} und {input} enthalten.
-  {input} (oder {input:Deine Frage}) fragt dich direkt vor dem Senden nach einem Wert — praktisch fürs Rollenspiel.
+- Bearbeiten: Rechtsklick auf ein Makro im Tray-Menü.
+- Senden per Menü: Linksklick fügt den Text ein und sendet ihn (Text + Enter).
+- Senden ohne Enter: Linksklick + Umschalt (oder Alt) sendet den Text OHNE abschließendes Enter.
+- Hotkeys: Strg+1 .. Strg+0 senden das jeweilige Makro. Standardmäßig folgt Enter wie beim Linksklick;
+  Umschalt oder Alt beim Drücken unterdrückt es.
+
+Makro-Profile
+- Drei benennbare Sätze zu je zehn Makros, etwa für verschiedene Figuren oder Szenarien.
+- Wechseln: Makros -&gt; Profile -&gt; Linksklick auf ein Profil. Der Wechsel tauscht die komplette
+  Belegung von Strg+1 bis Strg+0 aus.
+- Umbenennen: Rechtsklick auf ein Profil.
+- Zurücksetzen: Makros -&gt; Profile -&gt; "Aktives Profil zurücksetzen" leert Name und alle
+  zehn Makros des aktiven Profils. Profile lassen sich nicht entfernen - es sind immer genau drei.
+- Import und Export beziehen sich auf das aktive Profil, sofern nicht "Alle Profile exportieren" gewählt wird.
+
+Makro-Variablen
+- Makrotext kann {date}, {time}, {username}, {clipboard} und {input} enthalten.
+- {input} bzw. {input:Deine Frage} fragt unmittelbar vor dem Senden nach einem Wert.
+- Der Eingabedialog ist mehrzeilig: Enter erzeugt einen Zeilenumbruch, Strg+Enter sendet, Esc bricht ab.
+- Abbrechen verwirft den gesamten Sendevorgang.
+
+Medienansicht
+- Bild oder Video in Grok anklicken öffnet es in einem eigenen Fenster, links auf voller
+  Bildschirmhöhe; Wrok nimmt den Rest ein. Videos laufen stumm im Endlos-Loop.
+- Alternativ: Rechtsklick auf das Medium -&gt; "Bildadresse kopieren", dann Strg+Umschalt+P.
+- Strg+Umschalt+P ohne passende Zwischenablage öffnet das zuletzt angezeigte Medium.
+  Bilder werden dafür lokal zwischengespeichert und brauchen weder Netzwerk noch Anmeldung.
+- Im Medienfenster: Esc schließt, + / - und Mausrad zoomen, Strg+F passt ein,
+  Strg+S speichert, Strg+P heftet an. Ziehen mit links verschiebt das Bild.
 
 Chef-Taste
-- Zum Minimieren des Fensters die Tastenkombination Strg+Leertaste drücken (erneutes Drücken stellt das Fenster wieder her).
+- Strg+Leertaste minimiert das Fenster sofort; erneutes Drücken holt es zurück.
+
+Tray-Menü
+- Einstellungen -&gt; App: Inaktivität, Makro-Import/-Export, Mit Windows starten.
+- Einstellungen -&gt; Grok: öffnet Groks eigene Einstellungsseite.
+- Werkzeuge: Rate Limits, Bild öffnen, Cache löschen.
 
 Cache löschen
-- Tray‑Menü → 'Cache löschen' löscht WebView2‑Browserdaten (Cache, Cookies, lokal gespeicherte Daten).
-- Wann einsetzen: bei Anzeigefehlern, Login‑Problemen oder wenn eine 'saubere' Sitzung benötigt wird.
-- Hinweis: Nach dem Löschen kann ein erneuter Login oder erneutes Laden der Seite nötig sein.
+- Werkzeuge -&gt; "Cache löschen" bietet zwei Möglichkeiten:
+  "Nur Cache löschen" entfernt Bilder und Skripte, die Anmeldung bleibt bestehen.
+  "Alles löschen" entfernt zusätzlich Cookies und Einstellungen, du wirst abgemeldet.
+- Sinnvoll bei Anzeigefehlern, Anmeldeproblemen oder wenn eine saubere Sitzung nötig ist.
 
 Fehlerbehebung / Tipps
-- Wenn Text nicht abgeschickt wird: Stelle sicher, dass die Seite vollständig geladen ist und der Editor sichtbar ist.
-- DevTools öffnen: In Debugging‑Situationen kann WebView2 DevTools geöffnet werden, um DOM/Console zu prüfen.
-- Meldungen und Logs findest du unter %LOCALAPPDATA%\\Wrok\\logs\\app.log
+- Wird Text nicht abgeschickt: sicherstellen, dass die Seite vollständig geladen und das Eingabefeld sichtbar ist.
+- F12 öffnet die WebView2-Entwicklerwerkzeuge (DOM und Konsole).
+- Seite zoomen: Strg + Plus/Minus/0 oder Strg + Mausrad. Die Zoomstufe wird gemerkt.
+- Meldungen und Fehler stehen in %LOCALAPPDATA%\Wrok\logs\app.log
 
 Kurz zur Bedienung
-- Verhalten beim Klick und Hotkey ist gleich: Text einfügen, anschließend wird versucht, per Button‑Click oder OS‑Enter zu senden.
-  Einige Web‑Editoren ignorieren synthetische JS‑KeyboardEvents; deshalb wird bei Bedarf ein echtes Enter per InputSimulator gesendet.</value>
+- Klick und Hotkey verhalten sich gleich: Text einfügen, danach senden per Klick auf den
+  Sendeknopf oder per echtem Enter. Manche Web-Editoren ignorieren synthetische Tastaturereignisse;
+  deshalb weicht Wrok bei Bedarf auf eine echte Eingabe des Betriebssystems aus.</value>
   </data>
   <data name="EmptyMacro" xml:space="preserve">
     <value>Leer</value>

@@ -8,6 +8,17 @@ namespace Wrok
     // Datenmodell
     // -------------------------------------------------------------------------
 
+    /// <summary>Wie knapp das Kontingent ist – steuert die Farbe im Tray-Menue.</summary>
+    internal enum RateLimitSeverity
+    {
+        Unknown,
+        Normal,
+        /// <summary>Hoechstens 25 % uebrig.</summary>
+        Warning,
+        /// <summary>Hoechstens 10 % uebrig.</summary>
+        Critical
+    }
+
     internal record RateLimitEntry(
         [property: JsonPropertyName("remainingQueries")]  int?  RemainingQueries,
         [property: JsonPropertyName("totalQueries")]      int?  TotalQueries,
@@ -17,6 +28,26 @@ namespace Wrok
     {
         public bool   IsError    => !string.IsNullOrWhiteSpace(Error);
         public bool   IsUnknown  => !IsError && RemainingQueries == null;
+
+        /// <summary>
+        /// Restkontingent als Anteil (0.0 bis 1.0) oder null, wenn unbekannt.
+        /// </summary>
+        public double? RemainingFraction =>
+            (RemainingQueries is int r && TotalQueries is int t && t > 0)
+                ? r / (double)t
+                : null;
+
+        /// <summary>
+        /// Dringlichkeitsstufe fuer die farbliche Hervorhebung im Menue.
+        /// Eine Farbe erfasst man im Vorbeigehen, eine Zahl muss man lesen.
+        /// </summary>
+        public RateLimitSeverity Severity => RemainingFraction switch
+        {
+            null      => RateLimitSeverity.Unknown,
+            <= 0.10   => RateLimitSeverity.Critical,
+            <= 0.25   => RateLimitSeverity.Warning,
+            _         => RateLimitSeverity.Normal
+        };
         public string ResetInfo
         {
             get

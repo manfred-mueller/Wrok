@@ -133,6 +133,30 @@ namespace Wrok.Properties {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string MacroProfilesJson {
+            get {
+                return ((string)(this["MacroProfilesJson"]));
+            }
+            set {
+                this["MacroProfilesJson"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int ActiveMacroProfile {
+            get {
+                return ((int)(this["ActiveMacroProfile"]));
+            }
+            set {
+                this["ActiveMacroProfile"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
         public string LastImagePath {
             get {
                 return ((string)(this["LastImagePath"]));

@@ -412,16 +412,30 @@ namespace Wrok
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
                 "(KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.0.0";
 
-            core.AddWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.All);
+            // NUR Dokument-Anfragen, nicht "All".
+            //
+            // Zuvor wurden diese Header auf JEDE Anfrage gesetzt – auch auf Bilder,
+            // API-Aufrufe und Datei-Uploads. Einem Upload-POST wurde damit
+            // "Sec-Fetch-Dest: document" und "Accept: text/html" verpasst, was für
+            // eine XHR-Anfrage schlicht falsch ist und serverseitig zu unerwartetem
+            // Verhalten führen kann. Nebenbei kostete der Filter bei jeder einzelnen
+            // Anfrage einen Sprung in verwalteten Code.
+            //
+            // Für eine echte Seitennavigation sind die Werte dagegen korrekt –
+            // Chromium sendet sie für alle anderen Anfragetypen ohnehin selbst
+            // und jeweils passend.
+            core.AddWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.Document);
             core.WebResourceRequested += (sender, args) =>
             {
                 var h = args.Request.Headers;
                 h.SetHeader("Accept",          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7");
-                h.SetHeader("Accept-Encoding", "gzip, deflate, br");
                 h.SetHeader("Accept-Language", "de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7");
                 h.SetHeader("Sec-Fetch-Dest",  "document");
                 h.SetHeader("Sec-Fetch-Mode",  "navigate");
-                h.SetHeader("Sec-Fetch-Site",  "same-origin");
+                // "Accept-Encoding" nicht setzen: Das handelt Chromium selbst aus und
+                // kennt die tatsaechlich unterstuetzten Verfahren besser.
+                // "Sec-Fetch-Site" ebenfalls nicht: Der Wert haengt davon ab, woher
+                // die Navigation kommt - fest "same-origin" waere beim Erstaufruf falsch.
             };
         }
 

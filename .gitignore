@@ -22,6 +22,10 @@ mono_crash.*
 [Mm]anifests/
 [Bb]in/[Rr]elease/net8.0-windows
 [Bb]in/x64/Release/net8.0-windows
+# Setup-Dateien nicht mehr einchecken: Sie haengen seit 1.1.0 als Asset am
+# Release (publish-release.ps1) und wuerden die Historie sonst dauerhaft
+# um rund 50 MB je Version aufblaehen.
+[Bb]in/x64/[Rr]elease/*.exe
 [Rr]eleases/
 Wrok.exe.WebView2/
 [Ww][Ii][Nn]32/
