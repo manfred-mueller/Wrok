@@ -37,6 +37,22 @@ Set-Location -Path $PSScriptRoot
 # Gilt nur fuer diesen Skriptlauf, nicht fuer die uebrige Umgebung.
 $env:DOTNET_CLI_UI_LANGUAGE = 'en'
 
+# --- 0. Werkzeuge pruefen ---------------------------------------------------
+# Frueh statt spaet: Ohne diese Pruefung faellt ein fehlendes gh erst nach
+# mehreren Minuten Bauzeit auf, unmittelbar vor dem Anlegen des Releases.
+if (-not $DryRun) {
+    if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
+        throw "GitHub CLI nicht gefunden. Installieren mit:`n" +
+              "  winget install --id GitHub.cli`n" +
+              "Danach PowerShell neu starten (PATH) und 'gh auth login' ausfuehren."
+    }
+
+    gh auth status *> $null
+    if ($LASTEXITCODE -ne 0) {
+        throw "GitHub CLI ist nicht angemeldet. Bitte 'gh auth login' ausfuehren."
+    }
+}
+
 # --- 1. Version ermitteln ---------------------------------------------------
 $assemblyInfo = Get-Content 'Properties\AssemblyInfo.cs' -Raw
 $version = [regex]::Match($assemblyInfo, 'AssemblyFileVersion\("(\d+\.\d+\.\d+)').Groups[1].Value
