@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -164,7 +164,7 @@
     <value />
   </data>
   <data name="ClearCache" xml:space="preserve">
-    <value>Cache löschen</value>
+    <value>Daten löschen…</value>
   </data>
   <data name="StartWithWindows" xml:space="preserve">
     <value>Mit Windows starten</value>
@@ -174,9 +174,6 @@
   </data>
   <data name="InputDialogHint" xml:space="preserve">
     <value>Strg+Enter sendet · Esc bricht ab</value>
-  </data>
-  <data name="MacroProfiles" xml:space="preserve">
-    <value>Profile</value>
   </data>
   <data name="MacrosExportActive" xml:space="preserve">
     <value>Aktives Profil exportieren…</value>
@@ -200,7 +197,7 @@ Fortfahren?</value>
     <value>Die Datei ist kein gültiger Wrok-Makro-Export.</value>
   </data>
   <data name="MacroProfileRename" xml:space="preserve">
-    <value>Profil umbenennen</value>
+    <value>Aktives Profil umbenennen…</value>
   </data>
   <data name="MacroProfileReset" xml:space="preserve">
     <value>Aktives Profil zurücksetzen…</value>
@@ -212,9 +209,6 @@ Fortfahren?</value>
   </data>
   <data name="MacroProfileName" xml:space="preserve">
     <value>Profilname:</value>
-  </data>
-  <data name="MacroProfileHint" xml:space="preserve">
-    <value>Linksklick wechselt · Rechtsklick benennt um</value>
   </data>
   <data name="MacroProfileDefault" xml:space="preserve">
     <value>Profil {0}</value>
@@ -249,10 +243,10 @@ Tipp: In Grok mit Rechtsklick auf ein Bild „Bildadresse kopieren“ wählen un
     <value>Variablen: {input} {date} {time} {username} {clipboard}</value>
   </data>
   <data name="ClearBrowsingData" xml:space="preserve">
-    <value>Browserdaten löschen</value>
+    <value>Daten löschen</value>
   </data>
   <data name="ChooseWhatToBeDeleted" xml:space="preserve">
-    <value>Wählen Sie aus, was gelöscht werden soll:</value>
+    <value>Wählen Sie aus, was gelöscht werden soll. „Alles löschen“ entfernt zusätzlich das zuletzt geöffnete Bild.</value>
   </data>
   <data name="ClearCacheOnly" xml:space="preserve">
     <value>Nur Cache löschen</value>
@@ -267,9 +261,40 @@ Tipp: In Grok mit Rechtsklick auf ein Bild „Bildadresse kopieren“ wählen un
     <value>Bilder, Skripte und andere Daten gelöscht.
 Sie sind noch angemeldet.</value>
   </data>
-  <data name="CookiesLoginDataAndSettingsDeletedNYouAreLoggedOut" xml:space="preserve">
-    <value>Cookies, Login-Daten und Einstellungen gelöscht.
+  <data name="AllDataDeletedMsg" xml:space="preserve">
+    <value>Cookies, Login-Daten und das zuletzt geöffnete Bild wurden gelöscht.
+Sie sind abgemeldet.
+
+Ihre Makros sowie Fenster- und Programmeinstellungen sind erhalten geblieben.</value>
+  </data>
+  <data name="AllDataDeletedInclMacrosMsg" xml:space="preserve">
+    <value>Cookies, Login-Daten, das zuletzt geöffnete Bild und alle Makroprofile wurden gelöscht.
 Sie sind abgemeldet.</value>
+  </data>
+  <data name="ClearMacrosToo" xml:space="preserve">
+    <value>Auch alle Makroprofile löschen (nur bei „Alles löschen“)</value>
+  </data>
+  <data name="ImageViewerTitle" xml:space="preserve">
+    <value>Bild-Viewer – Wrok   ({0}×{1})</value>
+  </data>
+  <data name="VideoViewerTitle" xml:space="preserve">
+    <value>Video – Wrok</value>
+  </data>
+  <data name="SaveImageTitle" xml:space="preserve">
+    <value>Bild speichern</value>
+  </data>
+  <data name="SaveImageFilter" xml:space="preserve">
+    <value>PNG-Bild|*.png|JPEG-Bild|*.jpg|Alle Dateien|*.*</value>
+  </data>
+  <data name="SaveImageFailed" xml:space="preserve">
+    <value>Speichern fehlgeschlagen:
+{0}</value>
+  </data>
+  <data name="ExportFileNameAll" xml:space="preserve">
+    <value>Wrok-Makros_alle_{0}.json</value>
+  </data>
+  <data name="ExportFileNameOne" xml:space="preserve">
+    <value>Wrok-Makros_{0}_{1}.json</value>
   </data>
   <data name="Error" xml:space="preserve">
     <value>Fehler</value>
@@ -351,7 +376,7 @@ Sie sind abgemeldet.</value>
     <value>Cache wurde gelöscht.</value>
   </data>
   <data name="ErrorWhileDeletingCache" xml:space="preserve">
-    <value>Fehler beim Löschen des Caches:</value>
+    <value>Fehler beim Löschen der Daten:</value>
   </data>
   <data name="ClearCacheFailed" xml:space="preserve">
     <value>ClearCacheAsync ist fehlgeschlagen: </value>
@@ -413,11 +438,12 @@ Umschalt+Klick trägt ein ohne zu senden.</value>
 
 Makro-Profile
 - Drei benennbare Sätze zu je zehn Makros, etwa für verschiedene Figuren oder Szenarien.
-- Wechseln: Makros -&gt; Profile -&gt; Linksklick auf ein Profil. Der Wechsel tauscht die komplette
-  Belegung von Strg+1 bis Strg+0 aus.
-- Umbenennen: Rechtsklick auf ein Profil.
-- Zurücksetzen: Makros -&gt; Profile -&gt; "Aktives Profil zurücksetzen" leert Name und alle
-  zehn Makros des aktiven Profils. Profile lassen sich nicht entfernen - es sind immer genau drei.
+- Der erste Eintrag im Makro-Menü nennt das aktive Profil und klappt zu den übrigen auf.
+- Wechseln: Makros -&gt; [aktives Profil] -&gt; Linksklick auf ein anderes Profil. Der Wechsel
+  tauscht die komplette Belegung von Strg+1 bis Strg+0 aus.
+- Umbenennen: Makros -&gt; [aktives Profil] -&gt; "Aktives Profil umbenennen".
+- Zurücksetzen: "Aktives Profil zurücksetzen" leert Name und alle zehn Makros des aktiven
+  Profils. Profile lassen sich nicht entfernen - es sind immer genau drei.
 - Import und Export beziehen sich auf das aktive Profil, sofern nicht "Alle Profile exportieren" gewählt wird.
 
 Makro-Variablen
@@ -437,16 +463,22 @@ Medienansicht
 
 Chef-Taste
 - Strg+Leertaste minimiert das Fenster sofort; erneutes Drücken holt es zurück.
+- Ein offenes Medienfenster wird mit ausgeblendet, auch wenn es angeheftet ist, und kehrt
+  beim Zurückholen samt Anheftung wieder.
+- Die Inaktivitäts-Automatik und das Schließen über das Fenster-X verhalten sich genauso.
 
 Tray-Menü
 - Einstellungen -&gt; App: Inaktivität, Makro-Import/-Export, Mit Windows starten.
 - Einstellungen -&gt; Grok: öffnet Groks eigene Einstellungsseite.
-- Werkzeuge: Rate Limits, Bild öffnen, Cache löschen.
+- Werkzeuge: Rate Limits, Bild öffnen, Daten löschen.
 
-Cache löschen
-- Werkzeuge -&gt; "Cache löschen" bietet zwei Möglichkeiten:
+Daten löschen
+- Werkzeuge -&gt; "Daten löschen" bietet zwei Möglichkeiten:
   "Nur Cache löschen" entfernt Bilder und Skripte, die Anmeldung bleibt bestehen.
-  "Alles löschen" entfernt zusätzlich Cookies und Einstellungen, du wirst abgemeldet.
+  "Alles löschen" entfernt zusätzlich Cookies und Anmeldedaten - du wirst abgemeldet - sowie
+  das zuletzt geöffnete Bild samt gespeicherter Adresse.
+- Zusätzlich ankreuzbar: alle Makroprofile leeren. Standardmäßig abgewählt.
+- Nicht betroffen sind Fenstergröße, Inaktivitätszeit und die übrigen Programmeinstellungen.
 - Sinnvoll bei Anzeigefehlern, Anmeldeproblemen oder wenn eine saubere Sitzung nötig ist.
 
 Fehlerbehebung / Tipps

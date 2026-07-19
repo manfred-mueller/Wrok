@@ -1,5 +1,21 @@
 ﻿# Changelog
 
+## [1.2.0] - 2026-07-19
+
+### Features
+- **„Daten löschen" statt „Cache löschen".** Der Eintrag unter *Werkzeuge* räumt jetzt auch die Spuren weg, die Wrok außerhalb des Browserprofils hinterlässt: `Alles löschen` entfernt zusätzlich das zuletzt geöffnete Bild (`%LOCALAPPDATA%\Wrok\images\last-image.png`) samt gespeicherter Quell-URL. Optional — standardmäßig abgewählt — lassen sich auch alle Makroprofile leeren. Die Erfolgsmeldung benennt jetzt ausdrücklich, was **erhalten** bleibt.
+- **Makro-Menü zeigt das aktive Profil.** Statt eines Untermenüs „Profile" steht der Name des aktiven Profils als erster Eintrag und klappt zu den übrigen auf. Umbenennen und Zurücksetzen liegen darin und heißen jetzt *Aktives Profil umbenennen* bzw. *… zurücksetzen*.
+
+### Fixes
+- **Boss-Taste ließ das Medienfenster stehen.** `MinimizeToTray()` betraf nur das Hauptfenster — der Bild- und Videobetrachter ist ein eigenständiges Top-Level-Fenster und blieb sichtbar, angeheftet sogar über allem anderen. Er wird jetzt mit ausgeblendet und beim Reaktivieren samt Anheftung wiederhergestellt. Betrifft ebenso die Inaktivitäts-Automatik und das Schließen über das Fenster-X, die denselben Weg nehmen.
+- **Inaktivitäts-Zeitgeber löste bei geöffnetem Bild nie aus.** Es genügte, dass der Mauszeiger *irgendwo* im Fenster lag. Da die Nebeneinander-Anordnung Bild und Wrok über die gesamte Arbeitsfläche legt, galt fast jede Zeigerposition als Aktivität. Gewertet wird jetzt nur noch ein *bewegter* Zeiger; der Zweig „Wrok hat den Fokus" ist entfallen, da ein Programm im Vordergrund gerade kein Beleg dafür ist, dass jemand davorsitzt. Ein Zeiger über dem Medienfenster zählt weiterhin als Aufmerksamkeit.
+- **Offline-Grafik auf dunklem Grund.** `nonet.png` war schwarzes Motiv mit gegen Weiß gerechneten Kanten und zerfiel auf dem `#202020`-Hintergrund der Offline-Seite zu einem hellen Saum. Neu als weißes Motiv mit aus der Helligkeit abgeleitetem Alphakanal — dadurch auf jedem Hintergrund saubere Kanten.
+
+### Intern
+- **MainForm entflochten:** `Dialogs`, `ThemeManager` und `InactivityWatcher` in eigene Dateien ausgelagert, MainForm von 1861 auf rund 1330 Zeilen verkleinert.
+- Verbleibende hartkodierte Zeichenketten in die Ressourcen überführt; beide Sprachdateien decken sich (143 Einträge).
+
+
 ## [1.1.0] - 2026-07-19
 
 ### Features

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -164,7 +164,7 @@
     <value>wrok_white.ico;System.Drawing.Icon, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="ClearCache" xml:space="preserve">
-    <value>Clear cache</value>
+    <value>Delete data…</value>
   </data>
   <data name="StartWithWindows" xml:space="preserve">
     <value>Start with Windows</value>
@@ -174,9 +174,6 @@
   </data>
   <data name="InputDialogHint" xml:space="preserve">
     <value>Ctrl+Enter sends · Esc cancels</value>
-  </data>
-  <data name="MacroProfiles" xml:space="preserve">
-    <value>Profiles</value>
   </data>
   <data name="MacrosExportActive" xml:space="preserve">
     <value>Export active profile…</value>
@@ -200,7 +197,7 @@ Continue?</value>
     <value>The file is not a valid Wrok macro export.</value>
   </data>
   <data name="MacroProfileRename" xml:space="preserve">
-    <value>Rename profile</value>
+    <value>Rename active profile…</value>
   </data>
   <data name="MacroProfileReset" xml:space="preserve">
     <value>Reset active profile…</value>
@@ -212,9 +209,6 @@ Continue?</value>
   </data>
   <data name="MacroProfileName" xml:space="preserve">
     <value>Profile name:</value>
-  </data>
-  <data name="MacroProfileHint" xml:space="preserve">
-    <value>Left-click switches · right-click renames</value>
   </data>
   <data name="MacroProfileDefault" xml:space="preserve">
     <value>Profile {0}</value>
@@ -249,10 +243,10 @@ Tip: right-click an image in Grok, choose “Copy image address”, then press C
     <value>Variables: {input} {date} {time} {username} {clipboard}</value>
   </data>
   <data name="ClearBrowsingData" xml:space="preserve">
-    <value>Clear browsing data</value>
+    <value>Delete data</value>
   </data>
   <data name="ChooseWhatToBeDeleted" xml:space="preserve">
-    <value>Choose what to be deleted:</value>
+    <value>Choose what to be deleted. “Delete all” additionally removes the last opened image.</value>
   </data>
   <data name="ClearCacheOnly" xml:space="preserve">
     <value>Clear Cache only</value>
@@ -267,9 +261,40 @@ Tip: right-click an image in Grok, choose “Copy image address”, then press C
     <value>Pictures, scripts and other data deleted.
 You are still logged in.</value>
   </data>
-  <data name="CookiesLoginDataAndSettingsDeletedNYouAreLoggedOut" xml:space="preserve">
-    <value>Cookies, Login-Data and Settings deleted.
+  <data name="AllDataDeletedMsg" xml:space="preserve">
+    <value>Cookies, login data and the last opened image have been deleted.
+You are logged out.
+
+Your macros and your window and program settings have been kept.</value>
+  </data>
+  <data name="AllDataDeletedInclMacrosMsg" xml:space="preserve">
+    <value>Cookies, login data, the last opened image and all macro profiles have been deleted.
 You are logged out.</value>
+  </data>
+  <data name="ClearMacrosToo" xml:space="preserve">
+    <value>Also delete all macro profiles (only with “Delete all”)</value>
+  </data>
+  <data name="ImageViewerTitle" xml:space="preserve">
+    <value>Image viewer – Wrok   ({0}×{1})</value>
+  </data>
+  <data name="VideoViewerTitle" xml:space="preserve">
+    <value>Video – Wrok</value>
+  </data>
+  <data name="SaveImageTitle" xml:space="preserve">
+    <value>Save image</value>
+  </data>
+  <data name="SaveImageFilter" xml:space="preserve">
+    <value>PNG image|*.png|JPEG image|*.jpg|All files|*.*</value>
+  </data>
+  <data name="SaveImageFailed" xml:space="preserve">
+    <value>Saving failed:
+{0}</value>
+  </data>
+  <data name="ExportFileNameAll" xml:space="preserve">
+    <value>Wrok-Macros_all_{0}.json</value>
+  </data>
+  <data name="ExportFileNameOne" xml:space="preserve">
+    <value>Wrok-Macros_{0}_{1}.json</value>
   </data>
   <data name="Error" xml:space="preserve">
     <value>Error</value>
@@ -351,7 +376,7 @@ You are logged out.</value>
     <value>Cache has been deleted.</value>
   </data>
   <data name="ErrorWhileDeletingCache" xml:space="preserve">
-    <value>Error while deleting cache:</value>
+    <value>Error while deleting data:</value>
   </data>
   <data name="ClearCacheFailed" xml:space="preserve">
     <value>ClearCacheAsync failed: </value>
@@ -413,11 +438,12 @@ Shift+Click sends without Enter.</value>
 
 Macro profiles
 - Three named sets of ten macros each, for different characters or scenarios.
-- Switch: Macros -&gt; Profiles -&gt; left-click a profile. Switching swaps the whole
-  Ctrl+1 .. Ctrl+0 assignment at once.
-- Rename: right-click a profile.
-- Reset: Macros -&gt; Profiles -&gt; "Reset active profile" clears the name and all ten macros
-  of the active profile. Profiles cannot be removed - there are always exactly three.
+- The first entry of the macro menu names the active profile and expands to the others.
+- Switch: Macros -&gt; [active profile] -&gt; left-click another profile. Switching swaps the
+  whole Ctrl+1 .. Ctrl+0 assignment at once.
+- Rename: Macros -&gt; [active profile] -&gt; "Rename active profile".
+- Reset: "Reset active profile" clears the name and all ten macros of the active profile.
+  Profiles cannot be removed - there are always exactly three.
 - Import and export refer to the active profile unless "Export all profiles" is chosen.
 
 Macro variables
@@ -437,16 +463,21 @@ Media viewer
 
 Boss key
 - Ctrl+Space minimizes the window instantly; press again to restore it.
+- An open media window is hidden along with it, even when pinned, and returns pinned as before.
+- The inactivity timer and closing via the window's X behave the same way.
 
 Tray menu
 - Settings -&gt; App: inactivity, macro import/export, start with Windows.
 - Settings -&gt; Grok: opens Grok's own settings page.
-- Tools: rate limits, open image, clear cache.
+- Tools: rate limits, open image, delete data.
 
-Clear cache
-- Tools -&gt; "Clear cache" offers two options:
+Delete data
+- Tools -&gt; "Delete data" offers two options:
   "Clear cache only" removes images and scripts; you stay signed in.
-  "Delete all" also removes cookies and settings; you will be signed out.
+  "Delete all" additionally removes cookies and login data - you will be signed out - as well
+  as the last opened image together with its stored address.
+- An extra checkbox clears all macro profiles. Unchecked by default.
+- Not affected: window size, inactivity timeout and the remaining program settings.
 - Useful for display errors, login problems, or when a clean session is needed.
 
 Troubleshooting / Tips

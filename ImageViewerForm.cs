@@ -64,7 +64,7 @@ namespace Wrok
 
             // Eigenständiges Fenster (kein Owner): dadurch alt-tabbar und hinter das
             // Hauptfenster legbar, sodass währenddessen weiter getippt werden kann.
-            Text            = $"Bild-Viewer – Wrok   ({_image.Width}×{_image.Height})";
+            Text            = string.Format(Properties.Resources.ImageViewerTitle, _image.Width, _image.Height);
             FormBorderStyle = FormBorderStyle.Sizable;
             StartPosition   = FormStartPosition.CenterScreen;
             BackColor       = Color.FromArgb(28, 28, 28);
@@ -143,7 +143,7 @@ namespace Wrok
         private void TogglePinned()
         {
             TopMost = !TopMost;
-            Text = $"Bild-Viewer – Wrok   ({_image.Width}×{_image.Height})" +
+            Text = string.Format(Properties.Resources.ImageViewerTitle, _image.Width, _image.Height) +
                    (TopMost ? "   📌" : string.Empty);
         }
 
@@ -277,8 +277,8 @@ namespace Wrok
         {
             using var dlg = new SaveFileDialog
             {
-                Title           = "Bild speichern",
-                Filter          = "PNG-Bild|*.png|JPEG-Bild|*.jpg|Alle Dateien|*.*",
+                Title           = Properties.Resources.SaveImageTitle,
+                Filter          = Properties.Resources.SaveImageFilter,
                 FileName        = SuggestFilename(_sourceUrl),
                 OverwritePrompt = true,
             };
@@ -290,8 +290,8 @@ namespace Wrok
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, $"Speichern fehlgeschlagen:\n{ex.Message}",
-                    "Fehler", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(this, string.Format(Properties.Resources.SaveImageFailed, ex.Message),
+                    Properties.Resources.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

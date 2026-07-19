@@ -42,7 +42,7 @@ namespace Wrok
             _url = url ?? throw new ArgumentNullException(nameof(url));
             _env = env;
 
-            Text            = "Video – Wrok";
+            Text            = Properties.Resources.VideoViewerTitle;
             FormBorderStyle = FormBorderStyle.Sizable;
             StartPosition   = FormStartPosition.CenterScreen;
             BackColor       = Color.FromArgb(28, 28, 28);
@@ -165,7 +165,7 @@ namespace Wrok
 
                 case Keys.P when e.Control:
                     TopMost = !TopMost;
-                    Text = "Video – Wrok" + (TopMost ? "   📌" : string.Empty);
+                    Text = Properties.Resources.VideoViewerTitle + (TopMost ? "   📌" : string.Empty);
                     break;
             }
         }

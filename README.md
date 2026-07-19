@@ -23,7 +23,7 @@ Er arbeitet komplett ohne API-Zugriff und bietet folgende Funktionen:
 - Automatische Fensterminimierung nach einstellbarem Inaktivitäts-Zeitraum
 - Speichern von Fenstergröße, -position und Maximierungsstatus
 - Vollautomatische Anpassung an Windows Dark/Light-Mode (inkl. Tray-Icon und Titelleiste)
-- Intelligentes Löschen der Browsing-Daten (mit Auswahl: nur Cache oder alles)
+- Intelligentes Löschen der gespeicherten Daten (mit Auswahl: nur Cache oder alles)
 - Optionaler Start mit Windows
 - Anzeige der Grok-Rate-Limits
 - Tray-Menü mit Schnellzugriff auf alle wichtigen Funktionen
@@ -38,15 +38,17 @@ Das Menü ist in zwei Untermenüs gegliedert:
 
 - **Einstellungen → App** — Inaktivität, Makro-Import/-Export, Mit Windows starten
 - **Einstellungen → Grok** — öffnet Groks eigene Einstellungsseite
-- **Werkzeuge** — Rate Limits, Bild/Video öffnen, Cache löschen
+- **Werkzeuge** — Rate Limits, Bild/Video öffnen, Daten löschen
 
 ### Makro-Profile
 Drei benennbare Sätze zu je zehn Makros, etwa für verschiedene Figuren oder Szenarien. Ein Profilwechsel tauscht die komplette Belegung von `Strg+1` bis `Strg+0` aus.
 
-- **Wechseln:** *Makros → Profile* → Linksklick auf ein Profil
-- **Umbenennen:** Rechtsklick auf ein Profil
-- **Zurücksetzen:** *Makros → Profile → Aktives Profil zurücksetzen* leert Name und alle zehn Makros des gerade aktiven Profils. Profile lassen sich nicht entfernen — es sind immer genau drei.
-- Das aktive Profil ist angehakt. Import und Export beziehen sich darauf, sofern du nicht *Alle Profile exportieren* wählst.
+Der erste Eintrag im Makro-Menü trägt den Namen des aktiven Profils und klappt zu den übrigen auf.
+
+- **Wechseln:** *Makros → [aktives Profil]* → Linksklick auf ein anderes Profil
+- **Umbenennen:** *Makros → [aktives Profil] → Aktives Profil umbenennen*
+- **Zurücksetzen:** *Aktives Profil zurücksetzen* leert Name und alle zehn Makros des gerade aktiven Profils. Profile lassen sich nicht entfernen — es sind immer genau drei.
+- Import und Export beziehen sich auf das aktive Profil, sofern du nicht *Alle Profile exportieren* wählst.
 
 ### Makros
 - **Bearbeiten:** Rechtsklick auf ein Makro im Tray-Menü.
@@ -93,11 +95,15 @@ Ziehen mit der linken Maustaste verschiebt ein Bild.
 ### Boss-Taste
 `Strg+Leertaste` minimiert das Fenster sofort in den Infobereich; erneutes Drücken holt es zurück.
 
-### Cache löschen
-*Werkzeuge → Cache löschen* bietet zwei Möglichkeiten:
+Ein offenes Medienfenster verschwindet mit — auch wenn es angeheftet ist — und kehrt beim Zurückholen samt Anheftung wieder. Die automatische Minimierung bei Inaktivität und das Schließen über das Fenster-X verhalten sich genauso.
+
+### Daten löschen
+*Werkzeuge → Daten löschen* bietet zwei Möglichkeiten:
 
 - **Nur Cache löschen** — Bilder, Skripte und andere zwischengespeicherte Daten; du bleibst angemeldet.
-- **Alles löschen** — zusätzlich Cookies, Anmeldedaten und Einstellungen; du wirst abgemeldet.
+- **Alles löschen** — zusätzlich Cookies und Anmeldedaten (du wirst abgemeldet) sowie das zuletzt geöffnete Bild samt gespeicherter Adresse.
+
+Zusätzlich ankreuzbar: **alle Makroprofile leeren**, standardmäßig abgewählt. Nicht betroffen sind Fenstergröße, Inaktivitätszeit und die übrigen Programmeinstellungen.
 
 Sinnvoll bei Darstellungsfehlern, Anmeldeproblemen oder wenn eine saubere Sitzung nötig ist.
 
@@ -126,7 +132,7 @@ It works entirely without API access and offers the following features:
 - Automatic window minimization after configurable inactivity period
 - Saving of window size, position and maximized state
 - Full automatic adaptation to Windows Dark/Light mode (including tray icon and title bar)
-- Smart clearing of browsing data (with choice: cache only or everything)
+- Smart clearing of stored data (with choice: cache only or everything)
 - Optional start with Windows
 - Grok rate limit display
 - Tray menu with quick access to all important functions
@@ -143,15 +149,17 @@ The tray menu is grouped into two submenus:
 
 - **Einstellungen → App** — inactivity timeout, macro import/export, start with Windows
 - **Einstellungen → Grok** — opens Grok's own settings page
-- **Werkzeuge** — rate limits, open image/video, clear cache
+- **Werkzeuge** — rate limits, open image/video, delete data
 
 ### Macro profiles
 Three named sets of ten macros each, for different characters or scenarios. Switching a profile swaps the whole `Ctrl+1` … `Ctrl+0` assignment at once.
 
-- **Switch:** *Makros → Profile* → left-click a profile.
-- **Rename:** right-click a profile.
-- **Reset:** *Makros → Profile → Aktives Profil zurücksetzen* clears the name and all ten macros of the currently active profile. Profiles cannot be removed — there are always exactly three.
-- The active profile is ticked. Import/export always refer to it unless you choose *Alle Profile exportieren*.
+The first entry of the macro menu carries the active profile's name and expands to the others.
+
+- **Switch:** *Makros → [active profile]* → left-click another profile.
+- **Rename:** *Makros → [active profile] → Aktives Profil umbenennen*.
+- **Reset:** *Aktives Profil zurücksetzen* clears the name and all ten macros of the currently active profile. Profiles cannot be removed — there are always exactly three.
+- Import/export always refer to the active profile unless you choose *Alle Profile exportieren*.
 
 ### Macros
 - **Edit:** Right-click a macro in the tray menu.
@@ -198,11 +206,13 @@ Drag with the left mouse button to pan an image.
 
 ### Boss key
 - Press `Ctrl+Space` to instantly minimize the window to the tray (and press it again to restore it).
+- An open media window is hidden along with it — even when pinned — and comes back pinned as before. The inactivity timer and closing via the window's X behave the same way.
 
-### Clear cache
-- *Werkzeuge → Cache löschen* offers a choice:
+### Delete data
+- *Werkzeuge → Daten löschen* offers a choice:
   - **Nur Cache löschen** — images, scripts and other cached data; you stay signed in.
-  - **Alles löschen** — including cookies, login data and settings; you will be signed out.
+  - **Alles löschen** — additionally cookies and login data (you will be signed out) plus the last opened image together with its stored address.
+- An extra checkbox clears **all macro profiles**; unchecked by default. Not affected: window size, inactivity timeout and the remaining program settings.
 - Use this when you see rendering issues, login problems, or need a clean session.
 
 ### Troubleshooting & Tips

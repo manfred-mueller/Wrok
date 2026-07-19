@@ -1,6 +1,5 @@
-using Microsoft.Web.WebView2.Core;
+﻿using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
-using Microsoft.Win32;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
@@ -21,9 +20,6 @@ namespace Wrok
         private const int WM_THEMECHANGED  = 0x031A;
         private const int WM_SETTINGCHANGE = 0x001A;
         private const int WM_SHOWWINDOW    = 0x0018;
-
-        private const int DWMWA_USE_IMMERSIVE_DARK_MODE          = 20;
-        private const int DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1 = 19;
 
         private readonly string baseUrl = "https://grok.com/";
         private readonly (string name, string url)[] menuPages = new[]
@@ -49,15 +45,11 @@ namespace Wrok
         // Nebeneinander-Anordnung (Medium links, Wrok rechts)
         private bool  _suppressWindowSave;
         private Form? _mediaViewer;   // es gibt immer höchstens einen (Bild ODER Video)
+        private bool  _mediaViewerWasPinned;   // TopMost-Zustand über ein Verstecken hinweg
 
-        // Inaktivitäts-Timer
-        private System.Windows.Forms.Timer? inactivityTimer;
-        private TimeSpan  inactivityTimeout = TimeSpan.FromSeconds(30);
-        private bool      inactivityEnabled = true;
-        private DateTime  _lastActivity     = DateTime.UtcNow;
-        private readonly object _activityLock = new();
+        private InactivityWatcher? _inactivity;
+        private ThemeManager?      _theme;
 
-        private ActivityMessageFilter? activityFilter;
         private RateLimitManager?      _rateLimitManager;
         private ToolStripMenuItem?     _rateLimitMenu;
 
@@ -69,10 +61,6 @@ namespace Wrok
         private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool SetForegroundWindow(IntPtr hWnd);
-        [DllImport("dwmapi.dll", PreserveSig = true)]
-        private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
 
         // ------------------------------------------------------------------
         // Konstruktor
@@ -82,17 +70,16 @@ namespace Wrok
         {
             InitializeComponent();
 
-            activityFilter = new ActivityMessageFilter(this);
-            try { Application.AddMessageFilter(activityFilter); }
-            catch { activityFilter = null; }
+            _inactivity = new InactivityWatcher(this, MinimizeToTray, () => _mediaViewer);
+            _theme      = new ThemeManager(this, () => trayIcon);
 
             InitializeTrayIcon();
-            RefreshTheme();
+            _theme.Refresh();
             LoadWindowSettings();
-            ApplyInactivitySettings();
+            _inactivity.LoadSettings();
 
             _ = InitializeWebViewAsync();
-            InitializeInactivityTimer();
+            _inactivity.Start();
             _ = InitializeRateLimitManagerAsync();
 
             try { _ = LoadUrlAsync(baseUrl, bringToFront: false); }
@@ -129,7 +116,7 @@ namespace Wrok
             _webView = new WebView2 { Dock = DockStyle.Fill };
             this.Controls.Add(_webView);
 
-            _webViewManager = new WebViewManager(_webView, this, ResetInactivityTimer);
+            _webViewManager = new WebViewManager(_webView, this, () => _inactivity?.Reset("WebView-Ereignis"));
             await _webViewManager.InitializeAsync();
         }
 
@@ -158,7 +145,7 @@ namespace Wrok
             this.ShowInTaskbar = true;
             this.BringToFront();
             this.Activate();
-            ResetInactivityTimer();
+            _inactivity?.Reset("Fenster wieder angezeigt");
         }
 
         // ------------------------------------------------------------------
@@ -234,7 +221,8 @@ namespace Wrok
             this.ShowInTaskbar = true;
             this.BringToFront();
             this.Activate();
-            ResetInactivityTimer();
+            RestoreMediaViewer();
+            _inactivity?.Reset("Fenster reaktiviert");
 
             try
             {
@@ -250,9 +238,54 @@ namespace Wrok
 
         private void MinimizeToTray()
         {
+            HideMediaViewer();
             this.WindowState   = FormWindowState.Minimized;
             this.Opacity       = 0;
             this.ShowInTaskbar = false;
+        }
+
+        /// <summary>
+        /// Blendet ein offenes Medienfenster mit aus.
+        ///
+        /// Wichtig fuer die Boss-Taste: Der Betrachter ist ein eigenstaendiges
+        /// Top-Level-Fenster. Ohne diesen Schritt verschwaende nur das Hauptfenster,
+        /// waehrend das Bild sichtbar stehen bliebe – angeheftet sogar ueber allem
+        /// anderen. Genau dann soll die Funktion aber greifen.
+        ///
+        /// TopMost wird dabei aufgehoben und gemerkt, weil ein verstecktes
+        /// TopMost-Fenster beim Wiederauftauchen sonst unvermittelt vor allen
+        /// anderen Fenstern erschiene.
+        /// </summary>
+        private void HideMediaViewer()
+        {
+            try
+            {
+                if (_mediaViewer is { IsDisposed: false, Visible: true } viewer)
+                {
+                    _mediaViewerWasPinned = viewer.TopMost;
+                    viewer.TopMost = false;
+                    // Hide() nimmt das Fenster zugleich aus Taskleiste und Alt+Tab.
+                    // ShowInTaskbar wird bewusst nicht angefasst: Das erzwingt eine
+                    // Neuerzeugung des Fensterhandles und wuerde beim Video-Betrachter
+                    // das eingebettete WebView2 mitreissen.
+                    viewer.Hide();
+                }
+            }
+            catch (Exception ex) { Log(ex, "Medienfenster ausblenden fehlgeschlagen"); }
+        }
+
+        /// <summary>Holt ein zuvor ausgeblendetes Medienfenster samt Anheftung zurueck.</summary>
+        private void RestoreMediaViewer()
+        {
+            try
+            {
+                if (_mediaViewer is { IsDisposed: false, Visible: false } viewer)
+                {
+                    viewer.Show();
+                    viewer.TopMost = _mediaViewerWasPinned;
+                }
+            }
+            catch (Exception ex) { Log(ex, "Medienfenster wiederherstellen fehlgeschlagen"); }
         }
 
         // ------------------------------------------------------------------
@@ -373,7 +406,7 @@ namespace Wrok
             trayMenu.Items.Add(new ToolStripSeparator());
             trayMenu.Items.Add(Properties.Resources.Exit, null, (s, e) => Application.Exit());
 
-            var initialIcon = IsDarkMode() ? Properties.Resources.wrok_white : Properties.Resources.wrok_black;
+            var initialIcon = ThemeManager.CurrentIcon();
             try
             {
                 trayIcon = new NotifyIcon
@@ -406,7 +439,7 @@ namespace Wrok
         {
             try
             {
-                if (trayIcon == null) { InitializeTrayIcon(); ApplyThemeIcon(); }
+                if (trayIcon == null) { InitializeTrayIcon(); _theme?.ApplyIcon(); }
                 if (trayIcon != null && !trayIcon.Visible) trayIcon.Visible = true;
             }
             catch { }
@@ -454,54 +487,57 @@ namespace Wrok
         /// Linksklick wechselt, Rechtsklick benennt um – dieselbe Logik wie bei
         /// den Makros selbst, damit man sich nur ein Muster merken muss.
         /// </summary>
-        private void BuildProfilesMenu(ToolStripMenuItem parent)
+        /// <summary>
+        /// Anzeigename eines Profils – bei leerem Namen die Ersatzbezeichnung
+        /// „Profil N". An mehreren Stellen gebraucht, deshalb einmal hier.
+        /// </summary>
+        private string ProfileLabel(int index)
         {
-            parent.DropDownItems.Clear();
+            var names = _macroManager.GetProfileNames();
+            if (index < 0 || index >= names.Count)
+                return string.Format(Properties.Resources.MacroProfileDefault, index + 1);
 
-            // ShowItemToolTips des Hauptmenues vererbt sich nicht auf Untermenues –
-            // ohne das hier bliebe der Bedienhinweis unsichtbar.
-            parent.DropDown.ShowItemToolTips = true;
+            return string.IsNullOrWhiteSpace(names[index])
+                ? string.Format(Properties.Resources.MacroProfileDefault, index + 1)
+                : names[index];
+        }
 
-            var names  = _macroManager.GetProfileNames();
+        private string ActiveProfileLabel() => ProfileLabel(_macroManager.ActiveProfile);
+
+        /// <summary>
+        /// Baut den ersten Eintrag des Makro-Menues: Er traegt den Namen des
+        /// AKTIVEN Profils und klappt die uebrigen auf. So sieht man den Kontext
+        /// der darunter stehenden Makros und wechselt ihn an derselben Stelle.
+        /// </summary>
+        private ToolStripMenuItem BuildActiveProfileMenu()
+        {
+            var root = new ToolStripMenuItem(ActiveProfileLabel());
+
             int active = _macroManager.ActiveProfile;
+            int count  = _macroManager.GetProfileNames().Count;
 
-            for (int i = 0; i < names.Count; i++)
+            for (int i = 0; i < count; i++)
             {
-                string label = string.IsNullOrWhiteSpace(names[i])
-                    ? string.Format(Properties.Resources.MacroProfileDefault, i + 1)
-                    : names[i];
+                if (i == active) continue;   // steht bereits im Titel des Eintrags
 
-                var item = new ToolStripMenuItem(label)
+                int idx = i;   // fuer die Closure festhalten
+                root.DropDownItems.Add(ProfileLabel(i), null, (s, e) =>
                 {
-                    Tag         = i,
-                    Checked     = i == active,
-                    ToolTipText = Properties.Resources.MacroProfileHint
-                };
-
-                item.MouseDown += (sender, me) =>
-                {
-                    if (sender is not ToolStripMenuItem tsi || tsi.Tag is not int idx) return;
-
-                    if (me.Button == MouseButtons.Left)
-                    {
-                        _macroManager.SwitchProfile(idx);
-                        RefreshMacrosMenu();   // Makros UND Profilhäkchen neu aufbauen
-                    }
-                    else if (me.Button == MouseButtons.Right)
-                    {
-                        RenameProfileAndSave(idx);
-                    }
-                };
-
-                parent.DropDownItems.Add(item);
+                    _macroManager.SwitchProfile(idx);
+                    RefreshMacrosMenu();   // Beschriftung und Makros ziehen mit
+                });
             }
 
-            // Zuruecksetzen bezieht sich bewusst auf das AKTIVE Profil: So bleibt
-            // die Bedienung der Eintraege oben eindeutig (links wechseln, rechts
-            // umbenennen), und die Rueckfrage nennt das betroffene Profil beim Namen.
-            parent.DropDownItems.Add(new ToolStripSeparator());
-            parent.DropDownItems.Add(Properties.Resources.MacroProfileReset, null,
+            // Verwaltung betrifft immer das aktive Profil - also das, dessen Name
+            // ueber diesem Untermenue steht. Dadurch braucht es keinen versteckten
+            // Rechtsklick auf die Profilnamen.
+            root.DropDownItems.Add(new ToolStripSeparator());
+            root.DropDownItems.Add(Properties.Resources.MacroProfileRename, null,
+                (s, e) => RenameProfileAndSave(_macroManager.ActiveProfile));
+            root.DropDownItems.Add(Properties.Resources.MacroProfileReset, null,
                 (s, e) => ResetActiveProfile());
+
+            return root;
         }
 
         private void ResetActiveProfile()
@@ -509,11 +545,7 @@ namespace Wrok
             try
             {
                 int active = _macroManager.ActiveProfile;
-                var names  = _macroManager.GetProfileNames();
-
-                string label = string.IsNullOrWhiteSpace(names[active])
-                    ? string.Format(Properties.Resources.MacroProfileDefault, active + 1)
-                    : names[active];
+                string label = ActiveProfileLabel();
 
                 if (MessageBox.Show(this,
                         string.Format(Properties.Resources.MacroProfileResetConfirm, label),
@@ -538,9 +570,9 @@ namespace Wrok
                 if (index < 0 || index >= names.Count) return;
 
                 string current = names[index];
-                if (!ShowSingleLineDialog(Properties.Resources.MacroProfileRename,
-                                          Properties.Resources.MacroProfileName,
-                                          current, out string entered)) return;
+                if (!Dialogs.ShowSingleLine(this, Properties.Resources.MacroProfileRename,
+                                            Properties.Resources.MacroProfileName,
+                                            current, out string entered)) return;
 
                 _macroManager.RenameProfile(index, entered);
                 RefreshMacrosMenu();
@@ -555,13 +587,12 @@ namespace Wrok
         {
             if (macrosMenu == null) return;
             macrosMenu.DropDownItems.Clear();
-            macrosMenu.DropDown.ShowItemToolTips = true;   // siehe BuildProfilesMenu
+            macrosMenu.DropDown.ShowItemToolTips = true;   // Tooltips vererben sich nicht auf Untermenues
 
-            // Profilwahl zuerst – sie bestimmt, welche Makros darunter stehen.
-            var profilesMenu = new ToolStripMenuItem(Properties.Resources.MacroProfiles);
-            BuildProfilesMenu(profilesMenu);
-            macrosMenu.DropDownItems.Add(profilesMenu);
+            // Erster Eintrag: der aktive Profilname, aufklappbar zu den uebrigen.
+            macrosMenu.DropDownItems.Add(BuildActiveProfileMenu());
             macrosMenu.DropDownItems.Add(new ToolStripSeparator());
+
 
             var macros = _macroManager.GetMacros();
             for (int i = 1; i <= MacroManager.MacroCount; i++)
@@ -599,6 +630,7 @@ namespace Wrok
                 };
                 macrosMenu.DropDownItems.Add(macroItem);
             }
+
         }
 
         private void EditMacroAndSave(int index)
@@ -615,7 +647,7 @@ namespace Wrok
                     ? string.Format(Properties.Resources.EditMacro + " #{0}", index + 1)
                     : Properties.Resources.NewMacro;
 
-                if (!ShowEditMacroDialog(dlgTitle, ref name, ref text)) return;
+                if (!Dialogs.ShowEditMacro(this, dlgTitle, ref name, ref text)) return;
 
                 _macroManager.UpdateMacro(index, new MacroEntry(name.Trim(), text.Trim()));
                 RefreshMacrosMenu();
@@ -626,171 +658,16 @@ namespace Wrok
             }
         }
 
-        private bool ShowEditMacroDialog(string title, ref string name, ref string text)
-        {
-            using var dlg = new Form
-            {
-                Text             = title,
-                FormBorderStyle  = FormBorderStyle.SizableToolWindow,
-                StartPosition    = FormStartPosition.CenterParent,
-                MinimizeBox      = false,
-                MaximizeBox      = false,
-                MinimumSize      = new Size(360, 260),
-                ClientSize       = new Size(520, 320)
-            };
-
-            var lblName = new Label { Text = Properties.Resources.MacroName + ":", AutoSize = true, Location = new Point(10, 14), Font = new Font("Segoe UI", 9F) };
-            var tbName  = new TextBox
-            {
-                Left            = lblName.Right + 6,
-                Top             = 10,
-                Width           = dlg.ClientSize.Width - lblName.Right - 16,
-                Anchor          = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-                Text            = name ?? string.Empty,
-                Font            = new Font("Segoe UI", 9F),
-                PlaceholderText = string.Format(Properties.Resources.Macro0, "?")
-            };
-            int textTop = tbName.Bottom + 10;
-            var tb = new TextBox
-            {
-                Multiline    = true,
-                ScrollBars   = ScrollBars.Vertical,
-                AcceptsReturn = false,
-                AcceptsTab   = false,
-                WordWrap     = true,
-                Anchor       = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
-                Left         = 10,
-                Top          = textTop,
-                Width        = dlg.ClientSize.Width - 20,
-                Height       = dlg.ClientSize.Height - textTop - 46,
-                Text         = text ?? string.Empty,
-                Font         = new Font("Segoe UI", 10F)
-            };
-            var lblCount  = new Label { AutoSize = true, Font = new Font("Segoe UI", 8F), ForeColor = SystemColors.GrayText, Anchor = AnchorStyles.Bottom | AnchorStyles.Left, Text = $"{tb.Text.Length} Zeichen" };
-            var btnOk     = new Button { Text = Properties.Resources.OK,     DialogResult = DialogResult.OK,     Size = new Size(80, 26), Anchor = AnchorStyles.Bottom | AnchorStyles.Right };
-            var btnCancel = new Button { Text = Properties.Resources.Cancel, DialogResult = DialogResult.Cancel, Size = new Size(80, 26), Anchor = AnchorStyles.Bottom | AnchorStyles.Right };
-
-            var varTip = new ToolTip { AutoPopDelay = 15000, InitialDelay = 400, ReshowDelay = 200 };
-            varTip.SetToolTip(tb, Properties.Resources.MacroVariablesHint);
-
-            tb.TextChanged += (s, e) => lblCount.Text = $"{tb.Text.Length} Zeichen";
-
-            void LayoutBottom()
-            {
-                int y = dlg.ClientSize.Height - btnOk.Height - 8;
-                tb.Height       = y - tb.Top - 6;
-                btnCancel.Location = new Point(dlg.ClientSize.Width - btnCancel.Width - 10, y);
-                btnOk.Location     = new Point(btnCancel.Left - btnOk.Width - 6, y);
-                lblCount.Location  = new Point(10, y + (btnOk.Height - lblCount.Height) / 2);
-                tbName.Width       = dlg.ClientSize.Width - lblName.Right - 16;
-            }
-
-            dlg.Resize += (s, e) => LayoutBottom();
-            dlg.Controls.AddRange(new Control[] { lblName, tbName, tb, lblCount, btnOk, btnCancel });
-
-            tb.KeyDown += (s, e) =>
-            {
-                if (e.KeyCode == Keys.Enter && !e.Shift) { e.SuppressKeyPress = true; dlg.DialogResult = DialogResult.OK; dlg.Close(); }
-            };
-            tbName.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { e.SuppressKeyPress = true; tb.Focus(); } };
-
-            dlg.CancelButton = btnCancel;
-            dlg.Shown += (s, e) =>
-            {
-                LayoutBottom();
-                if (string.IsNullOrWhiteSpace(tbName.Text)) tbName.Focus();
-                else { tb.SelectionStart = tb.Text.Length; tb.Focus(); }
-            };
-            btnOk.Click += (s, e) => dlg.Close();
-
-            if (dlg.ShowDialog(this) == DialogResult.OK) { name = tbName.Text; text = tb.Text; return true; }
-            return false;
-        }
-
         // ------------------------------------------------------------------
         // Inaktivitäts-Timer
         // ------------------------------------------------------------------
-
-        private void ApplyInactivitySettings()
-        {
-            if (!Properties.Settings.Default.InactivityConfigured)
-            {
-                inactivityTimeout = TimeSpan.Zero;
-                inactivityEnabled = false;
-                Properties.Settings.Default.InactivityTimeoutSeconds = 0;
-                Properties.Settings.Default.InactivityConfigured     = true;
-                Properties.Settings.Default.Save();
-            }
-            else
-            {
-                var savedSeconds  = Properties.Settings.Default.InactivityTimeoutSeconds;
-                inactivityTimeout = TimeSpan.FromSeconds(savedSeconds);
-                inactivityEnabled = savedSeconds > 0;
-            }
-        }
-
-        private void InitializeInactivityTimer()
-        {
-            if (inactivityTimer != null)
-            {
-                try { inactivityTimer.Stop(); inactivityTimer.Tick -= InactivityTimer_Tick; }
-                catch { }
-                inactivityTimer = null;
-            }
-            inactivityTimer = new System.Windows.Forms.Timer
-            {
-                Interval = inactivityTimeout.TotalMilliseconds > 0
-                    ? (int)Math.Min(1000, inactivityTimeout.TotalMilliseconds)
-                    : 60_000
-            };
-            inactivityTimer.Tick += InactivityTimer_Tick;
-            if (inactivityEnabled && inactivityTimeout.TotalMilliseconds > 0)
-            {
-                lock (_activityLock) { _lastActivity = DateTime.UtcNow; }
-                inactivityTimer.Start();
-            }
-        }
-
-        private void InactivityTimer_Tick(object? sender, EventArgs e)
-        {
-            if (!inactivityEnabled || inactivityTimeout.TotalMilliseconds <= 0) return;
-
-            TimeSpan elapsed;
-            lock (_activityLock) { elapsed = DateTime.UtcNow - _lastActivity; }
-
-            try
-            {
-                if (this.Visible && (this.Focused || this.Bounds.Contains(Cursor.Position)))
-                { lock (_activityLock) { _lastActivity = DateTime.UtcNow; } return; }
-            }
-            catch { }
-
-            if (elapsed >= inactivityTimeout)
-            {
-                try { inactivityTimer?.Stop(); } catch { }
-                MinimizeToTray();
-            }
-        }
-
-        public void ResetInactivityTimer()
-        {
-            if (!inactivityEnabled || inactivityTimer == null) return;
-            lock (_activityLock) { _lastActivity = DateTime.UtcNow; }
-            try { if (!inactivityTimer.Enabled) inactivityTimer.Start(); } catch { }
-        }
 
         private void InactivityMenuItem_Click(object? sender, EventArgs e)
         {
             if (sender is not ToolStripMenuItem clicked) return;
             int seconds = Convert.ToInt32(clicked.Tag ?? 0);
 
-            Properties.Settings.Default.InactivityTimeoutSeconds = seconds;
-            Properties.Settings.Default.Save();
-
-            inactivityTimeout = TimeSpan.FromSeconds(seconds);
-            inactivityEnabled = seconds > 0;
-            if (inactivityEnabled) { lock (_activityLock) { _lastActivity = DateTime.UtcNow; } inactivityTimer?.Start(); }
-            else try { inactivityTimer?.Stop(); } catch { }
+            _inactivity?.SetTimeout(seconds);
 
             if (clicked.OwnerItem is ToolStripMenuItem parent)
                 foreach (var item in parent.DropDownItems.OfType<ToolStripMenuItem>())
@@ -800,64 +677,6 @@ namespace Wrok
         // ------------------------------------------------------------------
         // Thema / Dark Mode
         // ------------------------------------------------------------------
-
-        public static bool IsDarkMode()
-        {
-            try
-            {
-                var key   = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
-                var value = key?.GetValue("AppsUseLightTheme");
-                return value is int i && i == 0;
-            }
-            catch (Exception ex) { Trace.WriteLine($"IsDarkMode fallback: {ex}"); return true; }
-        }
-
-        private void RefreshTheme()
-        {
-            try { bool dark = IsDarkMode(); ApplyThemeIcon(); SetTitleBarDarkMode(dark); }
-            catch { }
-        }
-
-        private void ApplyThemeIcon()
-        {
-            var sourceIcon = IsDarkMode() ? Properties.Resources.wrok_white : Properties.Resources.wrok_black;
-            System.Drawing.Icon newIcon;
-            try { newIcon = (System.Drawing.Icon)sourceIcon.Clone(); } catch { newIcon = sourceIcon; }
-
-            if (trayIcon != null)
-            {
-                try
-                {
-                    var old = trayIcon.Icon;
-                    trayIcon.Visible = false;
-                    trayIcon.Icon    = newIcon;
-                    trayIcon.Visible = true;
-                    if (old != null && !ReferenceEquals(old, sourceIcon)) try { old.Dispose(); } catch { }
-                }
-                catch { try { trayIcon.Icon = newIcon; } catch { } }
-            }
-            try { this.Icon = (System.Drawing.Icon)newIcon.Clone(); } catch { this.Icon = newIcon; }
-        }
-
-        private void SetTitleBarDarkMode(bool enabled)
-        {
-            try
-            {
-                int val = enabled ? 1 : 0;
-                int hr  = DwmSetWindowAttribute(this.Handle, DWMWA_USE_IMMERSIVE_DARK_MODE, ref val, Marshal.SizeOf<int>());
-                if (hr != 0)
-                    try { DwmSetWindowAttribute(this.Handle, DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1, ref val, Marshal.SizeOf<int>()); } catch { }
-            }
-            catch { }
-        }
-
-        private void SystemEvents_UserPreferenceChanged(object? sender, UserPreferenceChangedEventArgs e)
-        {
-            if (e.Category == UserPreferenceCategory.Color ||
-                e.Category == UserPreferenceCategory.General ||
-                e.Category == UserPreferenceCategory.VisualStyle)
-                try { if (!this.IsDisposed) this.BeginInvoke((MethodInvoker)RefreshTheme); } catch { }
-        }
 
         // ------------------------------------------------------------------
         // Rate Limits
@@ -1009,14 +828,10 @@ namespace Wrok
         private void ExportMacros(bool allProfiles)
         {
             // Dateiname macht sichtbar, was drinsteckt.
-            int    active   = _macroManager.ActiveProfile;
-            var    names    = _macroManager.GetProfileNames();
-            string profile  = string.IsNullOrWhiteSpace(names[active])
-                ? $"Profil{active + 1}"
-                : names[active];
+            string profile  = ActiveProfileLabel();
             string suggested = allProfiles
-                ? $"Wrok-Makros_alle_{DateTime.Now:yyyyMMdd}.json"
-                : $"Wrok-Makros_{profile}_{DateTime.Now:yyyyMMdd}.json";
+                ? string.Format(Properties.Resources.ExportFileNameAll, $"{DateTime.Now:yyyyMMdd}")
+                : string.Format(Properties.Resources.ExportFileNameOne, profile, $"{DateTime.Now:yyyyMMdd}");
 
             using var dlg = new SaveFileDialog
             {
@@ -1072,7 +887,8 @@ namespace Wrok
                     break;
 
                 case MacroImportKind.SingleProfile:
-                    if (!ShowProfileChooser(out int target)) return;
+                    if (!Dialogs.ShowProfileChooser(this, _macroManager.GetProfileNames(),
+                                                    _macroManager.ActiveProfile, out int target)) return;
                     ok = _macroManager.ImportIntoProfile(dlg.FileName, target);
                     break;
 
@@ -1093,71 +909,9 @@ namespace Wrok
                     Properties.Resources.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
 
-        /// <summary>
-        /// Laesst das Zielprofil fuer einen Import waehlen. Vorausgewaehlt ist das
-        /// aktive Profil, damit der haeufigste Fall ein Enter-Druck bleibt.
-        /// </summary>
-        private bool ShowProfileChooser(out int index)
-        {
-            index = _macroManager.ActiveProfile;
-
-            var names = _macroManager.GetProfileNames();
-            var items = names.Select((n, i) => string.IsNullOrWhiteSpace(n)
-                    ? string.Format(Properties.Resources.MacroProfileDefault, i + 1)
-                    : $"{i + 1} – {n}")
-                .ToArray();
-
-            using var dlg = new Form
-            {
-                Text            = Properties.Resources.ImportTargetTitle,
-                FormBorderStyle = FormBorderStyle.FixedDialog,
-                StartPosition   = FormStartPosition.CenterParent,
-                MinimizeBox     = false,
-                MaximizeBox     = false,
-                ShowInTaskbar   = false,
-                ClientSize      = new Size(400, 150)
-            };
-
-            var lbl = new Label
-            {
-                Text     = Properties.Resources.ImportTargetPrompt,
-                AutoSize = false,
-                Left     = 16,
-                Top      = 14,
-                Width    = dlg.ClientSize.Width - 32,
-                Height   = 40,
-                Font     = new Font("Segoe UI", 9.5F)
-            };
-            var combo = new ComboBox
-            {
-                Left          = 16,
-                Top           = 62,
-                Width         = dlg.ClientSize.Width - 32,
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                Font          = new Font("Segoe UI", 10F)
-            };
-            combo.Items.AddRange(items);
-            combo.SelectedIndex = index;
-
-            var btnOk     = new Button { Text = Properties.Resources.OK,     DialogResult = DialogResult.OK,     Size = new Size(80, 28), Top = 106 };
-            var btnCancel = new Button { Text = Properties.Resources.Cancel, DialogResult = DialogResult.Cancel, Size = new Size(80, 28), Top = 106 };
-            btnCancel.Left = dlg.ClientSize.Width - btnCancel.Width - 16;
-            btnOk.Left     = btnCancel.Left - btnOk.Width - 8;
-
-            dlg.Controls.AddRange(new Control[] { lbl, combo, btnOk, btnCancel });
-            dlg.AcceptButton = btnOk;
-            dlg.CancelButton = btnCancel;
-
-            if (dlg.ShowDialog(this) != DialogResult.OK) return false;
-            index = combo.SelectedIndex;
-            return index >= 0;
-        }
-
         // ------------------------------------------------------------------
         // Cache leeren
         // ------------------------------------------------------------------
-
-        private enum ClearCacheChoice { Cancel, CacheOnly, All }
 
         private async Task ClearCacheAsync()
         {
@@ -1166,7 +920,7 @@ namespace Wrok
                 if (_webView?.CoreWebView2 == null)
                 { MessageBox.Show(Properties.Resources.WebView2IsNotInitializedYet, Properties.Resources.Error, MessageBoxButtons.OK, MessageBoxIcon.Error); return; }
 
-                var choice = ShowClearCacheChoiceDialog();
+                var choice = Dialogs.ShowClearCacheChoice(this, out bool includeMacros);
                 if (choice == ClearCacheChoice.Cancel) return;
 
                 if (choice == ClearCacheChoice.CacheOnly)
@@ -1181,10 +935,17 @@ namespace Wrok
                 }
                 else
                 {
-                    // Alles (inkl. Cookies, Login-Daten, lokalem Speicher).
+                    // Alles: erst die WebView2-Seite (Cookies, Login, lokaler Speicher),
+                    // dann die Spuren, die Wrok selbst ausserhalb des Browserprofils
+                    // hinterlaesst. Ohne den zweiten Schritt blieben das zuletzt
+                    // geoeffnete Bild und dessen URL zurueck.
                     await _webView.CoreWebView2.Profile.ClearBrowsingDataAsync();
+                    ClearWrokPrivateData(includeMacros);
+
                     MessageBox.Show(
-                        Properties.Resources.CookiesLoginDataAndSettingsDeletedNYouAreLoggedOut,
+                        includeMacros
+                            ? Properties.Resources.AllDataDeletedInclMacrosMsg
+                            : Properties.Resources.AllDataDeletedMsg,
                         Properties.Resources.AllDataDeleted, MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
@@ -1196,51 +957,50 @@ namespace Wrok
         }
 
         /// <summary>
-        /// Zeigt einen kleinen Dialog mit drei Schaltflächen
-        /// (Nur Cache / Alles löschen / Abbrechen) und gibt die Auswahl zurück.
+        /// Entfernt die Daten, die Wrok ausserhalb des WebView2-Profils ablegt.
+        ///
+        /// <see cref="CoreWebView2Profile.ClearBrowsingDataAsync()"/> raeumt nur den
+        /// Browser auf. Das zuletzt geoeffnete Bild liegt aber als PNG unter
+        /// %LOCALAPPDATA%\Wrok\images, und seine Quell-URL steht im Klartext in den
+        /// Einstellungen – beides ueberlebte das Loeschen bisher unbemerkt.
         /// </summary>
-        private ClearCacheChoice ShowClearCacheChoiceDialog()
+        private void ClearWrokPrivateData(bool includeMacros)
         {
-            using var dlg = new Form
+            // Ein offenes Medienfenster wuerde sonst genau das weiter anzeigen,
+            // was gerade geloescht wird.
+            CloseCurrentMedia();
+
+            try
             {
-                Text            = Properties.Resources.ClearBrowsingData,
-                FormBorderStyle = FormBorderStyle.FixedDialog,
-                StartPosition   = FormStartPosition.CenterParent,
-                MinimizeBox     = false,
-                MaximizeBox     = false,
-                ShowInTaskbar   = false,
-                ClientSize      = new Size(420, 120)
-            };
+                var path = Properties.Settings.Default.LastImagePath;
+                if (!string.IsNullOrWhiteSpace(path))
+                {
+                    // Auch die temporaere Datei aus SaveAsLastImage, die bei einem
+                    // Abbruch liegen bleiben kann.
+                    foreach (var candidate in new[] { path, path + ".tmp" })
+                        if (File.Exists(candidate)) File.Delete(candidate);
+                }
+            }
+            catch (Exception ex) { Log(ex, "Letztes Bild loeschen fehlgeschlagen"); }
 
-            var lbl = new Label
+            try
             {
-                Text     = Properties.Resources.ChooseWhatToBeDeleted,
-                AutoSize = false,
-                Left     = 16,
-                Top      = 16,
-                Width    = dlg.ClientSize.Width - 32,
-                Height   = 40,
-                Font     = new Font("Segoe UI", 9.5F)
-            };
+                Properties.Settings.Default.LastImagePath = string.Empty;
+                Properties.Settings.Default.LastImageUrl  = string.Empty;
+                Properties.Settings.Default.Save();
+            }
+            catch (Exception ex) { Log(ex, "Bildverweise zuruecksetzen fehlgeschlagen"); }
 
-            var btnCacheOnly = new Button { Text = Properties.Resources.ClearCacheOnly, DialogResult = DialogResult.Yes,    Size = new Size(120, 30), Top = 70 };
-            var btnAll       = new Button { Text = Properties.Resources.DeleteAll,      DialogResult = DialogResult.No,     Size = new Size(120, 30), Top = 70 };
-            var btnCancel    = new Button { Text = Properties.Resources.Cancel,         DialogResult = DialogResult.Cancel, Size = new Size(90,  30), Top = 70 };
+            if (!includeMacros) return;
 
-            btnCacheOnly.Left = 16;
-            btnAll.Left       = btnCacheOnly.Right + 8;
-            btnCancel.Left    = dlg.ClientSize.Width - btnCancel.Width - 16;
-
-            dlg.Controls.AddRange(new Control[] { lbl, btnCacheOnly, btnAll, btnCancel });
-            dlg.AcceptButton = btnCacheOnly;
-            dlg.CancelButton = btnCancel;
-
-            return dlg.ShowDialog(this) switch
+            try
             {
-                DialogResult.Yes => ClearCacheChoice.CacheOnly,
-                DialogResult.No  => ClearCacheChoice.All,
-                _                => ClearCacheChoice.Cancel
-            };
+                for (int i = 0; i < MacroManager.ProfileCount; i++)
+                    _macroManager.ResetProfile(i);
+
+                RefreshMacrosMenu();
+            }
+            catch (Exception ex) { Log(ex, "Makroprofile loeschen fehlgeschlagen"); }
         }
 
         // ------------------------------------------------------------------
@@ -1252,17 +1012,17 @@ namespace Wrok
             if (e.CloseReason == CloseReason.UserClosing)
             {
                 SaveWindowSettings();
-                e.Cancel           = true;
-                this.WindowState   = FormWindowState.Minimized;
-                this.Opacity       = 0;
-                this.ShowInTaskbar = false;
+                e.Cancel = true;
+                // Derselbe Weg wie die Boss-Taste – damit auch hier kein
+                // Medienfenster sichtbar zurueckbleibt.
+                MinimizeToTray();
             }
             base.OnFormClosing(e);
         }
 
         protected override void OnHandleCreated(EventArgs e)
         {
-            SystemEvents.UserPreferenceChanged += SystemEvents_UserPreferenceChanged;
+            _theme?.StartListening();
             base.OnHandleCreated(e);
 
             _webViewManager?.CreateInputSimulator();
@@ -1286,26 +1046,31 @@ namespace Wrok
                 if (!ok) Debug.WriteLine($"RegisterHotKey fehlgeschlagen macro={i + 1} err={Marshal.GetLastWin32Error()}");
             }
 
-            RefreshTheme();
+            _theme?.Refresh();
             EnsureTrayIconVisible();
         }
 
         protected override void OnHandleDestroyed(EventArgs e)
         {
             _rateLimitManager?.StopAutoRefresh();
-            if (activityFilter != null)
-            {
-                try { Application.RemoveMessageFilter(activityFilter); } catch { }
-                activityFilter = null;
-            }
             try { UnregisterHotKey(this.Handle, HOTKEY_ID); } catch { }
             try { UnregisterHotKey(this.Handle, HOTKEY_ID_IMAGE); } catch { }
             for (int i = 0; i < MacroManager.MacroCount; i++)
                 try { UnregisterHotKey(this.Handle, MacroManager.HotkeyBase + i); } catch { }
 
             _webViewManager?.DisposeInputSimulator();
-            SystemEvents.UserPreferenceChanged -= SystemEvents_UserPreferenceChanged;
-            if (!this.RecreatingHandle) DisposeTrayIcon();
+            _theme?.StopListening();   // wird in OnHandleCreated wieder angemeldet
+
+            // ACHTUNG: Diese Methode laeuft auch bei jeder Neuerzeugung des
+            // Fensterhandles, und die erzwingt WinForms bereits beim Aendern von
+            // ShowInTaskbar - was Wrok beim Anzeigen und Minimieren staendig tut.
+            // Der Inaktivitaets-Waechter darf deshalb nur beim echten Beenden
+            // abgeraeumt werden, sonst ist er nach dem ersten Anzeigen tot.
+            if (!this.RecreatingHandle)
+            {
+                _inactivity?.Dispose();
+                DisposeTrayIcon();
+            }
             base.OnHandleDestroyed(e);
         }
 
@@ -1353,7 +1118,7 @@ namespace Wrok
 
                 case WM_THEMECHANGED:
                 case WM_SETTINGCHANGE:
-                    try { RefreshTheme(); } catch { }
+                    try { _theme?.Refresh(); } catch { }
                     break;
 
                 case WM_SHOWWINDOW:
@@ -1415,170 +1180,12 @@ namespace Wrok
                     ? m.Groups[1].Value.Trim()
                     : Properties.Resources.MacroInputPrompt;
 
-                if (!ShowInputDialog(label, out string value)) return false;
+                if (!Dialogs.ShowMultiLineInput(this, label, out string value)) return false;
                 answers[token] = value;
             }
 
             foreach (var kv in answers)
                 text = text.Replace(kv.Key, kv.Value);
-            return true;
-        }
-
-        /// <summary>
-        /// Schlichter einzeiliger Eingabedialog (Profilnamen o. Ä.).
-        /// Enter bestätigt, Esc bricht ab.
-        /// </summary>
-        private bool ShowSingleLineDialog(string title, string prompt, string initial, out string value)
-        {
-            value = string.Empty;
-
-            using var dlg = new Form
-            {
-                Text            = title,
-                FormBorderStyle = FormBorderStyle.FixedDialog,
-                StartPosition   = FormStartPosition.CenterParent,
-                MinimizeBox     = false,
-                MaximizeBox     = false,
-                ShowInTaskbar   = false,
-                ClientSize      = new Size(400, 120)
-            };
-
-            var lbl = new Label
-            {
-                Text     = prompt,
-                AutoSize = true,
-                Left     = 16,
-                Top      = 16,
-                Font     = new Font("Segoe UI", 9.5F)
-            };
-            var tb = new TextBox
-            {
-                Left   = 16,
-                Top    = 44,
-                Width  = dlg.ClientSize.Width - 32,
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-                Font   = new Font("Segoe UI", 10F),
-                Text   = initial ?? string.Empty
-            };
-            var btnOk     = new Button { Text = Properties.Resources.OK,     DialogResult = DialogResult.OK,     Size = new Size(80, 28), Top = 80 };
-            var btnCancel = new Button { Text = Properties.Resources.Cancel, DialogResult = DialogResult.Cancel, Size = new Size(80, 28), Top = 80 };
-            btnCancel.Left = dlg.ClientSize.Width - btnCancel.Width - 16;
-            btnOk.Left     = btnCancel.Left - btnOk.Width - 8;
-
-            dlg.Controls.AddRange(new Control[] { lbl, tb, btnOk, btnCancel });
-            dlg.AcceptButton = btnOk;
-            dlg.CancelButton = btnCancel;
-            dlg.Shown += (s, e) => { tb.Focus(); tb.SelectAll(); };
-
-            if (dlg.ShowDialog(this) != DialogResult.OK) return false;
-            value = tb.Text;
-            return true;
-        }
-
-        /// <summary>
-        /// Mehrzeiliger Eingabedialog für {input}. Strg+Enter sendet, Esc bricht ab.
-        /// Bewusst mehrzeilig: Im Rollenspiel sind die Einwürfe oft längere
-        /// Erzählpassagen, die in einem einzeiligen Feld nicht überblickbar wären.
-        /// </summary>
-        private bool ShowInputDialog(string prompt, out string value)
-        {
-            value = string.Empty;
-
-            // Wird das Makro per globalem Hotkey ausgelöst, ist Wrok evtl. minimiert
-            // oder im Hintergrund. Dann muss der Dialog selbst nach vorn kommen –
-            // sonst erscheint er hinter dem aktiven Fenster und bekommt keinen Fokus.
-            bool ownerUsable = this.Visible && this.WindowState != FormWindowState.Minimized;
-
-            using var dlg = new Form
-            {
-                Text            = Properties.Resources.MacroInputTitle,
-                FormBorderStyle = FormBorderStyle.SizableToolWindow,
-                StartPosition   = ownerUsable ? FormStartPosition.CenterParent
-                                              : FormStartPosition.CenterScreen,
-                MinimizeBox     = false,
-                MaximizeBox     = false,
-                ShowInTaskbar   = false,
-                TopMost         = true,
-                MinimumSize     = new Size(360, 220),
-                ClientSize      = new Size(560, 300)
-            };
-
-            var lbl = new Label
-            {
-                Text     = prompt,
-                AutoSize = false,
-                Left     = 16,
-                Top      = 12,
-                Width    = dlg.ClientSize.Width - 32,
-                Height   = 20,
-                Anchor   = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
-                Font     = new Font("Segoe UI", 9.5F)
-            };
-            var tb = new TextBox
-            {
-                Multiline     = true,
-                AcceptsReturn = true,     // Enter erzeugt einen Zeilenumbruch
-                WordWrap      = true,
-                ScrollBars    = ScrollBars.Vertical,
-                Left          = 16,
-                Top           = 36,
-                Width         = dlg.ClientSize.Width - 32,
-                Height        = dlg.ClientSize.Height - 36 - 46,
-                Anchor        = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
-                Font          = new Font("Segoe UI", 10F)
-            };
-            var lblHint = new Label
-            {
-                Text      = Properties.Resources.InputDialogHint,
-                AutoSize  = true,
-                Anchor    = AnchorStyles.Bottom | AnchorStyles.Left,
-                ForeColor = SystemColors.GrayText,
-                Font      = new Font("Segoe UI", 8F)
-            };
-            var btnOk     = new Button { Text = Properties.Resources.OK,     DialogResult = DialogResult.OK,     Size = new Size(80, 28), Anchor = AnchorStyles.Bottom | AnchorStyles.Right };
-            var btnCancel = new Button { Text = Properties.Resources.Cancel, DialogResult = DialogResult.Cancel, Size = new Size(80, 28), Anchor = AnchorStyles.Bottom | AnchorStyles.Right };
-
-            void LayoutBottom()
-            {
-                int y = dlg.ClientSize.Height - btnOk.Height - 10;
-                tb.Height          = y - tb.Top - 8;
-                btnCancel.Location = new Point(dlg.ClientSize.Width - btnCancel.Width - 16, y);
-                btnOk.Location     = new Point(btnCancel.Left - btnOk.Width - 8, y);
-                lblHint.Location   = new Point(16, y + (btnOk.Height - lblHint.Height) / 2);
-            }
-
-            dlg.Controls.AddRange(new Control[] { lbl, tb, lblHint, btnOk, btnCancel });
-            // KEIN AcceptButton: Enter soll eine neue Zeile erzeugen, nicht senden.
-            dlg.CancelButton = btnCancel;
-            dlg.Resize += (s, e) => LayoutBottom();
-
-            tb.KeyDown += (s, e) =>
-            {
-                if (e.KeyCode == Keys.Enter && e.Control)
-                {
-                    e.SuppressKeyPress = true;
-                    dlg.DialogResult = DialogResult.OK;
-                    dlg.Close();
-                }
-            };
-
-            dlg.Shown += (s, e) =>
-            {
-                LayoutBottom();
-                try
-                {
-                    dlg.Activate();
-                    SetForegroundWindow(dlg.Handle);
-                }
-                catch (Exception ex) { Trace.WriteLine($"ShowInputDialog: Fokus fehlgeschlagen: {ex}"); }
-                tb.Focus();
-            };
-
-            // Ohne sichtbaren Owner ohne Owner-Fenster anzeigen, sonst hängt der
-            // modale Dialog an einem minimierten/unsichtbaren Fenster.
-            var result = ownerUsable ? dlg.ShowDialog(this) : dlg.ShowDialog();
-            if (result != DialogResult.OK) return false;
-            value = tb.Text;
             return true;
         }
 
@@ -1822,35 +1429,6 @@ namespace Wrok
                 Trace.WriteLine($"PerformMacroAsync fehlgeschlagen: {ex}");
             }
         }
-
-        // ------------------------------------------------------------------
-        // ActivityMessageFilter (innere Klasse)
-        // ------------------------------------------------------------------
-
-        private class ActivityMessageFilter : IMessageFilter
-        {
-            private readonly WeakReference<MainForm> _formRef;
-            public ActivityMessageFilter(MainForm form) => _formRef = new(form);
-
-            public bool PreFilterMessage(ref Message m)
-            {
-                const int WM_MOUSEMOVE   = 0x0200;
-                const int WM_LBUTTONDOWN = 0x0201;
-                const int WM_RBUTTONDOWN = 0x0204;
-                const int WM_MBUTTONDOWN = 0x0207;
-                const int WM_MOUSEWHEEL  = 0x020A;
-                const int WM_KEYDOWN     = 0x0100;
-                const int WM_SYSKEYDOWN  = 0x0104;
-
-                if (m.Msg is WM_MOUSEMOVE or WM_LBUTTONDOWN or WM_RBUTTONDOWN or
-                             WM_MBUTTONDOWN or WM_MOUSEWHEEL or WM_KEYDOWN or WM_SYSKEYDOWN)
-                    if (_formRef.TryGetTarget(out var target))
-                        target.ResetInactivityTimer();
-
-                return false;
-            }
-        }
-
         // ------------------------------------------------------------------
         // Logging
         // ------------------------------------------------------------------

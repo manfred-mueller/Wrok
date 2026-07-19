@@ -18,12 +18,26 @@
 
 .EXAMPLE
     .\publish-release.ps1
-    .\publish-release.ps1 -DryRun     # alles bauen, aber kein Release anlegen
+    .\publish-release.ps1 -DryRun       # alles bauen, aber kein Release anlegen
+    .\publish-release.ps1 -PreRelease   # Release als Vorabversion - WinGet bleibt aussen vor
+    .\publish-release.ps1 -NoClean      # ohne vollstaendigen Neubau (nur fuer Probelaeufe)
 #>
 
 [CmdletBinding()]
 param(
-    [switch] $DryRun
+    [switch] $DryRun,
+
+    # Legt das Release als Vorabversion an. GitHub meldet dann das Ereignis
+    # "prereleased" statt "released" - der WinGet-Workflow horcht auf "released"
+    # und laeuft folglich nicht an. So laesst sich eine Fassung erst selbst
+    # benutzen und spaeter, nach Entfernen der Markierung oder von Hand, an
+    # WinGet weiterreichen.
+    [switch] $PreRelease,
+
+    # Ueberspringt das Loeschen der Ausgabeordner. Spart beim wiederholten
+    # Probelauf die Zeit fuer den vollstaendigen Neubau samt ReadyToRun - fuer
+    # ein echtes Release aber nicht zu empfehlen.
+    [switch] $NoClean
 )
 
 $ErrorActionPreference = 'Stop'
@@ -89,13 +103,30 @@ if (-not $DryRun) {
     }
 }
 
-# --- 2. Sauber veroeffentlichen ---------------------------------------------
-# Alte Ausgaben entfernen, damit garantiert nichts Veraltetes eingepackt wird.
-if (Test-Path 'bin\x64\Release\publish') {
-    Remove-Item 'bin\x64\Release\publish' -Recurse -Force
+# --- 2. Alte Ausgaben entfernen ---------------------------------------------
+# Absichtlich mehr als nur der publish-Ordner: Auch die Zwischenergebnisse unter
+# obj verschwinden, damit kein inkrementeller Bau ein veraltetes Teilstueck
+# weiterreicht. Die Versionspruefung weiter unten faengt zwar eine falsche
+# Versionsnummer ab - nicht aber alten Code, der zufaellig dieselbe Nummer traegt.
+# Genau das ist beim Wechsel zwischen Bauen in Visual Studio und Veroeffentlichen
+# per Skript der wahrscheinlichere Fall.
+#
+# Bewusst NUR die x64-Release-Zweige: Debug-Staende und die AnyCPU-Ordner bleiben
+# stehen, damit Visual Studio nach einem Release nicht alles neu uebersetzen muss.
+if (-not $NoClean) {
+    foreach ($dir in @('bin\x64\Release', 'obj\x64\Release')) {
+        if (Test-Path $dir) {
+            Write-Host "Entferne $dir" -ForegroundColor DarkGray
+            Remove-Item $dir -Recurse -Force
+        }
+    }
 }
-if (Test-Path $setup) {
-    Remove-Item $setup -Force
+else {
+    Write-Host "-NoClean: alte Ausgaben bleiben stehen." -ForegroundColor Yellow
+
+    # Zumindest das, was sonst unbemerkt weiterverwendet wuerde.
+    if (Test-Path 'bin\x64\Release\publish') { Remove-Item 'bin\x64\Release\publish' -Recurse -Force }
+    if (Test-Path $setup)                    { Remove-Item $setup -Force }
 }
 
 Write-Host "`nVeroeffentliche..." -ForegroundColor Cyan
@@ -175,17 +206,22 @@ if (Test-Path 'CHANGELOG.md') {
     }
 }
 
-Write-Host "`nLege Release $tag an..." -ForegroundColor Cyan
+$kind = if ($PreRelease) { 'Vorabversion' } else { 'Release' }
+Write-Host "`nLege $kind $tag an..." -ForegroundColor Cyan
 
-if ($notesFile) {
-    gh release create $tag $setup --title "Wrok $tag" --notes-file $notesFile
-    $ghExit = $LASTEXITCODE
-    Remove-Item $notesFile -Force -ErrorAction SilentlyContinue
-}
-else {
-    gh release create $tag $setup --title "Wrok $tag" --generate-notes
-    $ghExit = $LASTEXITCODE
-}
+# Argumente sammeln statt die Aufrufe zu verdoppeln - so kann keine Variante
+# beim Aendern vergessen werden.
+$ghArgs = @('release', 'create', $tag, $setup, '--title', "Wrok $tag")
+
+if ($notesFile) { $ghArgs += @('--notes-file', $notesFile) }
+else            { $ghArgs += '--generate-notes' }
+
+if ($PreRelease) { $ghArgs += '--prerelease' }
+
+gh @ghArgs
+$ghExit = $LASTEXITCODE
+
+if ($notesFile) { Remove-Item $notesFile -Force -ErrorAction SilentlyContinue }
 
 # Auch hier gilt: externe Programme lassen PowerShell nicht von selbst abbrechen.
 if ($ghExit -ne 0) {
@@ -193,4 +229,13 @@ if ($ghExit -ne 0) {
           "Angemeldet? Pruefe mit 'gh auth status'."
 }
 
-Write-Host "`nFertig. Der Workflow 'WinGet veroeffentlichen' laeuft jetzt an." -ForegroundColor Green
+if ($PreRelease) {
+    Write-Host "`nFertig - als Vorabversion angelegt." -ForegroundColor Green
+    Write-Host "Der Workflow 'WinGet veroeffentlichen' laeuft NICHT an." -ForegroundColor Yellow
+    Write-Host "Zum Nachreichen spaeter eines von beidem:" -ForegroundColor Yellow
+    Write-Host "  gh release edit $tag --prerelease=false      # loest den Workflow aus"
+    Write-Host "  gh workflow run winget.yml -f tag=$tag          # von Hand anstossen"
+}
+else {
+    Write-Host "`nFertig. Der Workflow 'WinGet veroeffentlichen' laeuft jetzt an." -ForegroundColor Green
+}
