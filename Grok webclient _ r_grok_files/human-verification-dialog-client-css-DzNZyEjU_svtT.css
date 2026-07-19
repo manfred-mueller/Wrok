@@ -1,1 +1,0 @@
-@keyframes hv-verifying-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}.hv-verifying-illustration{animation:hv-verifying-float 3s ease-in-out infinite}@keyframes hv-verifying-ellipsis{0%{content:'.'}33%{content:'..'}66%{content:'...'}}.hv-verifying-label::after{content:'.';animation:hv-verifying-ellipsis 1.5s steps(1) infinite}
