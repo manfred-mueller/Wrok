@@ -1,4 +1,4 @@
-![dunkles wrok icon](/wrok_black.ico?raw=true "Dunkles Wrok-Symbol")
+![dunkles wrok icon](/Properties/wrok_black.ico?raw=true "Dunkles Wrok-Symbol")
 
 **Wrok** ist ein moderner, portabler WebView2-basierter Grok™-Client.
 
