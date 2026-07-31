@@ -156,6 +156,42 @@ namespace Wrok.Properties {
 
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool NumpadMacroModeEnabled {
+            get {
+                return ((bool)(this["NumpadMacroModeEnabled"]));
+            }
+            set {
+                this["NumpadMacroModeEnabled"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string GrokAccountsJson {
+            get {
+                return ((string)(this["GrokAccountsJson"]));
+            }
+            set {
+                this["GrokAccountsJson"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool PasswordAutosaveEnabled {
+            get {
+                return ((bool)(this["PasswordAutosaveEnabled"]));
+            }
+            set {
+                this["PasswordAutosaveEnabled"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("")]
         public string LastImagePath {
             get {
@@ -175,6 +211,90 @@ namespace Wrok.Properties {
             }
             set {
                 this["LastImageUrl"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool ProxyEnabled {
+            get {
+                return ((bool)(this["ProxyEnabled"]));
+            }
+            set {
+                this["ProxyEnabled"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string ProxyServer {
+            get {
+                return ((string)(this["ProxyServer"]));
+            }
+            set {
+                this["ProxyServer"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("localhost;127.0.0.1")]
+        public string ProxyBypassList {
+            get {
+                return ((string)(this["ProxyBypassList"]));
+            }
+            set {
+                this["ProxyBypassList"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool ProxyAuthEnabled {
+            get {
+                return ((bool)(this["ProxyAuthEnabled"]));
+            }
+            set {
+                this["ProxyAuthEnabled"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string ProxyUsername {
+            get {
+                return ((string)(this["ProxyUsername"]));
+            }
+            set {
+                this["ProxyUsername"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string ProxyPasswordProtected {
+            get {
+                return ((string)(this["ProxyPasswordProtected"]));
+            }
+            set {
+                this["ProxyPasswordProtected"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool SettingsUpgraded {
+            get {
+                return ((bool)(this["SettingsUpgraded"]));
+            }
+            set {
+                this["SettingsUpgraded"] = value;
             }
         }
     }

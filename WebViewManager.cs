@@ -88,7 +88,20 @@ namespace Wrok
 
             try
             {
-                var env = await CoreWebView2Environment.CreateAsync(userDataFolder: userDataPath);
+                // Proxy wirkt nur als Browser-Argument beim Erzeugen der Umgebung –
+                // Chromium liest --proxy-server nicht zur Laufzeit neu. Eine Änderung
+                // greift daher erst nach einem Neustart von Wrok (siehe MainForm.ShowProxyDialog).
+                var options = new CoreWebView2EnvironmentOptions();
+                if (Properties.Settings.Default.ProxyEnabled &&
+                    !string.IsNullOrWhiteSpace(Properties.Settings.Default.ProxyServer))
+                {
+                    string bypassList = Properties.Settings.Default.ProxyBypassList;
+                    options.AdditionalBrowserArguments =
+                        $"--proxy-server=\"{Properties.Settings.Default.ProxyServer}\"" +
+                        (string.IsNullOrWhiteSpace(bypassList) ? "" : $" --proxy-bypass-list=\"{bypassList}\"");
+                }
+
+                var env = await CoreWebView2Environment.CreateAsync(userDataFolder: userDataPath, options: options);
                 CoreEnvironment = env;   // für weitere WebViews (Video-Fenster) wiederverwenden
                 await _webView.EnsureCoreWebView2Async(env);
 
@@ -412,6 +425,12 @@ namespace Wrok
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
                 "(KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.0.0";
 
+            // Chromiums eigener Passwort-Manager fürs Grok-Konto-Login. Gilt fürs
+            // gesamte CoreWebView2Profile (Wroks eigener, isolierter WebView2Data-
+            // Ordner), nicht für das Edge-Profil des Nutzers. Wirkt sofort, auch
+            // nachträglich – siehe MainForm-Tray-Toggle "Passwörter im Browser merken".
+            core.Settings.IsPasswordAutosaveEnabled = Properties.Settings.Default.PasswordAutosaveEnabled;
+
             // NUR Dokument-Anfragen, nicht "All".
             //
             // Zuvor wurden diese Header auf JEDE Anfrage gesetzt – auch auf Bilder,
@@ -437,6 +456,57 @@ namespace Wrok
                 // "Sec-Fetch-Site" ebenfalls nicht: Der Wert haengt davon ab, woher
                 // die Navigation kommt - fest "same-origin" waere beim Erstaufruf falsch.
             };
+
+            core.BasicAuthenticationRequested += OnBasicAuthenticationRequested;
+        }
+
+        /// <summary>
+        /// Beantwortet 407-Anmeldeaufforderungen des konfigurierten Proxys mit
+        /// den in den Settings hinterlegten Zugangsdaten (Passwort per DPAPI
+        /// entschlüsselt). Grok selbst nutzt kein HTTP-Basic-Auth – trotzdem
+        /// wird die anfragende Adresse gegen den konfigurierten Proxy geprüft,
+        /// bevor Zugangsdaten herausgegeben werden, damit sie nicht versehentlich
+        /// an eine andere Basic-Auth-Abfrage (z. B. einer echten Website) gehen.
+        /// </summary>
+        private static void OnBasicAuthenticationRequested(object? sender, CoreWebView2BasicAuthenticationRequestedEventArgs e)
+        {
+            if (!Properties.Settings.Default.ProxyEnabled || !Properties.Settings.Default.ProxyAuthEnabled)
+                return;
+
+            string username = Properties.Settings.Default.ProxyUsername;
+            if (string.IsNullOrEmpty(username)) return;
+
+            if (!TryGetProxyHostPort(Properties.Settings.Default.ProxyServer, out var proxyHost, out var proxyPort))
+                return;
+            if (!Uri.TryCreate(e.Uri, UriKind.Absolute, out var challengeUri))
+                return;
+            if (!string.Equals(challengeUri.Host, proxyHost, StringComparison.OrdinalIgnoreCase) || challengeUri.Port != proxyPort)
+                return; // Anfrage kommt nicht vom konfigurierten Proxy - Finger weg.
+
+            e.Response.UserName = username;
+            e.Response.Password = ProxyCredentialProtector.Unprotect(Properties.Settings.Default.ProxyPasswordProtected);
+        }
+
+        /// <summary>
+        /// Zerlegt den in den Settings hinterlegten Proxy-String (Chromium-Syntax
+        /// "scheme=host:port" oder schlicht "host:port") in Host und Port.
+        /// </summary>
+        private static bool TryGetProxyHostPort(string? proxyServerSetting, out string host, out int port)
+        {
+            host = string.Empty;
+            port = 0;
+            if (string.IsNullOrWhiteSpace(proxyServerSetting)) return false;
+
+            string value = proxyServerSetting.Contains('=')
+                ? proxyServerSetting.Split('=', 2)[1]
+                : proxyServerSetting;
+            value = value.Trim();
+
+            int sep = value.LastIndexOf(':');
+            if (sep <= 0 || sep == value.Length - 1) return false;
+
+            host = value[..sep];
+            return int.TryParse(value[(sep + 1)..], out port);
         }
 
         /// <summary>

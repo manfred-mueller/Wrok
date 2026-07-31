@@ -27,6 +27,7 @@ mono_crash.*
 # um rund 50 MB je Version aufblaehen.
 [Bb]in/x64/[Rr]elease/*.exe
 [Rr]eleases/
+[Tt]ools/
 Wrok.exe.WebView2/
 [Ww][Ii][Nn]32/
 [Aa][Rr][Mm]/

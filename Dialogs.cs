@@ -19,6 +19,36 @@ namespace Wrok
         private static extern bool SetForegroundWindow(IntPtr hWnd);
 
         // ------------------------------------------------------------------
+        // Zentrierung über einem ggf. minimierten/unsichtbaren Owner
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// Ob <paramref name="owner"/> gerade taugt, um einen Dialog per
+        /// CenterParent daran auszurichten. Windows verschiebt ein minimiertes
+        /// Fenster intern weit aus dem sichtbaren Bereich – Wrok landet oft
+        /// genau in diesem Zustand in der Tray. CenterParent würde sich dann an
+        /// dieser verschobenen Position statt an der eigentlichen Fensterlage
+        /// orientieren, und der Dialog erschiene irgendwo am Bildschirmrand
+        /// statt zentriert.
+        /// </summary>
+        internal static bool IsUsableOwner(Form? owner) =>
+            owner is { IsDisposed: false, Visible: true, WindowState: not FormWindowState.Minimized };
+
+        /// <summary>
+        /// Zeigt <paramref name="dlg"/> zentriert über <paramref name="owner"/>,
+        /// falls dieser gerade sinnvoll positioniert ist – sonst zentriert auf
+        /// dem Bildschirm, ganz ohne Owner-Bindung (siehe <see cref="IsUsableOwner"/>).
+        /// Setzt <see cref="Form.StartPosition"/> selbst; ein vorab gesetzter
+        /// Wert wird also überschrieben.
+        /// </summary>
+        internal static DialogResult ShowCentered(Form dlg, Form? owner)
+        {
+            bool usable = IsUsableOwner(owner);
+            dlg.StartPosition = usable ? FormStartPosition.CenterParent : FormStartPosition.CenterScreen;
+            return usable ? dlg.ShowDialog(owner) : dlg.ShowDialog();
+        }
+
+        // ------------------------------------------------------------------
         // Makro bearbeiten
         // ------------------------------------------------------------------
 
@@ -32,7 +62,6 @@ namespace Wrok
             {
                 Text             = title,
                 FormBorderStyle  = FormBorderStyle.SizableToolWindow,
-                StartPosition    = FormStartPosition.CenterParent,
                 MinimizeBox      = false,
                 MaximizeBox      = false,
                 MinimumSize      = new Size(360, 260),
@@ -103,7 +132,7 @@ namespace Wrok
             };
             btnOk.Click += (s, e) => dlg.Close();
 
-            if (dlg.ShowDialog(owner) == DialogResult.OK) { name = tbName.Text; text = tb.Text; return true; }
+            if (ShowCentered(dlg, owner) == DialogResult.OK) { name = tbName.Text; text = tb.Text; return true; }
             return false;
         }
 
@@ -129,7 +158,6 @@ namespace Wrok
             {
                 Text            = Properties.Resources.ImportTargetTitle,
                 FormBorderStyle = FormBorderStyle.FixedDialog,
-                StartPosition   = FormStartPosition.CenterParent,
                 MinimizeBox     = false,
                 MaximizeBox     = false,
                 ShowInTaskbar   = false,
@@ -166,7 +194,7 @@ namespace Wrok
             dlg.AcceptButton = btnOk;
             dlg.CancelButton = btnCancel;
 
-            if (dlg.ShowDialog(owner) != DialogResult.OK) return false;
+            if (ShowCentered(dlg, owner) != DialogResult.OK) return false;
             index = combo.SelectedIndex;
             return index >= 0;
         }
@@ -192,7 +220,6 @@ namespace Wrok
             {
                 Text            = Properties.Resources.ClearBrowsingData,
                 FormBorderStyle = FormBorderStyle.FixedDialog,
-                StartPosition   = FormStartPosition.CenterParent,
                 MinimizeBox     = false,
                 MaximizeBox     = false,
                 ShowInTaskbar   = false,
@@ -238,7 +265,7 @@ namespace Wrok
             dlg.AcceptButton = btnCacheOnly;
             dlg.CancelButton = btnCancel;
 
-            var result = dlg.ShowDialog(owner);
+            var result = ShowCentered(dlg, owner);
             includeMacros = result == DialogResult.No && chkMacros.Checked;
 
             return result switch
@@ -266,7 +293,6 @@ namespace Wrok
             {
                 Text            = title,
                 FormBorderStyle = FormBorderStyle.FixedDialog,
-                StartPosition   = FormStartPosition.CenterParent,
                 MinimizeBox     = false,
                 MaximizeBox     = false,
                 ShowInTaskbar   = false,
@@ -300,8 +326,302 @@ namespace Wrok
             dlg.CancelButton = btnCancel;
             dlg.Shown += (s, e) => { tb.Focus(); tb.SelectAll(); };
 
-            if (dlg.ShowDialog(owner) != DialogResult.OK) return false;
+            if (ShowCentered(dlg, owner) != DialogResult.OK) return false;
             value = tb.Text;
+            return true;
+        }
+
+        // ------------------------------------------------------------------
+        // Grok-Konto hinzufügen / entfernen
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// Erfasst Bezeichnung + E-Mail für ein neues Grok-Konto. Bewusst OHNE
+        /// Passwortfeld – das Passwort bleibt Sache des Chromium-eigenen
+        /// Passwort-Managers (siehe WebViewManager.ConfigureCore) oder der
+        /// manuellen Eingabe. Validierung (E-Mail-Format, Duplikate) passiert
+        /// beim Aufrufer über GrokAccountManager.AddAccount.
+        /// </summary>
+        public static bool ShowAddGrokAccount(Form owner, out string label, out string email)
+        {
+            label = string.Empty;
+            email = string.Empty;
+
+            using var dlg = new Form
+            {
+                Text            = Properties.Resources.GrokAccountAddTitle,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                MinimizeBox     = false,
+                MaximizeBox     = false,
+                ShowInTaskbar   = false,
+                ClientSize      = new Size(360, 190)
+            };
+
+            var lblLabel = new Label
+            {
+                Text     = Properties.Resources.GrokAccountLabelPrompt,
+                AutoSize = true,
+                Left     = 16,
+                Top      = 16,
+                Font     = new Font("Segoe UI", 9.5F)
+            };
+            var tbLabel = new TextBox
+            {
+                Left   = 16,
+                Top    = 40,
+                Width  = dlg.ClientSize.Width - 32,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                Font   = new Font("Segoe UI", 10F)
+            };
+
+            var lblEmail = new Label
+            {
+                Text     = Properties.Resources.GrokAccountEmailPrompt,
+                AutoSize = true,
+                Left     = 16,
+                Top      = 76,
+                Font     = new Font("Segoe UI", 9.5F)
+            };
+            var tbEmail = new TextBox
+            {
+                Left   = 16,
+                Top    = 100,
+                Width  = dlg.ClientSize.Width - 32,
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                Font   = new Font("Segoe UI", 10F)
+            };
+
+            var btnOk     = new Button { Text = Properties.Resources.OK,     DialogResult = DialogResult.OK,     Size = new Size(80, 28), Top = 146 };
+            var btnCancel = new Button { Text = Properties.Resources.Cancel, DialogResult = DialogResult.Cancel, Size = new Size(80, 28), Top = 146 };
+            btnCancel.Left = dlg.ClientSize.Width - btnCancel.Width - 16;
+            btnOk.Left     = btnCancel.Left - btnOk.Width - 8;
+
+            dlg.Controls.AddRange(new Control[] { lblLabel, tbLabel, lblEmail, tbEmail, btnOk, btnCancel });
+            dlg.AcceptButton = btnOk;
+            dlg.CancelButton = btnCancel;
+            dlg.Shown += (s, e) => tbLabel.Focus();
+
+            if (ShowCentered(dlg, owner) != DialogResult.OK) return false;
+            label = tbLabel.Text.Trim();
+            email = tbEmail.Text.Trim();
+            return true;
+        }
+
+        /// <summary>
+        /// Lässt ein gespeichertes Grok-Konto zum Entfernen auswählen.
+        /// </summary>
+        public static bool ShowRemoveGrokAccount(Form owner, IReadOnlyList<GrokAccount> accounts, out int index)
+        {
+            index = -1;
+            if (accounts.Count == 0) return false;
+
+            var items = accounts.Select(a => a.DisplayName).ToArray();
+
+            using var dlg = new Form
+            {
+                Text            = Properties.Resources.GrokAccountRemoveTitle,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                MinimizeBox     = false,
+                MaximizeBox     = false,
+                ShowInTaskbar   = false,
+                ClientSize      = new Size(360, 150)
+            };
+
+            var lbl = new Label
+            {
+                Text     = Properties.Resources.GrokAccountRemovePrompt,
+                AutoSize = false,
+                Left     = 16,
+                Top      = 14,
+                Width    = dlg.ClientSize.Width - 32,
+                Height   = 32,
+                Font     = new Font("Segoe UI", 9.5F)
+            };
+            var combo = new ComboBox
+            {
+                Left          = 16,
+                Top           = 50,
+                Width         = dlg.ClientSize.Width - 32,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Font          = new Font("Segoe UI", 10F)
+            };
+            combo.Items.AddRange(items);
+            combo.SelectedIndex = 0;
+
+            var btnOk     = new Button { Text = Properties.Resources.GrokAccountRemove, DialogResult = DialogResult.OK,     Size = new Size(120, 28), Top = 96 };
+            var btnCancel = new Button { Text = Properties.Resources.Cancel,            DialogResult = DialogResult.Cancel, Size = new Size(90,  28), Top = 96 };
+            btnCancel.Left = dlg.ClientSize.Width - btnCancel.Width - 16;
+            btnOk.Left     = btnCancel.Left - btnOk.Width - 8;
+
+            dlg.Controls.AddRange(new Control[] { lbl, combo, btnOk, btnCancel });
+            dlg.AcceptButton = btnOk;
+            dlg.CancelButton = btnCancel;
+
+            if (ShowCentered(dlg, owner) != DialogResult.OK) return false;
+            index = combo.SelectedIndex;
+            return index >= 0;
+        }
+
+        // ------------------------------------------------------------------
+        // Proxy-Einstellungen
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// Aktivieren/Deaktivieren eines Proxys für die WebView2-Umgebung, die
+        /// Adresse selbst (Chromium-Syntax, z. B. "http=host:port" oder
+        /// "socks5=host:port") sowie optional Anmeldedaten für Proxys, die auf
+        /// einen 407-Request mit Basic-Auth antworten. Wirkt erst nach einem
+        /// Neustart von Wrok, da Chromium den Proxy nur beim Erzeugen der
+        /// CoreWebView2Environment liest – das ist hier bewusst nicht
+        /// versteckt, sondern der Aufrufer zeigt danach den Neustart-Hinweis.
+        /// Das Passwort selbst wird hier nur im Klartext gehalten, solange der
+        /// Dialog offen ist; die Verschlüsselung übernimmt der Aufrufer über
+        /// <see cref="ProxyCredentialProtector"/> vor dem Speichern.
+        /// </summary>
+        public static bool ShowProxySettings(Form owner, ref bool enabled, ref string server,
+                                              ref bool requiresAuth, ref string username, ref string password)
+        {
+            using var dlg = new Form
+            {
+                Text            = Properties.Resources.ProxyDialogTitle,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                MinimizeBox     = false,
+                MaximizeBox     = false,
+                ShowInTaskbar   = false,
+                ClientSize      = new Size(440, 340)
+            };
+
+            var chkEnabled = new CheckBox
+            {
+                Text     = Properties.Resources.ProxyUseCheckbox,
+                AutoSize = true,
+                Left     = 16,
+                Top      = 16,
+                Checked  = enabled,
+                Font     = new Font("Segoe UI", 9.5F)
+            };
+
+            var lblServer = new Label
+            {
+                Text     = Properties.Resources.ProxyServerLabel,
+                AutoSize = true,
+                Left     = 16,
+                Top      = 52,
+                Font     = new Font("Segoe UI", 9.5F)
+            };
+            var tbServer = new TextBox
+            {
+                Left    = 16,
+                Top     = 74,
+                Width   = dlg.ClientSize.Width - 32,
+                Anchor  = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                Font    = new Font("Segoe UI", 10F),
+                Text    = server ?? string.Empty,
+                Enabled = enabled
+            };
+            var lblHint = new Label
+            {
+                Text      = Properties.Resources.ProxyServerHint,
+                AutoSize  = false,
+                Left      = 16,
+                Top       = 104,
+                Width     = dlg.ClientSize.Width - 32,
+                Height    = 34,
+                Anchor    = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                ForeColor = SystemColors.GrayText,
+                Font      = new Font("Segoe UI", 8F)
+            };
+
+            var chkAuth = new CheckBox
+            {
+                Text     = Properties.Resources.ProxyAuthCheckbox,
+                AutoSize = true,
+                Left     = 16,
+                Top      = 146,
+                Checked  = requiresAuth,
+                Enabled  = enabled,
+                Font     = new Font("Segoe UI", 9.5F)
+            };
+
+            var lblUsername = new Label
+            {
+                Text     = Properties.Resources.ProxyUsernameLabel,
+                AutoSize = true,
+                Left     = 16,
+                Top      = 178,
+                Font     = new Font("Segoe UI", 9.5F)
+            };
+            var tbUsername = new TextBox
+            {
+                Left    = 16,
+                Top     = 200,
+                Width   = dlg.ClientSize.Width - 32,
+                Anchor  = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                Font    = new Font("Segoe UI", 10F),
+                Text    = username ?? string.Empty,
+                Enabled = enabled && requiresAuth
+            };
+
+            var lblPassword = new Label
+            {
+                Text     = Properties.Resources.ProxyPasswordLabel,
+                AutoSize = true,
+                Left     = 16,
+                Top      = 232,
+                Font     = new Font("Segoe UI", 9.5F)
+            };
+            var tbPassword = new TextBox
+            {
+                Left         = 16,
+                Top          = 254,
+                Width        = dlg.ClientSize.Width - 32,
+                Anchor       = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right,
+                Font         = new Font("Segoe UI", 10F),
+                Text         = password ?? string.Empty,
+                UseSystemPasswordChar = true,
+                Enabled      = enabled && requiresAuth
+            };
+
+            // Auth-Felder hängen an zwei Bedingungen: Proxy überhaupt aktiv UND
+            // "Anmeldung erforderlich" angehakt. Ohne aktiven Proxy ergibt die
+            // Checkbox selbst keinen Sinn, daher hier mit deaktiviert.
+            chkEnabled.CheckedChanged += (s, e) =>
+            {
+                tbServer.Enabled = chkEnabled.Checked;
+                chkAuth.Enabled  = chkEnabled.Checked;
+                bool authActive  = chkEnabled.Checked && chkAuth.Checked;
+                tbUsername.Enabled = authActive;
+                tbPassword.Enabled = authActive;
+            };
+            chkAuth.CheckedChanged += (s, e) =>
+            {
+                bool authActive = chkEnabled.Checked && chkAuth.Checked;
+                tbUsername.Enabled = authActive;
+                tbPassword.Enabled = authActive;
+            };
+
+            var btnOk     = new Button { Text = Properties.Resources.OK,     DialogResult = DialogResult.OK,     Size = new Size(80, 28), Top = 296 };
+            var btnCancel = new Button { Text = Properties.Resources.Cancel, DialogResult = DialogResult.Cancel, Size = new Size(80, 28), Top = 296 };
+            btnCancel.Left = dlg.ClientSize.Width - btnCancel.Width - 16;
+            btnOk.Left     = btnCancel.Left - btnOk.Width - 8;
+
+            dlg.Controls.AddRange(new Control[]
+            {
+                chkEnabled, lblServer, tbServer, lblHint,
+                chkAuth, lblUsername, tbUsername, lblPassword, tbPassword,
+                btnOk, btnCancel
+            });
+            dlg.AcceptButton = btnOk;
+            dlg.CancelButton = btnCancel;
+            dlg.Shown += (s, e) => { if (chkEnabled.Checked) { tbServer.Focus(); tbServer.SelectAll(); } };
+
+            if (ShowCentered(dlg, owner) != DialogResult.OK) return false;
+
+            enabled      = chkEnabled.Checked;
+            server       = tbServer.Text.Trim();
+            requiresAuth = chkAuth.Checked;
+            username     = tbUsername.Text.Trim();
+            password     = tbPassword.Text;
             return true;
         }
 
@@ -321,7 +641,7 @@ namespace Wrok
             // Wird das Makro per globalem Hotkey ausgelöst, ist Wrok evtl. minimiert
             // oder im Hintergrund. Dann muss der Dialog selbst nach vorn kommen –
             // sonst erscheint er hinter dem aktiven Fenster und bekommt keinen Fokus.
-            bool ownerUsable = owner is { Visible: true } && owner.WindowState != FormWindowState.Minimized;
+            bool ownerUsable = IsUsableOwner(owner);
 
             using var dlg = new Form
             {

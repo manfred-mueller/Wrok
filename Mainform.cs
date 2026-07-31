@@ -12,10 +12,37 @@ namespace Wrok
         // ------------------------------------------------------------------
 
         private const int HOTKEY_ID       = 0x9000;
-        private const int HOTKEY_ID_IMAGE = 0x9001;   // Strg+Shift+P
+        private const int HOTKEY_ID_IMAGE = 0x9001;   // Strg+Ö
         private const int WM_HOTKEY    = 0x0312;
         private const uint MOD_CONTROL = 0x0002;
-        private const uint MOD_SHIFT   = 0x0004;
+
+        /// <summary>
+        /// Strg-Makro-Tasten des AKTIVEN Profils: Strg+1..Strg+9, Strg+0. Index i
+        /// (0-basiert) → Makro i des aktiven Profils, registriert unter
+        /// MacroManager.CtrlMacroBase+i. Immer aktiv, auf jeder Tastatur bedienbar.
+        /// </summary>
+        private static readonly Keys[] CtrlMacroKeys =
+        {
+            Keys.D1, Keys.D2, Keys.D3, Keys.D4, Keys.D5,
+            Keys.D6, Keys.D7, Keys.D8, Keys.D9, Keys.D0
+        };
+
+        /// <summary>
+        /// Feste Tastenzuordnung für den Nummernblock-Modus: Index entspricht dem
+        /// Numpad-Slot (siehe MacroManager.NumpadMacroBase). Abgebildet werden nur
+        /// die ersten fünf Makros jedes Profils: Profil 1 = NumPad0-4, Profil 2 =
+        /// NumPad5-9, Profil 3 = die vier Rechenzeichen + Dezimalpunkt. Alle ohne
+        /// Modifier, damit sie einhändig gehen – optional, siehe Numpad-Makro-Modus.
+        /// </summary>
+        private static readonly Keys[] NumpadMacroKeys =
+        {
+            // Profil 1: erste 5 Makros → Ziffern 0-4
+            Keys.NumPad0, Keys.NumPad1, Keys.NumPad2, Keys.NumPad3, Keys.NumPad4,
+            // Profil 2: erste 5 Makros → Ziffern 5-9
+            Keys.NumPad5, Keys.NumPad6, Keys.NumPad7, Keys.NumPad8, Keys.NumPad9,
+            // Profil 3: erste 5 Makros → / * - + ,
+            Keys.Divide, Keys.Multiply, Keys.Subtract, Keys.Add, Keys.Decimal
+        };
 
         private const int WM_THEMECHANGED  = 0x031A;
         private const int WM_SETTINGCHANGE = 0x001A;
@@ -40,6 +67,7 @@ namespace Wrok
         private NotifyIcon?        trayIcon;
         private ContextMenuStrip?  trayMenu;
         private ToolStripMenuItem? macrosMenu;
+        private ToolStripMenuItem? grokAccountsMenu;
         private ToolStripMenuItem? _inactivityMenu;
 
         // Nebeneinander-Anordnung (Medium links, Wrok rechts)
@@ -61,6 +89,11 @@ namespace Wrok
         private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+
+        [DllImport("user32.dll")]
+        private static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
+        private const byte VK_NUMLOCK        = 0x90;
+        private const uint KEYEVENTF_KEYUP   = 0x0002;
 
         // ------------------------------------------------------------------
         // Konstruktor
@@ -118,6 +151,12 @@ namespace Wrok
 
             _webViewManager = new WebViewManager(_webView, this, () => _inactivity?.Reset("WebView-Ereignis"));
             await _webViewManager.InitializeAsync();
+
+            // Fuer den E-Mail-Prefill beim Grok-Kontowechsel: direkter Zugriff auf
+            // CoreWebView2 wie beim bestehenden Reload-Tray-Eintrag, WebViewManager
+            // kapselt keine Navigations-Events nach aussen.
+            if (_webView.CoreWebView2 != null)
+                _webView.CoreWebView2.NavigationCompleted += OnGrokSignInNavigationCompleted;
         }
 
         // ------------------------------------------------------------------
@@ -311,6 +350,11 @@ namespace Wrok
             // ---------- Makros (oberste Ebene: meistgenutzte Funktion) ----------
             InitializeMacrosMenu();
             if (macrosMenu != null) trayMenu.Items.Add(macrosMenu);
+
+            // ---------- Grok-Konto wechseln (ebenfalls oberste Ebene) ----------
+            InitializeGrokAccountsMenu();
+            if (grokAccountsMenu != null) trayMenu.Items.Add(grokAccountsMenu);
+
             trayMenu.Items.Add(new ToolStripSeparator());
 
             // ---------- Einstellungen ----------
@@ -357,6 +401,44 @@ namespace Wrok
             };
             appMenu.DropDownItems.Add(autostartItem);
 
+            // Numpad-Makro-Modus: alle 15 Makros ohne Modifier per Nummernblock,
+            // dafür ist der Block waehrend des Modus fuer normale Eingaben blockiert.
+            var numpadMacroItem = new ToolStripMenuItem(Properties.Resources.NumpadMacroMode)
+            {
+                CheckOnClick = false,
+                Checked      = Properties.Settings.Default.NumpadMacroModeEnabled
+            };
+            numpadMacroItem.Click += (s, e) =>
+            {
+                bool desired = !numpadMacroItem.Checked;
+                SetNumpadMacroMode(desired);
+                numpadMacroItem.Checked = desired;
+                RefreshMacrosMenu();
+            };
+            appMenu.DropDownItems.Add(numpadMacroItem);
+
+            // Chromiums eigener Passwort-Manager fuers Grok-Login (siehe
+            // WebViewManager.ConfigureCore) - wirkt sofort, kein Neustart noetig.
+            var passwordAutosaveItem = new ToolStripMenuItem(Properties.Resources.PasswordAutosaveMenuItem)
+            {
+                CheckOnClick = false,
+                Checked      = Properties.Settings.Default.PasswordAutosaveEnabled
+            };
+            passwordAutosaveItem.Click += (s, e) =>
+            {
+                bool desired = !passwordAutosaveItem.Checked;
+                Properties.Settings.Default.PasswordAutosaveEnabled = desired;
+                Properties.Settings.Default.Save();
+                if (_webView?.CoreWebView2 != null)
+                    _webView.CoreWebView2.Settings.IsPasswordAutosaveEnabled = desired;
+                passwordAutosaveItem.Checked = desired;
+            };
+            appMenu.DropDownItems.Add(passwordAutosaveItem);
+
+            var proxyItem = new ToolStripMenuItem(Properties.Resources.ProxyMenuItem);
+            proxyItem.Click += (s, e) => ShowProxyDialog();
+            appMenu.DropDownItems.Add(proxyItem);
+
             settingsMenu.DropDownItems.Add(appMenu);
 
             //   Einstellungen → Grok (öffnet Groks eigene Einstellungsseite)
@@ -401,7 +483,11 @@ namespace Wrok
             trayMenu.Items.Add(Properties.Resources.AboutWrok, null, (s, e) =>
             {
                 using var dlg = new AboutForm();
-                dlg.ShowDialog(this);
+                // Nicht direkt ShowDialog(this): ist Wrok gerade in die Tray
+                // minimiert, verschiebt Windows das Hauptfenster intern weit aus
+                // dem Bildschirm - CenterParent würde den Dialog dann relativ zu
+                // dieser verschobenen Position zeigen statt zentriert.
+                Dialogs.ShowCentered(dlg, this);
             });
             trayMenu.Items.Add(new ToolStripSeparator());
             trayMenu.Items.Add(Properties.Resources.Exit, null, (s, e) => Application.Exit());
@@ -594,14 +680,22 @@ namespace Wrok
             macrosMenu.DropDownItems.Add(new ToolStripSeparator());
 
 
+            bool numpadModeOn = Properties.Settings.Default.NumpadMacroModeEnabled;
+            int  active       = _macroManager.ActiveProfile;
+
             var macros = _macroManager.GetMacros();
             for (int i = 1; i <= MacroManager.MacroCount; i++)
             {
-                var entry      = macros[i - 1];
-                int displayNum = i == 10 ? 0 : i;
+                var entry = macros[i - 1];
 
-                var macroItem = new ToolStripMenuItem(entry.DisplayName(displayNum)) { Tag = i - 1 };
-                string hotkeyDisplay = string.Format(Properties.Resources.Ctrl0, displayNum);
+                var macroItem = new ToolStripMenuItem(entry.DisplayName(i)) { Tag = i - 1 };
+
+                // Strg+Ziffer gilt immer (Makro 10 → Strg+0). Ist der Nummernblock-
+                // Modus an, kommt für die ersten fünf Makros die Numpad-Taste dazu.
+                string ctrlDigit     = i <= 9 ? i.ToString() : "0";
+                string hotkeyDisplay = string.Format(Properties.Resources.CtrlMacroLabel, ctrlDigit);
+                if (numpadModeOn && (i - 1) < MacroManager.NumpadPerProfile)
+                    hotkeyDisplay += " / " + NumpadKeyLabel(active * MacroManager.NumpadPerProfile + (i - 1));
                 string preview = string.IsNullOrWhiteSpace(entry.Text)
                     ? Properties.Resources.EmptyMacro
                     : (entry.Text.Length > 80 ? entry.Text[..80] + "…" : entry.Text);
@@ -656,6 +750,341 @@ namespace Wrok
             {
                 Log(ex, "EditMacroAndSave fehlgeschlagen");
             }
+        }
+
+        // ------------------------------------------------------------------
+        // Grok-Konto wechseln
+        // ------------------------------------------------------------------
+
+        private const string GrokSignInHost = "accounts.x.ai";
+        private const string GrokHost       = "grok.com";
+
+        // Merkt sich die E-Mail, die nach der naechsten abgeschlossenen Navigation
+        // zur Sign-in-Seite per JS eingetragen werden soll. Wird nach einmaliger
+        // Verwendung sofort geloescht, damit Folge-Navigationen (z. B. nach dem
+        // Login weiter zu grok.com) nicht erneut befuellt werden.
+        private string? _pendingGrokLoginEmail;
+
+        // Wird beim Kontowechsel gesetzt: da SwitchGrokAccountAsync die Cookies
+        // fuer grok.com UND accounts.x.ai loescht, geht dabei auch das
+        // OneTrust-Cookie-Consent fuer grok.com verloren - der Banner dort taucht
+        // dann (live vom Nutzer bestaetigt) erst NACH dem erfolgreichen Login und
+        // der Weiterleitung zurueck zu grok.com auf, nicht schon auf der
+        // Sign-in-Seite. Diese Flag sorgt dafuer, dass der naechste
+        // NavigationCompleted-Event auf grok.com (also nach abgeschlossenem
+        // Login) den Banner dort ebenfalls automatisch wegklickt - einmalig, um
+        // normale grok.com-Navigationen ausserhalb eines Kontowechsels nicht zu
+        // beeinflussen.
+        private bool _pendingGrokCookieDismiss;
+
+        private void InitializeGrokAccountsMenu()
+        {
+            grokAccountsMenu ??= new ToolStripMenuItem(Properties.Resources.GrokAccountsMenu);
+            RefreshGrokAccountsMenu();
+        }
+
+        private void RefreshGrokAccountsMenu()
+        {
+            if (grokAccountsMenu == null) return;
+            grokAccountsMenu.DropDownItems.Clear();
+
+            var accounts = GrokAccountManager.LoadAccounts();
+
+            if (accounts.Count == 0)
+            {
+                grokAccountsMenu.DropDownItems.Add(new ToolStripMenuItem(Properties.Resources.GrokAccountsEmpty) { Enabled = false });
+            }
+            else
+            {
+                foreach (var acc in accounts)
+                {
+                    var item = new ToolStripMenuItem(acc.DisplayName);
+                    item.Click += async (s, e) => await SwitchGrokAccountAsync(acc.Email);
+                    grokAccountsMenu.DropDownItems.Add(item);
+                }
+            }
+
+            grokAccountsMenu.DropDownItems.Add(new ToolStripSeparator());
+            grokAccountsMenu.DropDownItems.Add(Properties.Resources.GrokAccountAdd, null, (s, e) => AddGrokAccountAndSave());
+
+            if (accounts.Count > 0)
+                grokAccountsMenu.DropDownItems.Add(Properties.Resources.GrokAccountRemove, null, (s, e) => RemoveGrokAccountAndSave(accounts));
+        }
+
+        private void AddGrokAccountAndSave()
+        {
+            try
+            {
+                if (!Dialogs.ShowAddGrokAccount(this, out string label, out string email)) return;
+
+                GrokAccountManager.AddAccount(label, email);
+                RefreshGrokAccountsMenu();
+            }
+            catch (InvalidOperationException ex)
+            {
+                MessageBox.Show(this, ex.Message, Properties.Resources.GrokAccountAddTitle,
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "AddGrokAccountAndSave fehlgeschlagen");
+            }
+        }
+
+        private void RemoveGrokAccountAndSave(List<GrokAccount> accounts)
+        {
+            try
+            {
+                if (!Dialogs.ShowRemoveGrokAccount(this, accounts, out int index)) return;
+
+                GrokAccountManager.RemoveAccount(accounts[index].Email);
+                RefreshGrokAccountsMenu();
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "RemoveGrokAccountAndSave fehlgeschlagen");
+            }
+        }
+
+        /// <summary>
+        /// Wechselt zum angegebenen Grok-Konto: loescht die Session-Cookies fuer
+        /// grok.com/accounts.x.ai (sonst landet man in der alten Sitzung statt im
+        /// Login-Formular), navigiert zur Sign-in-Seite und traegt danach die
+        /// E-Mail-Adresse automatisch ein. Das Passwort bleibt manuell bzw. Sache
+        /// des Chromium-eigenen Passwort-Managers (siehe WebViewManager.ConfigureCore).
+        /// </summary>
+        private async Task SwitchGrokAccountAsync(string email)
+        {
+            if (_webView?.CoreWebView2 == null || _webViewManager == null) return;
+
+            try
+            {
+                _pendingGrokLoginEmail = email;
+                _pendingGrokCookieDismiss = true;
+
+                var cookieManager = _webView.CoreWebView2.CookieManager;
+                foreach (var host in new[] { GrokHost, GrokSignInHost })
+                {
+                    var cookies = await cookieManager.GetCookiesAsync($"https://{host}");
+                    foreach (var cookie in cookies)
+                        cookieManager.DeleteCookie(cookie);
+                }
+
+                await _webViewManager.NavigateAsync($"https://{GrokSignInHost}/sign-in?redirect=grok-com&email=true");
+            }
+            catch (Exception ex)
+            {
+                _pendingGrokLoginEmail = null;
+                _pendingGrokCookieDismiss = false;
+                Log(ex, "SwitchGrokAccountAsync fehlgeschlagen");
+            }
+        }
+
+        private async void OnGrokSignInNavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs e)
+        {
+            if (_webView?.CoreWebView2 == null) return;
+            string? source = _webView.CoreWebView2.Source;
+
+            if (_pendingGrokLoginEmail != null &&
+                (source?.Contains(GrokSignInHost, StringComparison.OrdinalIgnoreCase) ?? false))
+            {
+                string email = _pendingGrokLoginEmail;
+                _pendingGrokLoginEmail = null;   // nur einmal verwenden, sonst Re-Fill bei Folge-Navigationen
+
+                await PrefillGrokEmailAsync(email);
+                return;
+            }
+
+            // Nach abgeschlossenem Login landet man per redirect=grok-com wieder
+            // auf grok.com - dort ggf. erneut auftauchendes Cookie-Consent-Banner
+            // (siehe Kommentar bei _pendingGrokCookieDismiss) einmalig wegklicken.
+            if (_pendingGrokCookieDismiss &&
+                (source?.Contains(GrokHost, StringComparison.OrdinalIgnoreCase) ?? false) &&
+                !(source?.Contains(GrokSignInHost, StringComparison.OrdinalIgnoreCase) ?? false))
+            {
+                _pendingGrokCookieDismiss = false;
+                await TryDismissCookieBannerAsync();
+            }
+        }
+
+        // JS-Helper zum Finden eines Buttons: erst gezielte Selektoren, dann
+        // Text-Scan (DE+EN) über alle Buttons/role=button-Elemente. Gleiches
+        // Muster wie WebViewManager.TryClickSendButtonAsync. Wird in mehrere
+        // der folgenden Skripte eingebettet.
+        private const string FindByHeuristicsJs = @"
+            function findByHeuristics(selectors, textNeedles) {
+                var btn = document.querySelector(selectors.join(', '));
+                if (btn) return btn;
+                var candidates = Array.from(document.querySelectorAll('button, [role=button]'));
+                for (var i = 0; i < candidates.length; i++) {
+                    var txt = ((candidates[i].innerText || candidates[i].getAttribute('aria-label') || candidates[i].title) + '').toLowerCase();
+                    for (var j = 0; j < textNeedles.length; j++) {
+                        if (txt.indexOf(textNeedles[j]) !== -1) return candidates[i];
+                    }
+                }
+                return null;
+            }";
+
+        /// <summary>
+        /// Führt <paramref name="script"/> (muss ein IIFE sein, das true/false
+        /// zurückgibt) wiederholt aus, bis es true liefert oder die Versuche
+        /// aufgebraucht sind. Bewusst von der C#-Seite aus gepollt statt mit
+        /// einem einzigen in-page setInterval: Falls die Seite zwischen zwei
+        /// Schritten des Sign-in-Flows tatsächlich neu navigiert (statt nur
+        /// React-intern den Zustand zu wechseln), würde ein laufendes
+        /// setInterval mit der ganzen Seite zerstört, bevor es fertig ist - ein
+        /// C#-Loop dagegen fragt bei jedem Versuch einfach den gerade aktuellen
+        /// Seitenzustand neu ab, unabhängig davon, ob zwischendurch navigiert wurde.
+        /// </summary>
+        private async Task<bool> RunJsRetryAsync(string script, int attempts, int delayMs)
+        {
+            if (_webViewManager == null) return false;
+
+            for (int attempt = 0; attempt < attempts; attempt++)
+            {
+                try
+                {
+                    string? result = await _webViewManager.ExecuteScriptAsync(script);
+                    if (result != null && result.Trim().Trim('"').Equals("true", StringComparison.OrdinalIgnoreCase))
+                        return true;
+                }
+                catch (Exception ex)
+                {
+                    Trace.WriteLine($"RunJsRetryAsync fehlgeschlagen: {ex}");
+                }
+                await Task.Delay(delayMs);
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Schliesst das OneTrust-Cookie-Banner (falls vorhanden) über "Alle
+        /// ablehnen" - datensparsamste Standardoption. Best-effort: läuft nur
+        /// kurz mit und blockiert den restlichen Flow nicht, falls kein Banner
+        /// auftaucht (z. B. weil die Zustimmung schon per Cookie vorliegt).
+        /// </summary>
+        private Task<bool> TryDismissCookieBannerAsync()
+        {
+            const string js = @"
+                (function() {
+                    var btn = document.querySelector('#onetrust-reject-all-handler');
+                    if (!btn) {
+                        var candidates = Array.from(document.querySelectorAll('button'));
+                        for (var i = 0; i < candidates.length; i++) {
+                            var txt = (candidates[i].innerText || '').toLowerCase();
+                            if (txt.indexOf('ablehnen') !== -1 || txt.indexOf('reject') !== -1 || txt.indexOf('decline') !== -1) { btn = candidates[i]; break; }
+                        }
+                    }
+                    if (!btn) return false;
+                    try { btn.click(); return true; } catch (e) { return false; }
+                })();";
+
+            // Etwas grosszuegigeres Fenster als bei den anderen Retry-Aufrufen:
+            // OneTrust-Consent-Skripte binden sich haeufig erst nach dem eigentlichen
+            // Seitenladen (NavigationCompleted) asynchron ein, u. a. wegen einer
+            // Geo-IP-Abfrage im Hintergrund. Nicht live nachgestellt (Banner liess
+            // sich im Test-Browser nicht reproduzieren), daher bewusst grosszuegig
+            // statt knapp bemessen.
+            return RunJsRetryAsync(js, attempts: 25, delayMs: 300);
+        }
+
+        private Task<bool> TrySetEmailAsync(string email)
+        {
+            string payload = System.Text.Json.JsonSerializer.Serialize(email);
+            string js = $@"
+                (function() {{
+                    var input = document.querySelector('input[data-testid=""email""]');
+                    if (!input) return false;
+                    var nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+                    nativeSetter.call(input, {payload});
+                    input.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                    input.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                    return true;
+                }})();";
+
+            return RunJsRetryAsync(js, attempts: 20, delayMs: 100);
+        }
+
+        private Task<bool> TryClickContinueButtonAsync()
+        {
+            string js = $@"
+                (function() {{
+                    {FindByHeuristicsJs}
+                    var btn = findByHeuristics(
+                        ['button[type=""submit""]', 'button[data-testid*=""continue"" i]', 'button[data-testid*=""submit"" i]',
+                         'button[aria-label*=""weiter"" i]', 'button[aria-label*=""continue"" i]', 'button[aria-label*=""next"" i]'],
+                        ['weiter', 'continue', 'next']);
+                    if (!btn || btn.disabled) return false;
+                    try {{ btn.click(); return true; }} catch (e) {{ return false; }}
+                }})();";
+
+            return RunJsRetryAsync(js, attempts: 15, delayMs: 150);
+        }
+
+        /// <summary>
+        /// Wartet auf befülltes Passwortfeld, abgeschlossene Cloudflare-Turnstile-
+        /// Prüfung UND aktivierten Anmelden-Button (`data-testid="sign-in-submit"`,
+        /// live verifiziert), dann Klick. Der Button ist waehrend der laufenden
+        /// Cloudflare-Pruefung NICHT disabled (live verifiziert - vermutlich der
+        /// Grund fuer bisherige Fehlklicks: der Button wurde geklickt, bevor
+        /// Cloudflare fertig war). Verlaessliches Signal fuer "fertig" ist das von
+        /// Cloudflare selbst befuellte versteckte Feld
+        /// input[name="cf-turnstile-response"] (live verifiziert: leer waehrend
+        /// der Pruefung, befuellt bei Erfolg). Ist auf der Seite kein
+        /// Turnstile-Feld vorhanden, wird diese Bedingung uebersprungen, um nicht
+        /// grundlos zu blockieren, falls Grok die Pruefung fuer ein Konto mal
+        /// nicht anzeigt. Passwort selbst wird NICHT automatisiert - bleibt
+        /// manuell bzw. Sache von Chromiums eigenem Passwort-Manager.
+        /// Grosszuegiges Zeitfenster (Standard: 2 Minuten), da hier auf eine
+        /// menschliche Eingabe gewartet wird.
+        /// </summary>
+        private Task<bool> TryClickSignInButtonAsync(int attempts = 400, int delayMs = 300)
+        {
+            string js = $@"
+                (function() {{
+                    {FindByHeuristicsJs}
+                    var pwField = document.querySelector('input[type=""password""]');
+                    if (!pwField || !pwField.value) return false;
+
+                    var turnstileField = document.querySelector('input[name*=""turnstile"" i]');
+                    if (turnstileField && !turnstileField.value) return false;
+
+                    var btn = document.querySelector('button[data-testid=""sign-in-submit""]') ||
+                              findByHeuristics(['button[type=""submit""]'], ['anmelden', 'sign in', 'log in', 'login']);
+                    if (!btn || btn.disabled) return false;
+                    try {{ btn.click(); return true; }} catch (e) {{ return false; }}
+                }})();";
+
+            return RunJsRetryAsync(js, attempts, delayMs);
+        }
+
+        /// <summary>
+        /// Steuert den kompletten Sign-in-Flow: Cookie-Banner wegklicken → E-Mail
+        /// eintragen → "Weiter" klicken → warten bis Passwort da + Anmelden aktiv
+        /// → "Anmelden" klicken. Jeder Schritt ist ein eigener, von C# aus
+        /// wiederholter Aufruf statt eines einzelnen JS-Blocks mit
+        /// verschachtelten setInterval-Timern (siehe RunJsRetryAsync).
+        /// </summary>
+        private async Task PrefillGrokEmailAsync(string email)
+        {
+            if (_webViewManager == null) return;
+
+            await TryDismissCookieBannerAsync();   // best effort, blockiert den Rest nicht
+
+            if (!await TrySetEmailAsync(email))
+            {
+                Trace.WriteLine("PrefillGrokEmailAsync: E-Mail-Feld nicht gefunden.");
+                return;
+            }
+
+            if (!await TryClickContinueButtonAsync())
+            {
+                Trace.WriteLine("PrefillGrokEmailAsync: Weiter-Button nicht gefunden/geklickt.");
+                return;
+            }
+
+            if (!await TryClickSignInButtonAsync())
+                Trace.WriteLine("PrefillGrokEmailAsync: Anmelden-Button nicht innerhalb des Zeitfensters geklickt.");
         }
 
         // ------------------------------------------------------------------
@@ -910,6 +1339,55 @@ namespace Wrok
         }
 
         // ------------------------------------------------------------------
+        // Proxy-Einstellungen
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// Zeigt den Proxy-Dialog und speichert das Ergebnis. Chromium liest
+        /// den Proxy nur beim Erzeugen der CoreWebView2Environment (siehe
+        /// WebViewManager.InitializeAsync) – eine Änderung wirkt daher erst
+        /// nach einem Neustart, den diese Methode bei Bedarf direkt anbietet.
+        /// </summary>
+        private void ShowProxyDialog()
+        {
+            bool   enabled      = Properties.Settings.Default.ProxyEnabled;
+            string server       = Properties.Settings.Default.ProxyServer ?? string.Empty;
+            bool   requiresAuth = Properties.Settings.Default.ProxyAuthEnabled;
+            string username     = Properties.Settings.Default.ProxyUsername ?? string.Empty;
+            // Nur zum Anzeigen/Bearbeiten im Dialog entschlüsselt, danach sofort
+            // wieder verworfen (liegt nur lokal in dieser Methode im Klartext).
+            string password     = ProxyCredentialProtector.Unprotect(Properties.Settings.Default.ProxyPasswordProtected);
+
+            if (!Dialogs.ShowProxySettings(this, ref enabled, ref server, ref requiresAuth, ref username, ref password))
+                return;
+
+            bool changed = enabled      != Properties.Settings.Default.ProxyEnabled
+                        || server       != (Properties.Settings.Default.ProxyServer   ?? string.Empty)
+                        || requiresAuth != Properties.Settings.Default.ProxyAuthEnabled
+                        || username     != (Properties.Settings.Default.ProxyUsername ?? string.Empty)
+                        || password     != ProxyCredentialProtector.Unprotect(Properties.Settings.Default.ProxyPasswordProtected);
+            if (!changed) return;
+
+            Properties.Settings.Default.ProxyEnabled          = enabled;
+            Properties.Settings.Default.ProxyServer           = server;
+            Properties.Settings.Default.ProxyAuthEnabled      = requiresAuth;
+            // Ohne aktive Anmeldung keine Reste stehen lassen, statt nur die
+            // Checkbox umzuschalten und ein altes Passwort verschlüsselt liegen
+            // zu lassen.
+            Properties.Settings.Default.ProxyUsername         = requiresAuth ? username : string.Empty;
+            Properties.Settings.Default.ProxyPasswordProtected = requiresAuth
+                ? ProxyCredentialProtector.Protect(password)
+                : string.Empty;
+            Properties.Settings.Default.Save();
+
+            var result = MessageBox.Show(this, Properties.Resources.ProxyRestartRequiredMessage,
+                Properties.Resources.ProxyRestartRequiredTitle, MessageBoxButtons.YesNo, MessageBoxIcon.Information);
+
+            if (result == DialogResult.Yes)
+                Program.RestartApplication();
+        }
+
+        // ------------------------------------------------------------------
         // Cache leeren
         // ------------------------------------------------------------------
 
@@ -1030,21 +1508,16 @@ namespace Wrok
             bool ok = RegisterHotKey(this.Handle, HOTKEY_ID, MOD_CONTROL, (uint)Keys.Space);
             if (!ok) Debug.WriteLine($"RegisterHotKey fehlgeschlagen id={HOTKEY_ID} err={Marshal.GetLastWin32Error()}");
 
-            // Strg+Shift+P → Bild aus Zwischenablage öffnen
-            ok = RegisterHotKey(this.Handle, HOTKEY_ID_IMAGE, MOD_CONTROL | MOD_SHIFT, (uint)Keys.P);
-            if (!ok) Trace.WriteLine($"RegisterHotKey fehlgeschlagen id={HOTKEY_ID_IMAGE} (Strg+Shift+P) err={Marshal.GetLastWin32Error()}");
+            // Strg+Ö → Bild aus Zwischenablage öffnen
+            ok = RegisterHotKey(this.Handle, HOTKEY_ID_IMAGE, MOD_CONTROL, (uint)Keys.Oem1);
+            if (!ok) Trace.WriteLine($"RegisterHotKey fehlgeschlagen id={HOTKEY_ID_IMAGE} (Strg+Ö) err={Marshal.GetLastWin32Error()}");
 
-            // Makro 0 (intern) → Strg+1, Makro 1 → Strg+2, ..., Makro 8 → Strg+9, Makro 9 → Strg+0
-            var macroKeys = new uint[]
-            {
-                (uint)Keys.D1, (uint)Keys.D2, (uint)Keys.D3, (uint)Keys.D4, (uint)Keys.D5,
-                (uint)Keys.D6, (uint)Keys.D7, (uint)Keys.D8, (uint)Keys.D9, (uint)Keys.D0
-            };
-            for (int i = 0; i < MacroManager.MacroCount; i++)
-            {
-                ok = RegisterHotKey(this.Handle, MacroManager.HotkeyBase + i, MOD_CONTROL, macroKeys[i]);
-                if (!ok) Debug.WriteLine($"RegisterHotKey fehlgeschlagen macro={i + 1} err={Marshal.GetLastWin32Error()}");
-            }
+            // Strg+1..Strg+0 für das aktive Profil – immer aktiv, auf jeder Tastatur.
+            RegisterCtrlMacroHotkeys();
+
+            // Nummernblock zusätzlich, aber nur wenn eingeschaltet.
+            if (Properties.Settings.Default.NumpadMacroModeEnabled)
+                RegisterNumpadMacroHotkeys();
 
             _theme?.Refresh();
             EnsureTrayIconVisible();
@@ -1055,8 +1528,8 @@ namespace Wrok
             _rateLimitManager?.StopAutoRefresh();
             try { UnregisterHotKey(this.Handle, HOTKEY_ID); } catch { }
             try { UnregisterHotKey(this.Handle, HOTKEY_ID_IMAGE); } catch { }
-            for (int i = 0; i < MacroManager.MacroCount; i++)
-                try { UnregisterHotKey(this.Handle, MacroManager.HotkeyBase + i); } catch { }
+            UnregisterCtrlMacroHotkeys();
+            UnregisterNumpadMacroHotkeys();
 
             _webViewManager?.DisposeInputSimulator();
             _theme?.StopListening();   // wird in OnHandleCreated wieder angemeldet
@@ -1073,6 +1546,88 @@ namespace Wrok
             }
             base.OnHandleDestroyed(e);
         }
+
+        // ------------------------------------------------------------------
+        // Numpad-Makro-Modus
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// Registriert alle 15 Numpad-Makro-Hotkeys ohne Modifier. Da diese Tasten
+        /// dabei systemweit für JEDE Anwendung abgefangen werden (keine normale
+        /// Zahlen-/Rechenzeicheneingabe über den Nummernblock mehr möglich, solange
+        /// der Modus an ist), ist das an die Einstellung NumpadMacroModeEnabled
+        /// gekoppelt statt immer aktiv zu sein.
+        /// </summary>
+        /// <summary>Registriert Strg+1..Strg+0 für das aktive Profil.</summary>
+        private void RegisterCtrlMacroHotkeys()
+        {
+            for (int i = 0; i < CtrlMacroKeys.Length; i++)
+            {
+                bool ok = RegisterHotKey(this.Handle, MacroManager.CtrlMacroBase + i, MOD_CONTROL, (uint)CtrlMacroKeys[i]);
+                if (!ok) Debug.WriteLine($"RegisterHotKey fehlgeschlagen strg-makro={i} err={Marshal.GetLastWin32Error()}");
+            }
+        }
+
+        private void UnregisterCtrlMacroHotkeys()
+        {
+            for (int i = 0; i < CtrlMacroKeys.Length; i++)
+                try { UnregisterHotKey(this.Handle, MacroManager.CtrlMacroBase + i); } catch { }
+        }
+
+        private void RegisterNumpadMacroHotkeys()
+        {
+            EnsureNumLockOn();
+            for (int i = 0; i < NumpadMacroKeys.Length; i++)
+            {
+                bool ok = RegisterHotKey(this.Handle, MacroManager.NumpadMacroBase + i, 0 /* kein Modifier */, (uint)NumpadMacroKeys[i]);
+                if (!ok) Debug.WriteLine($"RegisterHotKey fehlgeschlagen numpad-makro={i} err={Marshal.GetLastWin32Error()}");
+            }
+        }
+
+        private void UnregisterNumpadMacroHotkeys()
+        {
+            for (int i = 0; i < NumpadMacroKeys.Length; i++)
+                try { UnregisterHotKey(this.Handle, MacroManager.NumpadMacroBase + i); } catch { }
+        }
+
+        /// <summary>Schaltet den Numpad-Makro-Modus um, inkl. Persistierung.</summary>
+        private void SetNumpadMacroMode(bool enabled)
+        {
+            if (enabled) RegisterNumpadMacroHotkeys();
+            else UnregisterNumpadMacroHotkeys();
+
+            Properties.Settings.Default.NumpadMacroModeEnabled = enabled;
+            Properties.Settings.Default.Save();
+        }
+
+        /// <summary>
+        /// Stellt sicher, dass NumLock aktiv ist – die virtuellen Codes der
+        /// Numpad-Ziffern (und des Dezimalpunkts) werden nur dann gesendet,
+        /// sonst liefern dieselben Tasten Navigationscodes (Pfeile, Bild↑/↓ usw.).
+        /// Betrifft nicht die vier Rechenzeichen, die sind NumLock-unabhängig.
+        /// </summary>
+        private static void EnsureNumLockOn()
+        {
+            try
+            {
+                if (Control.IsKeyLocked(Keys.NumLock)) return;
+                keybd_event(VK_NUMLOCK, 0, 0, UIntPtr.Zero);
+                keybd_event(VK_NUMLOCK, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+            }
+            catch { }
+        }
+
+        /// <summary>Anzeigename der physischen Nummernblock-Taste für einen Numpad-Slot (0-14).</summary>
+        private static string NumpadKeyLabel(int numpadSlot) => numpadSlot switch
+        {
+            >= 0 and <= 9 => string.Format(Properties.Resources.NumpadDigitLabel0, numpadSlot),
+            10 => Properties.Resources.NumpadDivideLabel,
+            11 => Properties.Resources.NumpadMultiplyLabel,
+            12 => Properties.Resources.NumpadSubtractLabel,
+            13 => Properties.Resources.NumpadAddLabel,
+            14 => Properties.Resources.NumpadDecimalLabel,
+            _  => "?"
+        };
 
         protected override void OnShown(EventArgs e)
         {
@@ -1197,7 +1752,7 @@ namespace Wrok
         /// Öffnet die Bild-URL aus der Zwischenablage (Rechtsklick im WebView →
         /// „Bildadresse kopieren") ohne Rückfrage direkt im Viewer-Fenster.
         /// Enthält die Zwischenablage keine gültige URL, wird auf das zuletzt
-        /// gespeicherte Bild zurückgefallen – so macht Strg+Shift+P immer etwas Sinnvolles.
+        /// gespeicherte Bild zurückgefallen – so macht Strg+Ö immer etwas Sinnvolles.
         /// </summary>
         private async Task OpenImageFromClipboardAsync()
         {

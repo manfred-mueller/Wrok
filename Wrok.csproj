@@ -16,7 +16,6 @@
     <ApplicationIcon>Properties\wrok_black.ico</ApplicationIcon>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
 
-    <!-- DIESE 4 ZEILEN SIND ENTSCHEIDEND FÜR SINGLE-FILE + COSTURA -->
     <PublishSingleFile>true</PublishSingleFile>
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
@@ -42,6 +41,9 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4078.44" />
+    <!-- DPAPI-Wrapper fuers Proxy-Passwort: seit .NET 5 kein Teil des Shared
+         Frameworks mehr, muss als eigenes Paket referenziert werden. -->
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
   </ItemGroup>
 
   <!-- Ressourcen -->

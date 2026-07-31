@@ -169,6 +169,36 @@
   <data name="StartWithWindows" xml:space="preserve">
     <value>Start with Windows</value>
   </data>
+  <data name="ProxyMenuItem" xml:space="preserve">
+    <value>Proxy…</value>
+  </data>
+  <data name="ProxyDialogTitle" xml:space="preserve">
+    <value>Proxy settings</value>
+  </data>
+  <data name="ProxyUseCheckbox" xml:space="preserve">
+    <value>Use proxy</value>
+  </data>
+  <data name="ProxyServerLabel" xml:space="preserve">
+    <value>Server:</value>
+  </data>
+  <data name="ProxyServerHint" xml:space="preserve">
+    <value>e.g. http=127.0.0.1:8080 or socks5=127.0.0.1:1080</value>
+  </data>
+  <data name="ProxyRestartRequiredTitle" xml:space="preserve">
+    <value>Restart required</value>
+  </data>
+  <data name="ProxyRestartRequiredMessage" xml:space="preserve">
+    <value>The proxy change takes effect only after Wrok restarts. Restart now?</value>
+  </data>
+  <data name="ProxyAuthCheckbox" xml:space="preserve">
+    <value>Proxy requires login</value>
+  </data>
+  <data name="ProxyUsernameLabel" xml:space="preserve">
+    <value>Username:</value>
+  </data>
+  <data name="ProxyPasswordLabel" xml:space="preserve">
+    <value>Password:</value>
+  </data>
   <data name="MacroInputTitle" xml:space="preserve">
     <value>Macro input</value>
   </data>
@@ -203,7 +233,7 @@ Continue?</value>
     <value>Reset active profile…</value>
   </data>
   <data name="MacroProfileResetConfirm" xml:space="preserve">
-    <value>Profile “{0}” will be cleared: its name and all ten macros.
+    <value>Profile “{0}” will be cleared: its name and all its macros.
 
 Continue?</value>
   </data>
@@ -212,6 +242,69 @@ Continue?</value>
   </data>
   <data name="MacroProfileDefault" xml:space="preserve">
     <value>Profile {0}</value>
+  </data>
+  <data name="NumpadMacroMode" xml:space="preserve">
+    <value>Numpad macro mode (no modifier key)</value>
+  </data>
+  <data name="NumpadDigitLabel0" xml:space="preserve">
+    <value>Num {0}</value>
+  </data>
+  <data name="NumpadDivideLabel" xml:space="preserve">
+    <value>Num /</value>
+  </data>
+  <data name="NumpadMultiplyLabel" xml:space="preserve">
+    <value>Num *</value>
+  </data>
+  <data name="NumpadSubtractLabel" xml:space="preserve">
+    <value>Num -</value>
+  </data>
+  <data name="NumpadAddLabel" xml:space="preserve">
+    <value>Num +</value>
+  </data>
+  <data name="NumpadDecimalLabel" xml:space="preserve">
+    <value>Num .</value>
+  </data>
+  <data name="NumpadModeOffHint" xml:space="preserve">
+    <value>(numpad mode off)</value>
+  </data>
+  <data name="CtrlMacroLabel" xml:space="preserve">
+    <value>Ctrl+{0}</value>
+  </data>
+  <data name="GrokAccountsMenu" xml:space="preserve">
+    <value>Switch Grok account</value>
+  </data>
+  <data name="GrokAccountsEmpty" xml:space="preserve">
+    <value>(no accounts saved)</value>
+  </data>
+  <data name="GrokAccountAdd" xml:space="preserve">
+    <value>Add account…</value>
+  </data>
+  <data name="GrokAccountRemove" xml:space="preserve">
+    <value>Remove account…</value>
+  </data>
+  <data name="GrokAccountAddTitle" xml:space="preserve">
+    <value>Add Grok account</value>
+  </data>
+  <data name="GrokAccountLabelPrompt" xml:space="preserve">
+    <value>Label (e.g. "Personal"):</value>
+  </data>
+  <data name="GrokAccountEmailPrompt" xml:space="preserve">
+    <value>Email address:</value>
+  </data>
+  <data name="GrokAccountRemoveTitle" xml:space="preserve">
+    <value>Remove account</value>
+  </data>
+  <data name="GrokAccountRemovePrompt" xml:space="preserve">
+    <value>Choose the account to remove:</value>
+  </data>
+  <data name="GrokAccountInvalidEmail" xml:space="preserve">
+    <value>Please enter a valid email address.</value>
+  </data>
+  <data name="GrokAccountDuplicate" xml:space="preserve">
+    <value>This account already exists.</value>
+  </data>
+  <data name="PasswordAutosaveMenuItem" xml:space="preserve">
+    <value>Remember passwords in browser</value>
   </data>
   <data name="OpenImageFromClipboard" xml:space="preserve">
     <value>Open image from clipboard…</value>

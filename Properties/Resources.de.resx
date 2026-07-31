@@ -169,6 +169,36 @@
   <data name="StartWithWindows" xml:space="preserve">
     <value>Mit Windows starten</value>
   </data>
+  <data name="ProxyMenuItem" xml:space="preserve">
+    <value>Proxy…</value>
+  </data>
+  <data name="ProxyDialogTitle" xml:space="preserve">
+    <value>Proxy-Einstellungen</value>
+  </data>
+  <data name="ProxyUseCheckbox" xml:space="preserve">
+    <value>Proxy verwenden</value>
+  </data>
+  <data name="ProxyServerLabel" xml:space="preserve">
+    <value>Server:</value>
+  </data>
+  <data name="ProxyServerHint" xml:space="preserve">
+    <value>z. B. http=127.0.0.1:8080 oder socks5=127.0.0.1:1080</value>
+  </data>
+  <data name="ProxyRestartRequiredTitle" xml:space="preserve">
+    <value>Neustart erforderlich</value>
+  </data>
+  <data name="ProxyRestartRequiredMessage" xml:space="preserve">
+    <value>Die Proxy-Änderung wirkt erst nach einem Neustart von Wrok. Jetzt neu starten?</value>
+  </data>
+  <data name="ProxyAuthCheckbox" xml:space="preserve">
+    <value>Proxy erfordert Anmeldung</value>
+  </data>
+  <data name="ProxyUsernameLabel" xml:space="preserve">
+    <value>Benutzername:</value>
+  </data>
+  <data name="ProxyPasswordLabel" xml:space="preserve">
+    <value>Passwort:</value>
+  </data>
   <data name="MacroInputTitle" xml:space="preserve">
     <value>Makro-Eingabe</value>
   </data>
@@ -203,7 +233,7 @@ Fortfahren?</value>
     <value>Aktives Profil zurücksetzen…</value>
   </data>
   <data name="MacroProfileResetConfirm" xml:space="preserve">
-    <value>Profil „{0}“ wird geleert: Name und alle zehn Makros.
+    <value>Profil „{0}“ wird geleert: Name und alle seine Makros.
 
 Fortfahren?</value>
   </data>
@@ -212,6 +242,69 @@ Fortfahren?</value>
   </data>
   <data name="MacroProfileDefault" xml:space="preserve">
     <value>Profil {0}</value>
+  </data>
+  <data name="NumpadMacroMode" xml:space="preserve">
+    <value>Numpad-Makro-Modus (ohne Zusatztaste)</value>
+  </data>
+  <data name="NumpadDigitLabel0" xml:space="preserve">
+    <value>Num {0}</value>
+  </data>
+  <data name="NumpadDivideLabel" xml:space="preserve">
+    <value>Num /</value>
+  </data>
+  <data name="NumpadMultiplyLabel" xml:space="preserve">
+    <value>Num *</value>
+  </data>
+  <data name="NumpadSubtractLabel" xml:space="preserve">
+    <value>Num -</value>
+  </data>
+  <data name="NumpadAddLabel" xml:space="preserve">
+    <value>Num +</value>
+  </data>
+  <data name="NumpadDecimalLabel" xml:space="preserve">
+    <value>Num ,</value>
+  </data>
+  <data name="NumpadModeOffHint" xml:space="preserve">
+    <value>(Numpad-Modus aus)</value>
+  </data>
+  <data name="CtrlMacroLabel" xml:space="preserve">
+    <value>Strg+{0}</value>
+  </data>
+  <data name="GrokAccountsMenu" xml:space="preserve">
+    <value>Grok-Konto wechseln</value>
+  </data>
+  <data name="GrokAccountsEmpty" xml:space="preserve">
+    <value>(keine Konten hinterlegt)</value>
+  </data>
+  <data name="GrokAccountAdd" xml:space="preserve">
+    <value>Konto hinzufügen…</value>
+  </data>
+  <data name="GrokAccountRemove" xml:space="preserve">
+    <value>Konto entfernen…</value>
+  </data>
+  <data name="GrokAccountAddTitle" xml:space="preserve">
+    <value>Grok-Konto hinzufügen</value>
+  </data>
+  <data name="GrokAccountLabelPrompt" xml:space="preserve">
+    <value>Bezeichnung (z. B. „Privat“):</value>
+  </data>
+  <data name="GrokAccountEmailPrompt" xml:space="preserve">
+    <value>E-Mail-Adresse:</value>
+  </data>
+  <data name="GrokAccountRemoveTitle" xml:space="preserve">
+    <value>Konto entfernen</value>
+  </data>
+  <data name="GrokAccountRemovePrompt" xml:space="preserve">
+    <value>Zu entfernendes Konto wählen:</value>
+  </data>
+  <data name="GrokAccountInvalidEmail" xml:space="preserve">
+    <value>Bitte eine gültige E-Mail-Adresse angeben.</value>
+  </data>
+  <data name="GrokAccountDuplicate" xml:space="preserve">
+    <value>Dieses Konto ist bereits vorhanden.</value>
+  </data>
+  <data name="PasswordAutosaveMenuItem" xml:space="preserve">
+    <value>Passwörter im Browser merken</value>
   </data>
   <data name="OpenImageFromClipboard" xml:space="preserve">
     <value>Bild aus Zwischenablage öffnen…</value>

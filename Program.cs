@@ -67,10 +67,12 @@ namespace Wrok
 
             if (!isNewInstance)
             {
-                // Another instance is running � notify it to show its window and exit.
+                // Another instance is running � notify it to show its window and exit.
                 NotifyExistingInstance();
                 return;
             }
+
+            UpgradeSettingsIfNeeded();
 
             // In the single (first) instance: start a named-pipe server to receive SHOW messages.
             StartNamedPipeServer();
@@ -81,13 +83,76 @@ namespace Wrok
 
             try
             {
-                _singleInstanceMutex.ReleaseMutex();
-                _singleInstanceMutex.Dispose();
+                // Null-conditional: nach RestartApplication() ist das Feld bereits
+                // freigegeben und genullt, dann soll hier einfach nichts passieren.
+                _singleInstanceMutex?.ReleaseMutex();
+                _singleInstanceMutex?.Dispose();
             }
             catch
             {
                 // Swallow exceptions on shutdown; not critical.
             }
+        }
+
+        /// <summary>
+        /// Übernimmt beim ersten Start einer neuen Assembly-Version die
+        /// Einstellungen (Makros, Grok-Konten, Fensterposition usw.) aus der
+        /// zuletzt installierten Vorgängerversion. .NET legt Settings pro
+        /// AssemblyVersion in einem eigenen Ordner ab und startet dort ohne
+        /// diesen Aufruf mit lauter Standardwerten - Settings.Default.Upgrade()
+        /// kopiert die alten Werte einmalig rüber, bevor sie gelesen werden.
+        /// SettingsUpgraded verhindert, dass das bei jedem Start erneut passiert
+        /// (was sonst z. B. absichtlich geänderte Werte wieder überschreiben
+        /// würde, falls aus Versehen zwei Ordner nebeneinander existieren).
+        /// </summary>
+        private static void UpgradeSettingsIfNeeded()
+        {
+            try
+            {
+                if (!Properties.Settings.Default.SettingsUpgraded)
+                {
+                    Properties.Settings.Default.Upgrade();
+                    Properties.Settings.Default.SettingsUpgraded = true;
+                    Properties.Settings.Default.Save();
+                    Trace.WriteLine("Settings aus vorheriger Version übernommen (Settings.Default.Upgrade).");
+                }
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"UpgradeSettingsIfNeeded fehlgeschlagen: {ex}");
+            }
+        }
+
+        /// <summary>
+        /// Startet eine neue Instanz und beendet die aktuelle geordnet. Für
+        /// Einstellungen, die erst beim Neuerzeugen der CoreWebView2Environment
+        /// wirken (z. B. Proxy). Mutex zuerst freigeben, dann die neue Instanz
+        /// starten – sonst hält die alte Instanz den Mutex noch, wenn die neue
+        /// ihn prüft, und die neue hielte sich fälschlich für einen Zweitstart.
+        /// </summary>
+        public static void RestartApplication()
+        {
+            try
+            {
+                _singleInstanceMutex?.ReleaseMutex();
+                _singleInstanceMutex?.Dispose();
+                _singleInstanceMutex = null;
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"RestartApplication: Mutex-Freigabe fehlgeschlagen: {ex}");
+            }
+
+            try
+            {
+                Process.Start(Environment.ProcessPath ?? Application.ExecutablePath);
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"RestartApplication: neue Instanz konnte nicht gestartet werden: {ex}");
+            }
+
+            Application.Exit();
         }
 
         private static void NotifyExistingInstance()
@@ -137,7 +202,7 @@ namespace Wrok
                                 var message = reader.ReadLine();
                                 if (string.Equals(message, "SHOW", StringComparison.OrdinalIgnoreCase))
                                 {
-                                    // Broadcast WM_SHOWWINDOW � MainForm.WndProc will react and bring the window forward.
+                                    // Broadcast WM_SHOWWINDOW � MainForm.WndProc will react and bring the window forward.
                                     PostMessage((IntPtr)HWND_BROADCAST, WM_SHOWWINDOW, IntPtr.Zero, IntPtr.Zero);
                                 }
                             }

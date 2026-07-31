@@ -15,5 +15,5 @@ using System.Runtime.InteropServices;
 // GUID für COM-Exporte (nur relevant, falls COM-Sichtbarkeit benötigt wird)
 [assembly: Guid("d9a3f8b2-1c2f-4b3a-9f3e-6b5c7a9d0e2f")]
 
-[assembly: AssemblyVersion("1.2.0.0")]
-[assembly: AssemblyFileVersion("1.2.0.0")]
+[assembly: AssemblyVersion("1.3.0.0")]
+[assembly: AssemblyFileVersion("1.3.0.0")]

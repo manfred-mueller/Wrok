@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Text.Json;
 using System.Windows.Forms;
 
@@ -22,7 +22,10 @@ namespace Wrok
 
     /// <summary>
     /// Ein Satz Makros unter einem Namen – etwa je Figur oder Szenario.
-    /// Das Umschalten tauscht alle zehn Makros samt Hotkey-Belegung aus.
+    /// Das „aktive" Profil wird per Strg+1..Strg+0 gesteuert und ist es auch,
+    /// das im Tray-Menü angezeigt und bearbeitet wird. Zusätzlich sind im
+    /// Nummernblock-Modus die ersten fünf Makros JEDES Profils gleichzeitig auf
+    /// festen Numpad-Tasten erreichbar (siehe MainForm.NumpadMacroKeys).
     /// </summary>
     internal record MacroProfile(string Name, List<MacroEntry> Macros)
     {
@@ -56,14 +59,29 @@ namespace Wrok
     /// </summary>
     internal sealed class MacroManager
     {
-        // Anzahl unterstützter Makros; Hotkeys Ctrl+1 .. Ctrl+MacroCount.
+        // Makros pro Profil, erreichbar über Strg+1..Strg+0 des AKTIVEN Profils.
         public const int MacroCount = 10;
-
-        // Basis-ID für Makro-Hotkeys (muss mit MainForm übereinstimmen).
-        public const int HotkeyBase = 0x9100;
 
         /// <summary>Anzahl der Makro-Profile (z. B. je Figur oder Szenario).</summary>
         public const int ProfileCount = 3;
+
+        // Zwei getrennte Hotkey-Systeme, jedes mit eigenem ID-Bereich (müssen mit
+        // MainForm übereinstimmen und dürfen sich nicht überlappen):
+        //
+        //   Strg+Ziffer  – CtrlMacroBase+0..9 → immer das aktive Profil, Makro 0..9.
+        //                  Funktioniert auf jeder Tastatur, ist immer aktiv.
+        //   Nummernblock – NumpadMacroBase+0..14 → festes Raster über ALLE Profile,
+        //                  aber nur die ersten NumpadPerProfile Makros je Profil.
+        //                  Optional (Einstellung NumpadMacroModeEnabled), da der
+        //                  Nummernblock dann systemweit belegt ist.
+        public const int CtrlMacroBase   = 0x9100;   // 0x9100..0x9109
+        public const int NumpadMacroBase = 0x9120;   // 0x9120..0x912E
+
+        /// <summary>Wie viele Makros je Profil der Nummernblock-Modus abbildet (die ersten n).</summary>
+        public const int NumpadPerProfile = 5;
+
+        /// <summary>Gesamtzahl der Nummernblock-Slots über alle Profile (ProfileCount × NumpadPerProfile).</summary>
+        public const int NumpadSlots = ProfileCount * NumpadPerProfile;
 
         /// <summary>Version des Exportformats für alle Profile.</summary>
         private const int ExportFormatVersion = 2;
@@ -76,7 +94,11 @@ namespace Wrok
         // Profile
         // -------------------------------------------------------------------
 
-        /// <summary>Index des aktiven Profils.</summary>
+        /// <summary>
+        /// Index des Profils, das im Tray-Menü angezeigt/bearbeitet wird. Hat
+        /// KEINEN Einfluss darauf, welche Makros per Hotkey ausgelöst werden
+        /// können – alle Profile sind dafür immer gleichzeitig aktiv.
+        /// </summary>
         public int ActiveProfile
         {
             get { lock (_lock) { EnsureLoaded(); return _activeIndex; } }
@@ -92,7 +114,10 @@ namespace Wrok
             }
         }
 
-        /// <summary>Wechselt das aktive Profil. Die Makros wechseln damit komplett.</summary>
+        /// <summary>
+        /// Wechselt das im Tray-Menü angezeigte/bearbeitete Profil. Betrifft nur
+        /// die Anzeige – die Hotkeys aller drei Profile bleiben unverändert aktiv.
+        /// </summary>
         public void SwitchProfile(int index)
         {
             lock (_lock)
@@ -178,14 +203,8 @@ namespace Wrok
         /// </summary>
         public string? GetTextForHotkey(int hotkeyId)
         {
-            int macroIndex = hotkeyId - HotkeyBase;
-            if (macroIndex < 0 || macroIndex >= MacroCount)
-                return null;
-
-            var macros = GetMacros();
-            string text = macroIndex < macros.Count ? macros[macroIndex].Text : string.Empty;
-            if (string.IsNullOrWhiteSpace(text)) return null;
-            return ExpandVariables(text);
+            string text = RawTextForHotkey(hotkeyId);
+            return string.IsNullOrWhiteSpace(text) ? null : ExpandVariables(text);
         }
 
         /// <summary>
@@ -195,13 +214,50 @@ namespace Wrok
         /// </summary>
         public string? GetRawTextForHotkey(int hotkeyId)
         {
-            int macroIndex = hotkeyId - HotkeyBase;
-            if (macroIndex < 0 || macroIndex >= MacroCount)
-                return null;
-
-            var macros = GetMacros();
-            string text = macroIndex < macros.Count ? macros[macroIndex].Text : string.Empty;
+            string text = RawTextForHotkey(hotkeyId);
             return string.IsNullOrWhiteSpace(text) ? null : text;
+        }
+
+        /// <summary>
+        /// Löst eine Hotkey-ID in Profil + lokalen Makroindex auf und liest den Text.
+        ///
+        /// Zwei ID-Bereiche, zwei Regeln (siehe Konstanten oben):
+        ///   Strg+Ziffer  → das gerade aktive Profil, Makro 0..9.
+        ///   Nummernblock → festes Raster, erste NumpadPerProfile Makros je Profil.
+        /// Der eigentliche Sendeweg dahinter ist für beide derselbe.
+        /// </summary>
+        private string RawTextForHotkey(int hotkeyId)
+        {
+            lock (_lock)
+            {
+                EnsureLoaded();
+
+                int profileIndex;
+                int localIndex;
+
+                int ctrl = hotkeyId - CtrlMacroBase;
+                int num  = hotkeyId - NumpadMacroBase;
+
+                if (ctrl >= 0 && ctrl < MacroCount)
+                {
+                    profileIndex = _activeIndex;
+                    localIndex   = ctrl;
+                }
+                else if (num >= 0 && num < NumpadSlots)
+                {
+                    profileIndex = num / NumpadPerProfile;
+                    localIndex   = num % NumpadPerProfile;
+                }
+                else
+                {
+                    return string.Empty;
+                }
+
+                if (profileIndex < 0 || profileIndex >= _profiles!.Count) return string.Empty;
+
+                var macros = _profiles[profileIndex].Macros;
+                return localIndex < macros.Count ? macros[localIndex].Text : string.Empty;
+            }
         }
 
         /// <summary>
@@ -415,8 +471,10 @@ namespace Wrok
             }
 
             // 2. Migration: bisherige Makros werden zu Profil 1, der Rest bleibt leer.
+            // Ein Profil fasst weiterhin MacroCount (= 10) Makros, also passt der
+            // gesamte Alt-Satz verlustfrei hinein.
             var profiles = new List<MacroProfile>();
-            var existing = LoadLegacyMacros();
+            var existing = Normalize(LoadLegacyMacros());
 
             profiles.Add(new MacroProfile(string.Empty, existing));
             while (profiles.Count < ProfileCount)
@@ -426,7 +484,10 @@ namespace Wrok
             return profiles;
         }
 
-        /// <summary>Liest die Makros aus den beiden Vorgängerformaten (vor den Profilen).</summary>
+        /// <summary>
+        /// Liest die Makros aus den beiden Vorgängerformaten (vor den Profilen).
+        /// Gibt die Rohliste zurück; der Aufrufer normalisiert sie auf MacroCount.
+        /// </summary>
         private static List<MacroEntry> LoadLegacyMacros()
         {
             // a) MacrosJson (eine einzelne Liste)
@@ -438,8 +499,8 @@ namespace Wrok
                     var list = JsonSerializer.Deserialize<List<MacroEntry>>(json);
                     if (list != null)
                     {
-                        Trace.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [MacroManager] Übernehme bisherige Makros in Profil 1.");
-                        return Normalize(list);
+                        Trace.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [MacroManager] Übernehme {list.Count} bisherige Makros und verteile sie auf die Profile.");
+                        return list;
                     }
                 }
             }
@@ -463,7 +524,7 @@ namespace Wrok
                     Properties.Settings.Default.Macros = new System.Collections.Specialized.StringCollection();
                     Properties.Settings.Default.Save();
 
-                    return Normalize(migrated);
+                    return migrated;
                 }
             }
             catch (Exception ex)
@@ -471,8 +532,8 @@ namespace Wrok
                 Trace.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [MacroManager] Migration fehlgeschlagen: {ex}");
             }
 
-            // c) Erster Start
-            return EmptyMacros();
+            // c) Erster Start: nichts zu übernehmen.
+            return new List<MacroEntry>();
         }
 
         /// <summary>Persistiert den aktuellen Profilstand. Aufrufer hält bereits _lock.</summary>

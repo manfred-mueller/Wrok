@@ -1,5 +1,22 @@
 ﻿# Changelog
 
+## [1.3.0] - 2026-07-31
+
+### Features
+- **Optionaler Nummernblock-Modus – alle Profile gleichzeitig, einhändig.** Zusätzlich zu den gewohnten `Strg+1`…`Strg+0` des aktiven Profils lassen sich die ersten fünf Makros **jedes** Profils ohne Zusatztaste über den Nummernblock auslösen: Profil 1 auf `Num0`–`Num4`, Profil 2 auf `Num5`–`Num9`, Profil 3 auf `/ * - + ,`. So sind erstmals alle drei Profile gleichzeitig per Hotkey erreichbar, ohne umzuschalten. Der Modus ist unter *Einstellungen → App* umschaltbar und standardmäßig aus, da die Numpad-Tasten dann systemweit belegt sind. Die klassische Strg-Belegung bleibt unverändert und funktioniert auf jeder Tastatur – auch ohne Nummernblock.
+- **Grok-Konten-Verwaltung.** Mehrere Grok-Konten lassen sich mit Bezeichnung und E-Mail hinterlegen (*Einstellungen → Grok-Konten*). Ein Klick wechselt: Wrok löscht die Sitzungs-Cookies von grok.com und accounts.x.ai, ruft die Anmeldeseite auf und trägt die E-Mail automatisch ein. **Kein Passwort wird gespeichert** – das bleibt beim Chromium-eigenen Passwort-Manager oder der manuellen Eingabe.
+- **Proxy-Unterstützung.** Adresse, Ausnahmeliste und optionale Anmeldung mit Benutzername und Passwort (*Einstellungen → App*). Das Passwort wird mit der Windows-DPAPI verschlüsselt abgelegt – nie im Klartext – und nur an genau den konfigurierten Proxy-Host herausgegeben, nicht an andere Anmeldeabfragen. Eine Änderung greift nach einem Neustart, den Wrok auf Wunsch selbst auslöst.
+- **Passwort-Speichern umschaltbar.** Der Chromium-Passwort-Manager lässt sich über einen Menüpunkt ein- und ausschalten.
+
+### Fixes
+- **Bild-aus-Zwischenablage-Kürzel geändert** von `Strg+Shift+P` auf `Strg+Ö`, um Konflikte mit gängigen Web-Editor-Kürzeln zu vermeiden.
+- **Einstellungen überstehen ein Versionsupdate.** Beim ersten Start einer neuen Fassung werden die gespeicherten Einstellungen übernommen, statt auf Standardwerte zurückzufallen.
+
+### Intern
+- **Sauberer Neustart** (`Program.RestartApplication`): Der Einzelinstanz-Mutex wird zuerst freigegeben, dann die neue Instanz gestartet – sonst blockierte die alte den Start der neuen.
+- Grok-Konten und Numpad-Zuordnung als eigene, schlanke Manager (`GrokAccountManager`), Persistenz als JSON in den Settings – dasselbe Muster wie bei den Makros.
+
+
 ## [1.2.0] - 2026-07-19
 
 ### Features
