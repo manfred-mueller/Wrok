@@ -61,8 +61,17 @@ if (-not $DryRun) {
               "Danach PowerShell neu starten (PATH) und 'gh auth login' ausfuehren."
     }
 
-    gh auth status *> $null
-    if ($LASTEXITCODE -ne 0) {
+    # gh schreibt den Anmeldestatus nach stderr. Zusammen mit
+    # $ErrorActionPreference='Stop' macht PowerShell aus jeder umgeleiteten
+    # stderr-Zeile einen abbrechenden Fehler - noch bevor der Exit-Code geprueft
+    # wird. Deshalb die Praeferenz kurz herabsetzen und allein den Exit-Code werten.
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = 'SilentlyContinue'
+    gh auth status 2>&1 | Out-Null
+    $authed = ($LASTEXITCODE -eq 0)
+    $ErrorActionPreference = $prevEap
+
+    if (-not $authed) {
         throw "GitHub CLI ist nicht angemeldet. Bitte 'gh auth login' ausfuehren."
     }
 }
@@ -173,8 +182,13 @@ if ($DryRun) {
 # --- 4. Release anlegen und Asset hochladen ---------------------------------
 # Existiert der Tag schon, wird das Release ersetzt - so ist ein zweiter
 # Anlauf nach einem Fehlschlag gefahrlos moeglich.
-$exists = $false
-try { gh release view $tag *> $null; $exists = $true } catch { }
+# Auch hier schreibt gh nach stderr; dieselbe Herabsetzung wie beim Anmeldestatus,
+# damit ein "Release existiert nicht" nicht faelschlich als Skriptfehler durchschlaegt.
+$prevEap = $ErrorActionPreference
+$ErrorActionPreference = 'SilentlyContinue'
+gh release view $tag 2>&1 | Out-Null
+$exists = ($LASTEXITCODE -eq 0)
+$ErrorActionPreference = $prevEap
 
 if ($exists) {
     Write-Host "`nRelease $tag existiert bereits - wird geloescht." -ForegroundColor Yellow
