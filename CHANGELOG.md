@@ -1,5 +1,14 @@
 ﻿# Changelog
 
+## [1.3.1] - 2026-07-31
+
+### Features
+- **Update-Hinweis.** Wrok sieht beim Start (höchstens einmal täglich) auf GitHub nach, ob eine neuere Version vorliegt, und zeigt dann einen Tray-Ballon sowie einen Menüeintrag, der die Release-Seite öffnet. Es wird nichts heruntergeladen oder ausgeführt – die Aktualisierung selbst läuft weiter über WinGet bzw. den signierten Installer. Abschaltbar unter *Einstellungen → App → Nach Updates suchen* (standardmäßig an); der Menüeintrag weist darauf hin, dass dabei GitHub kontaktiert wird.
+
+### Fixes
+- **Sauberes Beenden bei Abmeldung, Herunterfahren und Update.** Das Fenster-X minimiert wie gewohnt in den Infobereich, ein echtes Sitzungsende beendet Wrok dagegen jetzt wirklich. Zuvor konnte die laufende Instanz die Programmdatei festhalten und so ein stilles Upgrade über WinGet behindern. Erkannt wird das über `WM_QUERYENDSESSION`, das jedem Schließen vorausgeht – unabhängig davon, wie der Installer die Anwendung schließt.
+
+
 ## [1.3.0] - 2026-07-31
 
 ### Features

@@ -173,6 +173,24 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Checks GitHub for a newer version once a day at startup. This contacts GitHub. ähnelt.
+        /// </summary>
+        public static string CheckForUpdatesHint {
+            get {
+                return ResourceManager.GetString("CheckForUpdatesHint", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Check for updates ähnelt.
+        /// </summary>
+        public static string CheckForUpdatesMenuItem {
+            get {
+                return ResourceManager.GetString("CheckForUpdatesMenuItem", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die Choose what to be deleted. “Delete all” additionally removes the last opened image. ähnelt.
         /// </summary>
         public static string ChooseWhatToBeDeleted {
@@ -286,6 +304,15 @@ namespace Wrok.Properties {
         public static string Ctrl0 {
             get {
                 return ResourceManager.GetString("Ctrl0", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Ctrl+{0} ähnelt.
+        /// </summary>
+        public static string CtrlMacroLabel {
+            get {
+                return ResourceManager.GetString("CtrlMacroLabel", resourceCulture);
             }
         }
         
@@ -1120,16 +1147,7 @@ namespace Wrok.Properties {
                 return ResourceManager.GetString("NumpadModeOffHint", resourceCulture);
             }
         }
-
-        /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Ctrl+{0} ähnelt.
-        /// </summary>
-        public static string CtrlMacroLabel {
-            get {
-                return ResourceManager.GetString("CtrlMacroLabel", resourceCulture);
-            }
-        }
-
+        
         /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die Num * ähnelt.
         /// </summary>
@@ -1600,6 +1618,69 @@ namespace Wrok.Properties {
             }
         }
         
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Wrok {0} is available. Click here to open the release page. ähnelt.
+        /// </summary>
+        public static string UpdateAvailableBalloon {
+            get {
+                return ResourceManager.GetString("UpdateAvailableBalloon", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Update available: {0} ähnelt.
+        /// </summary>
+        public static string UpdateAvailableMenuItem {
+            get {
+                return ResourceManager.GetString("UpdateAvailableMenuItem", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Update available ähnelt.
+        /// </summary>
+        public static string UpdateAvailableTitle {
+            get {
+                return ResourceManager.GetString("UpdateAvailableTitle", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Check for updates ähnelt.
+        /// </summary>
+        public static string CheckForUpdatesButton {
+            get {
+                return ResourceManager.GetString("CheckForUpdatesButton", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Checking… ähnelt.
+        /// </summary>
+        public static string CheckForUpdatesRunning {
+            get {
+                return ResourceManager.GetString("CheckForUpdatesRunning", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Wrok is up to date. ähnelt.
+        /// </summary>
+        public static string UpdateUpToDate {
+            get {
+                return ResourceManager.GetString("UpdateUpToDate", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die The update check failed. ähnelt.
+        /// </summary>
+        public static string UpdateCheckFailed {
+            get {
+                return ResourceManager.GetString("UpdateCheckFailed", resourceCulture);
+            }
+        }
+
         /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die Video – Wrok ähnelt.
         /// </summary>

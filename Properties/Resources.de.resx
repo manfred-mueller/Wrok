@@ -270,6 +270,33 @@ Fortfahren?</value>
   <data name="CtrlMacroLabel" xml:space="preserve">
     <value>Strg+{0}</value>
   </data>
+  <data name="CheckForUpdatesMenuItem" xml:space="preserve">
+    <value>Nach Updates suchen</value>
+  </data>
+  <data name="CheckForUpdatesHint" xml:space="preserve">
+    <value>Fragt beim Start einmal täglich bei GitHub nach einer neueren Version. Dabei wird GitHub kontaktiert.</value>
+  </data>
+  <data name="UpdateAvailableMenuItem" xml:space="preserve">
+    <value>Update verfügbar: {0}</value>
+  </data>
+  <data name="UpdateAvailableTitle" xml:space="preserve">
+    <value>Update verfügbar</value>
+  </data>
+  <data name="UpdateAvailableBalloon" xml:space="preserve">
+    <value>Wrok {0} ist verfügbar. Zum Öffnen der Release-Seite hier klicken.</value>
+  </data>
+  <data name="CheckForUpdatesButton" xml:space="preserve">
+    <value>Nach Updates suchen</value>
+  </data>
+  <data name="CheckForUpdatesRunning" xml:space="preserve">
+    <value>Suche…</value>
+  </data>
+  <data name="UpdateUpToDate" xml:space="preserve">
+    <value>Wrok ist auf dem neuesten Stand.</value>
+  </data>
+  <data name="UpdateCheckFailed" xml:space="preserve">
+    <value>Die Update-Prüfung ist fehlgeschlagen. Bitte später erneut versuchen oder die Verbindung prüfen.</value>
+  </data>
   <data name="GrokAccountsMenu" xml:space="preserve">
     <value>Grok-Konto wechseln</value>
   </data>
@@ -327,7 +354,7 @@ Fortfahren?</value>
   <data name="NoLastImage" xml:space="preserve">
     <value>Kein Bild verfügbar.
 
-Tipp: In Grok mit Rechtsklick auf ein Bild „Bildadresse kopieren“ wählen und Strg+Shift+P drücken. Danach steht es hier nach jedem Neustart zur Verfügung.</value>
+Tipp: In Grok mit Rechtsklick auf ein Bild „Bildadresse kopieren“ wählen und Strg+Ö drücken. Danach steht es hier nach jedem Neustart zur Verfügung.</value>
   </data>
   <data name="MacroInputPrompt" xml:space="preserve">
     <value>Eingabe:</value>
@@ -526,14 +553,17 @@ Umschalt+Klick trägt ein ohne zu senden.</value>
 - Bearbeiten: Rechtsklick auf ein Makro im Tray-Menü.
 - Senden per Menü: Linksklick fügt den Text ein und sendet ihn (Text + Enter).
 - Senden ohne Enter: Linksklick + Umschalt (oder Alt) sendet den Text OHNE abschließendes Enter.
-- Hotkeys: Strg+1 .. Strg+0 senden das jeweilige Makro. Standardmäßig folgt Enter wie beim Linksklick;
-  Umschalt oder Alt beim Drücken unterdrückt es.
+- Hotkeys: Strg+1 .. Strg+0 senden die zehn Makros des AKTIVEN Profils. Standardmäßig folgt Enter
+  wie beim Linksklick; Umschalt oder Alt beim Drücken unterdrückt es.
+- Nummernblock-Modus (optional): zusätzlich sind die ersten fünf Makros JEDES Profils ohne
+  Zusatztaste über den Ziffernblock erreichbar - alle drei Profile gleichzeitig. Umschalten unter
+  Einstellungen -&gt; App. Belegung: Profil 1 = Num0..Num4, Profil 2 = Num5..Num9, Profil 3 = / * - + ,.
 
 Makro-Profile
 - Drei benennbare Sätze zu je zehn Makros, etwa für verschiedene Figuren oder Szenarien.
 - Der erste Eintrag im Makro-Menü nennt das aktive Profil und klappt zu den übrigen auf.
-- Wechseln: Makros -&gt; [aktives Profil] -&gt; Linksklick auf ein anderes Profil. Der Wechsel
-  tauscht die komplette Belegung von Strg+1 bis Strg+0 aus.
+- Wechseln: Makros -&gt; [aktives Profil] -&gt; Linksklick auf ein anderes Profil. Strg+1 bis Strg+0
+  senden danach die Makros des neuen aktiven Profils.
 - Umbenennen: Makros -&gt; [aktives Profil] -&gt; "Aktives Profil umbenennen".
 - Zurücksetzen: "Aktives Profil zurücksetzen" leert Name und alle zehn Makros des aktiven
   Profils. Profile lassen sich nicht entfernen - es sind immer genau drei.
@@ -548,8 +578,8 @@ Makro-Variablen
 Medienansicht
 - Bild oder Video in Grok anklicken öffnet es in einem eigenen Fenster, links auf voller
   Bildschirmhöhe; Wrok nimmt den Rest ein. Videos laufen stumm im Endlos-Loop.
-- Alternativ: Rechtsklick auf das Medium -&gt; "Bildadresse kopieren", dann Strg+Umschalt+P.
-- Strg+Umschalt+P ohne passende Zwischenablage öffnet das zuletzt angezeigte Medium.
+- Alternativ: Rechtsklick auf das Medium -&gt; "Bildadresse kopieren", dann Strg+Ö.
+- Strg+Ö ohne passende Zwischenablage öffnet das zuletzt angezeigte Medium.
   Bilder werden dafür lokal zwischengespeichert und brauchen weder Netzwerk noch Anmeldung.
 - Im Medienfenster: Esc schließt, + / - und Mausrad zoomen, Strg+F passt ein,
   Strg+S speichert, Strg+P heftet an. Ziehen mit links verschiebt das Bild.
@@ -559,9 +589,11 @@ Chef-Taste
 - Ein offenes Medienfenster wird mit ausgeblendet, auch wenn es angeheftet ist, und kehrt
   beim Zurückholen samt Anheftung wieder.
 - Die Inaktivitäts-Automatik und das Schließen über das Fenster-X verhalten sich genauso.
+- Abmelden, Herunterfahren oder ein Update beenden Wrok dagegen wirklich, statt es wegzulegen.
 
 Tray-Menü
-- Einstellungen -&gt; App: Inaktivität, Makro-Import/-Export, Mit Windows starten.
+- Einstellungen -&gt; App: Inaktivität, Makro-Import/-Export, Mit Windows starten, Nummernblock-Modus,
+  Passwort speichern, Proxy, Nach Updates suchen.
 - Einstellungen -&gt; Grok: öffnet Groks eigene Einstellungsseite.
 - Werkzeuge: Rate Limits, Bild öffnen, Daten löschen.
 
@@ -573,6 +605,13 @@ Daten löschen
 - Zusätzlich ankreuzbar: alle Makroprofile leeren. Standardmäßig abgewählt.
 - Nicht betroffen sind Fenstergröße, Inaktivitätszeit und die übrigen Programmeinstellungen.
 - Sinnvoll bei Anzeigefehlern, Anmeldeproblemen oder wenn eine saubere Sitzung nötig ist.
+
+Updates
+- Wrok sieht beim Start (höchstens einmal täglich) nach, ob eine neuere Version vorliegt, und zeigt
+  dann einen Hinweis im Infobereich sowie einen Menüeintrag zur Release-Seite. Es wird nichts
+  heruntergeladen; die Aktualisierung läuft über WinGet bzw. den Installer.
+- Manuell prüfen: im Info-Dialog (Über Wrok) auf "Nach Updates suchen". Abschalten unter
+  Einstellungen -&gt; App -&gt; Nach Updates suchen. Die Prüfung kontaktiert dabei GitHub.
 
 Fehlerbehebung / Tipps
 - Wird Text nicht abgeschickt: sicherstellen, dass die Seite vollständig geladen und das Eingabefeld sichtbar ist.

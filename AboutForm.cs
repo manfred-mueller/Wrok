@@ -17,6 +17,7 @@ namespace Wrok
         private LinkLabel linkGitHub = null!;
         private Button btnClose = null!;
         private Button btnManual = null!;
+        private Button btnUpdate = null!;
 
         private void InitializeComponent()
         {
@@ -59,12 +60,21 @@ namespace Wrok
             linkGitHub.TabStop = true;
             linkGitHub.LinkClicked += LinkGitHub_LinkClicked;
 
-            // Manual button: opens a short manual explaining macros and cache clearing.
+            // Update button: on-demand check against GitHub.
+            btnUpdate = new Button();
+            btnUpdate.Text = Wrok.Properties.Resources.CheckForUpdatesButton;
+            btnUpdate.AutoSize = false;
+            btnUpdate.Size = new Size(150, 28);
+            btnUpdate.Location = new Point(12, 118);
+            btnUpdate.Anchor = AnchorStyles.Bottom | AnchorStyles.Left;
+            btnUpdate.Click += BtnUpdate_Click;
+
+            // Manual button: opens a short manual explaining macros and data clearing.
             btnManual = new Button();
             btnManual.Text = Wrok.Properties.Resources.Manual;
             btnManual.AutoSize = false;
             btnManual.Size = new Size(90, 28);
-            btnManual.Location = new Point(138, 118);
+            btnManual.Location = new Point(238, 118);
             btnManual.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
             btnManual.Click += BtnManual_Click;
 
@@ -73,17 +83,18 @@ namespace Wrok
             btnClose.Text = Properties.Resources.Close;
             btnClose.DialogResult = DialogResult.OK;
             btnClose.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            btnClose.Location = new Point(240, 118);
+            btnClose.Location = new Point(340, 118);
             btnClose.Size = new Size(90, 28);
 
             // Finalize form.
             this.AcceptButton = btnClose;
             this.CancelButton = btnClose;
-            this.ClientSize = new Size(342, 160);
+            this.ClientSize = new Size(442, 160);
             this.Controls.Add(picIcon);
             this.Controls.Add(lblTitle);
             this.Controls.Add(lblVersion);
             this.Controls.Add(linkGitHub);
+            this.Controls.Add(btnUpdate);
             this.Controls.Add(btnManual);
             this.Controls.Add(btnClose);
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -135,6 +146,68 @@ namespace Wrok
                     "Wrok",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
+            }
+        }
+
+        // Manuelle Update-Prüfung: laeuft immer, unabhaengig von Schalter und Drossel.
+        private async void BtnUpdate_Click(object? sender, EventArgs e)
+        {
+            var original = btnUpdate.Text;
+            try
+            {
+                btnUpdate.Enabled = false;
+                btnUpdate.Text = Properties.Resources.CheckForUpdatesRunning;
+
+                var result = await UpdateChecker.CheckNowAsync();
+
+                switch (result.Outcome)
+                {
+                    case UpdateOutcome.UpdateAvailable when result.Info != null:
+                        var answer = MessageBox.Show(
+                            this,
+                            string.Format(Properties.Resources.UpdateAvailableBalloon, result.Info.TagName),
+                            Properties.Resources.UpdateAvailableTitle,
+                            MessageBoxButtons.YesNo, MessageBoxIcon.Information);
+                        if (answer == DialogResult.Yes)
+                            OpenUrl(result.Info.ReleaseUrl);
+                        break;
+
+                    case UpdateOutcome.UpToDate:
+                        MessageBox.Show(this, Properties.Resources.UpdateUpToDate,
+                            Properties.Resources.CheckForUpdatesButton,
+                            MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        break;
+
+                    default:
+                        MessageBox.Show(this, Properties.Resources.UpdateCheckFailed,
+                            Properties.Resources.CheckForUpdatesButton,
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"BtnUpdate_Click failed: {ex}");
+            }
+            finally
+            {
+                btnUpdate.Text = original;
+                btnUpdate.Enabled = true;
+            }
+        }
+
+        private void OpenUrl(string url)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(url)) return;
+                Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine(String.Format(Properties.Resources.CouldnTOpenLinkToGitHub0, ex));
+                MessageBox.Show(Properties.Resources.LinkCouldnTBeOepened, "Wrok",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

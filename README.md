@@ -19,7 +19,8 @@ winget install --id NASS.Wrok
 
 Er arbeitet komplett ohne API-Zugriff und bietet folgende Funktionen:
 
-* Bis zu zehn frei belegbare Makros mit Hotkeys **Strg+1** bis **Strg+0**
+* Bis zu zehn frei belegbare Makros je Profil mit Hotkeys **Strg+1** bis **Strg+0**
+* Optionaler **Nummernblock-Modus**: die ersten fünf Makros aller drei Profile gleichzeitig auf dem Ziffernblock, ohne Zusatztaste
 * Makro-Variablen: `{input}`, `{date}`, `{time}`, `{username}`, `{clipboard}`
 * Boss-Taste **Strg + Leertaste** (sofortiges Minimieren/Wiederherstellen)
 * Medienansicht für Bilder und Videos, links auf voller Bildschirmhöhe – Videos im Endlos-Loop
@@ -28,6 +29,7 @@ Er arbeitet komplett ohne API-Zugriff und bietet folgende Funktionen:
 * Vollautomatische Anpassung an Windows Dark/Light-Mode (inkl. Tray-Icon und Titelleiste)
 * Intelligentes Löschen der gespeicherten Daten (mit Auswahl: nur Cache oder alles)
 * Optionaler Start mit Windows
+* Update-Hinweis beim Start (abschaltbar)
 * Anzeige der Grok-Rate-Limits
 * Tray-Menü mit Schnellzugriff auf alle wichtigen Funktionen
 
@@ -40,13 +42,13 @@ Alle in dieser Software verwendeten Markennamen und Bezeichnungen sind eingetrag
 
 Das Menü ist in zwei Untermenüs gegliedert:
 
-* **Einstellungen → App** — Inaktivität, Makro-Import/-Export, Mit Windows starten
+* **Einstellungen → App** — Inaktivität, Makro-Import/-Export, Mit Windows starten, Nummernblock-Modus, Passwort speichern, Proxy, Nach Updates suchen
 * **Einstellungen → Grok** — öffnet Groks eigene Einstellungsseite
 * **Werkzeuge** — Rate Limits, Bild/Video öffnen, Daten löschen
 
 ### Makro-Profile
 
-Drei benennbare Sätze zu je zehn Makros, etwa für verschiedene Figuren oder Szenarien. Ein Profilwechsel tauscht die komplette Belegung von `Strg+1` bis `Strg+0` aus.
+Drei benennbare Sätze zu je zehn Makros, etwa für verschiedene Figuren oder Szenarien. `Strg+1` bis `Strg+0` bedienen immer das aktive Profil; ein Profilwechsel legt diese Belegung auf das gewählte Profil um. Im Nummernblock-Modus sind zusätzlich die ersten fünf Makros aller drei Profile gleichzeitig erreichbar.
 
 Der erste Eintrag im Makro-Menü trägt den Namen des aktiven Profils und klappt zu den übrigen auf.
 
@@ -60,7 +62,8 @@ Der erste Eintrag im Makro-Menü trägt den Namen des aktiven Profils und klappt
 * **Bearbeiten:** Rechtsklick auf ein Makro im Tray-Menü.
 * **Über das Menü senden:** Linksklick fügt den Text ein und sendet ihn (Text + Enter).
 * **Ohne Enter senden:** Linksklick + Umschalt (oder Alt) fügt den Text ein, sendet aber **kein** Enter.
-* **Hotkeys:** `Strg+1` … `Strg+0` senden das jeweilige Makro. Standardmäßig folgt Enter wie beim Linksklick; Umschalt oder Alt beim Drücken unterdrückt es.
+* **Hotkeys:** `Strg+1` … `Strg+0` senden die zehn Makros des **aktiven** Profils. Standardmäßig folgt Enter wie beim Linksklick; Umschalt oder Alt beim Drücken unterdrückt es.
+* **Nummernblock-Modus (optional):** Die ersten fünf Makros jedes Profils liegen ohne Zusatztaste auf dem Ziffernblock — Profil 1 auf `Num0`–`Num4`, Profil 2 auf `Num5`–`Num9`, Profil 3 auf `/ * - + ,`. So sind alle drei Profile gleichzeitig per Tastendruck erreichbar. Umschaltbar unter *Einstellungen → App*; standardmäßig aus, da der Ziffernblock dann systemweit belegt ist.
 
 #### Makro-Variablen
 
@@ -84,8 +87,8 @@ Beispiel: `Hallo Schlingeline, es ist jetzt {time} und {input: Text}`
 Bilder und Videos aus Grok lassen sich in einem eigenen Fenster öffnen, das links auf voller Bildschirmhöhe erscheint, während Wrok den Rest einnimmt. Es ist immer höchstens ein Medienfenster offen — ein neues ersetzt das bisherige.
 
 * **Per Klick öffnen:** Bild oder Video in Grok anklicken.
-* **Per Tastenkombination:** Rechtsklick auf das Medium → *Bildadresse kopieren*, dann `Strg+Umschalt+P`.
-* **Zuletzt geöffnetes erneut anzeigen:** `Strg+Umschalt+P` drücken, wenn nichts Brauchbares in der Zwischenablage steht, oder *Werkzeuge → Letztes Bild öffnen*. Bilder werden lokal unter `%LOCALAPPDATA%\\Wrok\\images` zwischengespeichert und öffnen daher ohne Netzwerk und ohne gültige Sitzung.
+* **Per Tastenkombination:** Rechtsklick auf das Medium → *Bildadresse kopieren*, dann `Strg+Ö`.
+* **Zuletzt geöffnetes erneut anzeigen:** `Strg+Ö` drücken, wenn nichts Brauchbares in der Zwischenablage steht, oder *Werkzeuge → Letztes Bild öffnen*. Bilder werden lokal unter `%LOCALAPPDATA%\\Wrok\\images` zwischengespeichert und öffnen daher ohne Netzwerk und ohne gültige Sitzung.
 * **Videos** laufen stumm im Endlos-Loop; über die Bedienelemente lässt sich der Ton zuschalten.
 
 Tastenkürzel im Medienfenster:
@@ -104,7 +107,7 @@ Ziehen mit der linken Maustaste verschiebt ein Bild.
 
 `Strg+Leertaste` minimiert das Fenster sofort in den Infobereich; erneutes Drücken holt es zurück.
 
-Ein offenes Medienfenster verschwindet mit — auch wenn es angeheftet ist — und kehrt beim Zurückholen samt Anheftung wieder. Die automatische Minimierung bei Inaktivität und das Schließen über das Fenster-X verhalten sich genauso.
+Ein offenes Medienfenster verschwindet mit — auch wenn es angeheftet ist — und kehrt beim Zurückholen samt Anheftung wieder. Die automatische Minimierung bei Inaktivität und das Schließen über das Fenster-X verhalten sich genauso. Ein echtes Sitzungsende — Abmelden, Herunterfahren, Update — beendet Wrok dagegen wirklich.
 
 ### Daten löschen
 
@@ -116,6 +119,13 @@ Ein offenes Medienfenster verschwindet mit — auch wenn es angeheftet ist — u
 Zusätzlich ankreuzbar: **alle Makroprofile leeren**, standardmäßig abgewählt. Nicht betroffen sind Fenstergröße, Inaktivitätszeit und die übrigen Programmeinstellungen.
 
 Sinnvoll bei Darstellungsfehlern, Anmeldeproblemen oder wenn eine saubere Sitzung nötig ist.
+
+### Updates
+
+Wrok sieht beim Start (höchstens einmal täglich) nach, ob auf GitHub eine neuere Version vorliegt, und zeigt dann einen Hinweis im Infobereich sowie einen Menüeintrag zur Release-Seite. Es wird nichts heruntergeladen — die Aktualisierung läuft weiter über WinGet bzw. den Installer.
+
+* **Manuell prüfen:** im Info-Dialog (*Über Wrok*) auf *Nach Updates suchen*.
+* **Abschalten:** *Einstellungen → App → Nach Updates suchen*. Die Prüfung kontaktiert dabei GitHub.
 
 ### Fehlerbehebung und Tipps
 
@@ -137,7 +147,8 @@ Sinnvoll bei Darstellungsfehlern, Anmeldeproblemen oder wenn eine saubere Sitzun
 
 It works entirely without API access and offers the following features:
 
-* Up to ten freely assignable macros with hotkeys **Ctrl+1** to **Ctrl+0**
+* Up to ten freely assignable macros per profile with hotkeys **Ctrl+1** to **Ctrl+0**
+* Optional **numpad mode**: the first five macros of all three profiles at once on the numeric keypad, without a modifier
 * Macro variables: `{input}`, `{date}`, `{time}`, `{username}`, `{clipboard}`
 * Boss key **Ctrl + Spacebar** (instant minimize/restore)
 * Media viewer for images and videos, left-aligned at full screen height – videos loop endlessly
@@ -146,6 +157,7 @@ It works entirely without API access and offers the following features:
 * Full automatic adaptation to Windows Dark/Light mode (including tray icon and title bar)
 * Smart clearing of stored data (with choice: cache only or everything)
 * Optional start with Windows
+* Update notice at startup (can be turned off)
 * Grok rate limit display
 * Tray menu with quick access to all important functions
 
@@ -160,13 +172,13 @@ All brand names and designations used in this software are registered trademarks
 
 The tray menu is grouped into two submenus:
 
-* **Einstellungen → App** — inactivity timeout, macro import/export, start with Windows
+* **Einstellungen → App** — inactivity timeout, macro import/export, start with Windows, numpad mode, password saving, proxy, check for updates
 * **Einstellungen → Grok** — opens Grok's own settings page
 * **Werkzeuge** — rate limits, open image/video, delete data
 
 ### Macro profiles
 
-Three named sets of ten macros each, for different characters or scenarios. Switching a profile swaps the whole `Ctrl+1` … `Ctrl+0` assignment at once.
+Three named sets of ten macros each, for different characters or scenarios. `Ctrl+1` … `Ctrl+0` always drive the active profile; switching a profile moves that assignment to the chosen one. In numpad mode, the first five macros of all three profiles are additionally reachable at the same time.
 
 The first entry of the macro menu carries the active profile's name and expands to the others.
 
@@ -180,7 +192,8 @@ The first entry of the macro menu carries the active profile's name and expands 
 * **Edit:** Right-click a macro in the tray menu.
 * **Send via menu:** Left-click a macro to insert its text and send it (Send + Enter).
 * **Send without Enter:** Left-click + Shift (or Alt) inserts the text but does NOT send Enter.
-* **Hotkeys:** `Ctrl+1` … `Ctrl+0` send the corresponding macro. By default the macro is inserted and followed by Enter (same as left-click). Hold Shift or Alt while pressing the hotkey to suppress the trailing Enter.
+* **Hotkeys:** `Ctrl+1` … `Ctrl+0` send the ten macros of the **active** profile. By default the macro is inserted and followed by Enter (same as left-click). Hold Shift or Alt while pressing the hotkey to suppress the trailing Enter.
+* **Numpad mode (optional):** The first five macros of each profile sit on the numeric keypad without a modifier — profile 1 on `Num0`–`Num4`, profile 2 on `Num5`–`Num9`, profile 3 on `/ * - + ,`. This makes all three profiles reachable at once. Toggle under *Einstellungen → App*; off by default, since the keypad is then claimed system-wide.
 
 #### Macro variables
 
@@ -205,8 +218,8 @@ Example: `Hallo Schlingeline, es ist jetzt {time} und {input: Text}`
 Images and videos from Grok can be opened in a separate window that is placed on the left at full screen height, while Wrok fills the remaining space. There is always at most one media window — a new item replaces the previous one.
 
 * **Open by click:** Click an image or video in Grok.
-* **Open by hotkey:** Right-click the media in Grok → *Copy image/video address*, then press `Ctrl+Shift+P`.
-* **Reopen the last item:** Press `Ctrl+Shift+P` with nothing usable in the clipboard, or use *Werkzeuge → Letztes Bild öffnen*. Images are cached locally under `%LOCALAPPDATA%\\Wrok\\images`, so they reopen without network or session.
+* **Open by hotkey:** Right-click the media in Grok → *Copy image/video address*, then press `Ctrl+Ö`.
+* **Reopen the last item:** Press `Ctrl+Ö` with nothing usable in the clipboard, or use *Werkzeuge → Letztes Bild öffnen*. Images are cached locally under `%LOCALAPPDATA%\\Wrok\\images`, so they reopen without network or session.
 * **Videos** play muted in an endless loop; use the player controls to unmute.
 
 Keyboard shortcuts inside the viewer:
@@ -224,7 +237,7 @@ Drag with the left mouse button to pan an image.
 ### Boss key
 
 * Press `Ctrl+Space` to instantly minimize the window to the tray (and press it again to restore it).
-* An open media window is hidden along with it — even when pinned — and comes back pinned as before. The inactivity timer and closing via the window's X behave the same way.
+* An open media window is hidden along with it — even when pinned — and comes back pinned as before. The inactivity timer and closing via the window's X behave the same way. A real session end — logging off, shutting down, an update — closes Wrok for good instead of parking it.
 
 ### Delete data
 
@@ -234,6 +247,13 @@ Drag with the left mouse button to pan an image.
   * **Alles löschen** — additionally cookies and login data (you will be signed out) plus the last opened image together with its stored address.
 * An extra checkbox clears **all macro profiles**; unchecked by default. Not affected: window size, inactivity timeout and the remaining program settings.
 * Use this when you see rendering issues, login problems, or need a clean session.
+
+### Updates
+
+At startup (at most once a day) Wrok checks GitHub for a newer version and then shows a tray notice plus a menu entry linking to the release page. Nothing is downloaded — the update itself goes through WinGet or the installer.
+
+* **Check manually:** in the info dialog (*About Wrok*), click *Check for updates*.
+* **Turn it off:** *Einstellungen → App → Check for updates*. The check contacts GitHub.
 
 ### Troubleshooting \& Tips
 

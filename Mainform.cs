@@ -44,9 +44,11 @@ namespace Wrok
             Keys.Divide, Keys.Multiply, Keys.Subtract, Keys.Add, Keys.Decimal
         };
 
-        private const int WM_THEMECHANGED  = 0x031A;
-        private const int WM_SETTINGCHANGE = 0x001A;
-        private const int WM_SHOWWINDOW    = 0x0018;
+        private const int WM_THEMECHANGED    = 0x031A;
+        private const int WM_SETTINGCHANGE   = 0x001A;
+        private const int WM_SHOWWINDOW      = 0x0018;
+        private const int WM_QUERYENDSESSION = 0x0011;
+        private const int WM_ENDSESSION      = 0x0016;
 
         private readonly string baseUrl = "https://grok.com/";
         private readonly (string name, string url)[] menuPages = new[]
@@ -77,6 +79,16 @@ namespace Wrok
 
         private InactivityWatcher? _inactivity;
         private ThemeManager?      _theme;
+
+        // Windows meldet Abmelden/Herunterfahren und der Installer-Restart-Manager
+        // ein bevorstehendes Sitzungsende ueber WM_QUERYENDSESSION - immer VOR dem
+        // eigentlichen Schliessen. In diesem Fall soll Wrok wirklich beenden statt
+        // in den Tray zu minimieren (sonst blockiert es ein stilles Upgrade).
+        private bool _sessionEnding;
+
+        // URL der neueren Version, sobald die Update-Prüfung fündig wird.
+        private string? _pendingUpdateUrl;
+        private ToolStripItem? _updateMenuItem;
 
         private RateLimitManager?      _rateLimitManager;
         private ToolStripMenuItem?     _rateLimitMenu;
@@ -123,6 +135,9 @@ namespace Wrok
             this.Move      += (s, e) => { if (this.WindowState == FormWindowState.Normal) SaveWindowSettings(); };
 
             UpdateTrayMenuInactivityState();
+
+            // Nach dem Aufbau: still im Hintergrund nach einer neueren Version sehen.
+            StartUpdateCheck();
         }
 
         // ------------------------------------------------------------------
@@ -439,6 +454,22 @@ namespace Wrok
             proxyItem.Click += (s, e) => ShowProxyDialog();
             appMenu.DropDownItems.Add(proxyItem);
 
+            // Update-Prüfung: kontaktiert beim Start GitHub, deshalb abschaltbar.
+            var updateCheckItem = new ToolStripMenuItem(Properties.Resources.CheckForUpdatesMenuItem)
+            {
+                CheckOnClick = false,
+                Checked      = Properties.Settings.Default.CheckForUpdates
+            };
+            updateCheckItem.ToolTipText = Properties.Resources.CheckForUpdatesHint;
+            updateCheckItem.Click += (s, e) =>
+            {
+                bool desired = !updateCheckItem.Checked;
+                Properties.Settings.Default.CheckForUpdates = desired;
+                Properties.Settings.Default.Save();
+                updateCheckItem.Checked = desired;
+            };
+            appMenu.DropDownItems.Add(updateCheckItem);
+
             settingsMenu.DropDownItems.Add(appMenu);
 
             //   Einstellungen → Grok (öffnet Groks eigene Einstellungsseite)
@@ -518,7 +549,11 @@ namespace Wrok
             catch { this.Icon = initialIcon; }
 
             if (trayIcon != null)
+            {
                 trayIcon.MouseClick += (s, e) => { if (e.Button == MouseButtons.Left) Reactivate(); };
+                // Klick auf den Update-Ballon öffnet die Release-Seite.
+                trayIcon.BalloonTipClicked += (s, e) => OpenPendingUpdateUrl();
+            }
         }
 
         private void EnsureTrayIconVisible()
@@ -543,6 +578,71 @@ namespace Wrok
                 try { ico?.Dispose(); } catch { }
             }
             catch { trayIcon = null; }
+        }
+
+        // ------------------------------------------------------------------
+        // Update-Prüfung
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// Stößt die Update-Prüfung an (best-effort, ohne den Start zu blockieren).
+        /// Bei einer neueren Version erscheint ein Tray-Ballon und ein Menüeintrag.
+        /// </summary>
+        private void StartUpdateCheck()
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var info = await UpdateChecker.CheckAsync();
+                    if (info == null || this.IsDisposed) return;
+
+                    this.BeginInvoke((MethodInvoker)(() => ShowUpdateNotice(info)));
+                }
+                catch (Exception ex) { Log(ex, "Update-Prüfung fehlgeschlagen"); }
+            });
+        }
+
+        private void ShowUpdateNotice(UpdateInfo info)
+        {
+            try
+            {
+                _pendingUpdateUrl = info.ReleaseUrl;
+
+                // Menüeintrag ganz oben – bleibt sichtbar, auch wenn der Ballon weg ist.
+                if (_updateMenuItem == null && trayMenu != null)
+                {
+                    var item = new ToolStripMenuItem(
+                        string.Format(Properties.Resources.UpdateAvailableMenuItem, info.TagName))
+                    {
+                        Font = new Font(trayMenu.Font, FontStyle.Bold)
+                    };
+                    item.Click += (s, e) => OpenPendingUpdateUrl();
+
+                    trayMenu.Items.Insert(0, new ToolStripSeparator());
+                    trayMenu.Items.Insert(0, item);
+                    _updateMenuItem = item;
+                }
+
+                trayIcon?.ShowBalloonTip(
+                    8000,
+                    Properties.Resources.UpdateAvailableTitle,
+                    string.Format(Properties.Resources.UpdateAvailableBalloon, info.TagName),
+                    ToolTipIcon.Info);
+            }
+            catch (Exception ex) { Log(ex, "Update-Hinweis anzeigen fehlgeschlagen"); }
+        }
+
+        private void OpenPendingUpdateUrl()
+        {
+            var url = _pendingUpdateUrl;
+            if (string.IsNullOrWhiteSpace(url)) return;
+
+            try
+            {
+                Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            }
+            catch (Exception ex) { Log(ex, "Release-Seite öffnen fehlgeschlagen"); }
         }
 
         private void UpdateTrayMenuInactivityState()
@@ -1487,13 +1587,23 @@ namespace Wrok
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            if (e.CloseReason == CloseReason.UserClosing)
+            // Nur der bewusste Klick aufs X minimiert in den Tray. Ein Sitzungsende
+            // (Abmelden, Herunterfahren, Installer-Restart-Manager) beendet dagegen
+            // wirklich - sonst haelt Wrok die laufende Exe fest und ein stilles
+            // Upgrade schlaegt fehl. _sessionEnding faengt auch den Fall ab, dass der
+            // Restart-Manager das Schliessen als gewoehnliches WM_CLOSE schickt.
+            if (e.CloseReason == CloseReason.UserClosing && !_sessionEnding)
             {
                 SaveWindowSettings();
                 e.Cancel = true;
                 // Derselbe Weg wie die Boss-Taste – damit auch hier kein
                 // Medienfenster sichtbar zurueckbleibt.
                 MinimizeToTray();
+            }
+            else
+            {
+                // Echtes Beenden: Fensterlage noch sichern, dann durchlassen.
+                SaveWindowSettings();
             }
             base.OnFormClosing(e);
         }
@@ -1674,6 +1784,18 @@ namespace Wrok
                 case WM_THEMECHANGED:
                 case WM_SETTINGCHANGE:
                     try { _theme?.Refresh(); } catch { }
+                    break;
+
+                case WM_QUERYENDSESSION:
+                    // Sitzungsende kuendigt sich an - merken, damit das folgende
+                    // Schliessen wirklich beendet und nicht in den Tray minimiert.
+                    _sessionEnding = true;
+                    break;
+
+                case WM_ENDSESSION:
+                    // wParam == 0 heisst: ein zuvor angekuendigtes Sitzungsende
+                    // wurde doch abgeblasen. Dann wieder normal in den Tray gehen.
+                    if (m.WParam == IntPtr.Zero) _sessionEnding = false;
                     break;
 
                 case WM_SHOWWINDOW:

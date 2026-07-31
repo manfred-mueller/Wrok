@@ -270,6 +270,33 @@ Continue?</value>
   <data name="CtrlMacroLabel" xml:space="preserve">
     <value>Ctrl+{0}</value>
   </data>
+  <data name="CheckForUpdatesMenuItem" xml:space="preserve">
+    <value>Check for updates</value>
+  </data>
+  <data name="CheckForUpdatesHint" xml:space="preserve">
+    <value>Checks GitHub for a newer version once a day at startup. This contacts GitHub.</value>
+  </data>
+  <data name="UpdateAvailableMenuItem" xml:space="preserve">
+    <value>Update available: {0}</value>
+  </data>
+  <data name="UpdateAvailableTitle" xml:space="preserve">
+    <value>Update available</value>
+  </data>
+  <data name="UpdateAvailableBalloon" xml:space="preserve">
+    <value>Wrok {0} is available. Click here to open the release page.</value>
+  </data>
+  <data name="CheckForUpdatesButton" xml:space="preserve">
+    <value>Check for updates</value>
+  </data>
+  <data name="CheckForUpdatesRunning" xml:space="preserve">
+    <value>Checking…</value>
+  </data>
+  <data name="UpdateUpToDate" xml:space="preserve">
+    <value>Wrok is up to date.</value>
+  </data>
+  <data name="UpdateCheckFailed" xml:space="preserve">
+    <value>The update check failed. Please try again later or check your connection.</value>
+  </data>
   <data name="GrokAccountsMenu" xml:space="preserve">
     <value>Switch Grok account</value>
   </data>
@@ -327,7 +354,7 @@ Continue?</value>
   <data name="NoLastImage" xml:space="preserve">
     <value>No image available.
 
-Tip: right-click an image in Grok, choose “Copy image address”, then press Ctrl+Shift+P. It will be available here after every restart.</value>
+Tip: right-click an image in Grok, choose “Copy image address”, then press Ctrl+Ö. It will be available here after every restart.</value>
   </data>
   <data name="MacroInputPrompt" xml:space="preserve">
     <value>Input:</value>
@@ -526,14 +553,17 @@ Shift+Click sends without Enter.</value>
 - Edit: right-click a macro in the tray menu.
 - Send via menu: left-click inserts the text and sends it (text + Enter).
 - Send without Enter: left-click + Shift (or Alt) sends the text WITHOUT a trailing Enter.
-- Hotkeys: Ctrl+1 .. Ctrl+0 send the respective macro. Enter follows by default, as with left-click;
-  hold Shift or Alt while pressing to suppress it.
+- Hotkeys: Ctrl+1 .. Ctrl+0 send the ten macros of the ACTIVE profile. Enter follows by default,
+  as with left-click; hold Shift or Alt while pressing to suppress it.
+- Numpad mode (optional): additionally, the first five macros of EVERY profile are reachable on the
+  numeric keypad without a modifier - all three profiles at once. Toggle under Settings -&gt; App.
+  Layout: profile 1 = Num0..Num4, profile 2 = Num5..Num9, profile 3 = / * - + ,.
 
 Macro profiles
 - Three named sets of ten macros each, for different characters or scenarios.
 - The first entry of the macro menu names the active profile and expands to the others.
-- Switch: Macros -&gt; [active profile] -&gt; left-click another profile. Switching swaps the
-  whole Ctrl+1 .. Ctrl+0 assignment at once.
+- Switch: Macros -&gt; [active profile] -&gt; left-click another profile. Ctrl+1 .. Ctrl+0 then send
+  the macros of the newly active profile.
 - Rename: Macros -&gt; [active profile] -&gt; "Rename active profile".
 - Reset: "Reset active profile" clears the name and all ten macros of the active profile.
   Profiles cannot be removed - there are always exactly three.
@@ -548,8 +578,8 @@ Macro variables
 Media viewer
 - Clicking an image or video in Grok opens it in its own window, placed on the left at full
   screen height while Wrok fills the rest. Videos play muted in an endless loop.
-- Alternatively: right-click the media -&gt; "Copy image address", then press Ctrl+Shift+P.
-- Ctrl+Shift+P without a usable clipboard reopens the last media item. Images are cached
+- Alternatively: right-click the media -&gt; "Copy image address", then press Ctrl+Ö.
+- Ctrl+Ö without a usable clipboard reopens the last media item. Images are cached
   locally for this and need neither network nor an active session.
 - Inside the window: Esc closes, + / - and the mouse wheel zoom, Ctrl+F fits,
   Ctrl+S saves, Ctrl+P pins. Drag with the left button to pan.
@@ -558,9 +588,11 @@ Boss key
 - Ctrl+Space minimizes the window instantly; press again to restore it.
 - An open media window is hidden along with it, even when pinned, and returns pinned as before.
 - The inactivity timer and closing via the window's X behave the same way.
+- Logging off, shutting down or an update, however, really close Wrok instead of parking it.
 
 Tray menu
-- Settings -&gt; App: inactivity, macro import/export, start with Windows.
+- Settings -&gt; App: inactivity, macro import/export, start with Windows, numpad mode,
+  password saving, proxy, check for updates.
 - Settings -&gt; Grok: opens Grok's own settings page.
 - Tools: rate limits, open image, delete data.
 
@@ -572,6 +604,13 @@ Delete data
 - An extra checkbox clears all macro profiles. Unchecked by default.
 - Not affected: window size, inactivity timeout and the remaining program settings.
 - Useful for display errors, login problems, or when a clean session is needed.
+
+Updates
+- At startup (at most once a day) Wrok checks whether a newer version exists and then shows a
+  tray notice plus a menu entry linking to the release page. Nothing is downloaded; the update
+  itself goes through WinGet or the installer.
+- Check manually: in the info dialog (About Wrok), click "Check for updates". Turn it off under
+  Settings -&gt; App -&gt; Check for updates. The check contacts GitHub.
 
 Troubleshooting / Tips
 - If text is not sent: make sure the page is fully loaded and the input field is visible.
