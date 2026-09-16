@@ -173,6 +173,15 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Check for updates ähnelt.
+        /// </summary>
+        public static string CheckForUpdatesButton {
+            get {
+                return ResourceManager.GetString("CheckForUpdatesButton", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die Checks GitHub for a newer version once a day at startup. This contacts GitHub. ähnelt.
         /// </summary>
         public static string CheckForUpdatesHint {
@@ -187,6 +196,15 @@ namespace Wrok.Properties {
         public static string CheckForUpdatesMenuItem {
             get {
                 return ResourceManager.GetString("CheckForUpdatesMenuItem", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Checking… ähnelt.
+        /// </summary>
+        public static string CheckForUpdatesRunning {
+            get {
+                return ResourceManager.GetString("CheckForUpdatesRunning", resourceCulture);
             }
         }
         
@@ -860,12 +878,10 @@ namespace Wrok.Properties {
         ///- Edit: right-click a macro in the tray menu.
         ///- Send via menu: left-click inserts the text and sends it (text + Enter).
         ///- Send without Enter: left-click + Shift (or Alt) sends the text WITHOUT a trailing Enter.
-        ///- Hotkeys: Ctrl+1 .. Ctrl+0 send the respective macro. Enter follows by default, as with left-click;
-        ///  hold Shift or Alt while pressing to suppress it.
-        ///
-        ///Macro profiles
-        ///- Three named sets of ten macros each, for different characters or scenarios.
-        ///- The first entry of the macro menu nam [Rest der Zeichenfolge wurde abgeschnitten]&quot;; ähnelt.
+        ///- Hotkeys: Ctrl+1 .. Ctrl+0 send the ten macros of the ACTIVE profile. Enter follows by default,
+        ///  as with left-click; hold Shift or Alt while pressing to suppress it.
+        ///- Numpad mode (optional): additionally, the first five macros of EVERY profile are reachable on the
+        ///  numeric keypad wi [Rest der Zeichenfolge wurde abgeschnitten]&quot;; ähnelt.
         /// </summary>
         public static string MacroHelp {
             get {
@@ -1067,7 +1083,7 @@ namespace Wrok.Properties {
         /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die No image available.
         ///
-        ///Tip: right-click an image in Grok, choose “Copy image address”, then press Ctrl+Shift+P. It will be available here after every restart. ähnelt.
+        ///Tip: right-click an image in Grok, choose “Copy image address”, then press Ctrl+Ö. It will be available here after every restart. ähnelt.
         /// </summary>
         public static string NoLastImage {
             get {
@@ -1644,25 +1660,16 @@ namespace Wrok.Properties {
                 return ResourceManager.GetString("UpdateAvailableTitle", resourceCulture);
             }
         }
-
+        
         /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Check for updates ähnelt.
+        ///   Sucht eine lokalisierte Zeichenfolge, die The update check failed. Please try again later or check your connection. ähnelt.
         /// </summary>
-        public static string CheckForUpdatesButton {
+        public static string UpdateCheckFailed {
             get {
-                return ResourceManager.GetString("CheckForUpdatesButton", resourceCulture);
+                return ResourceManager.GetString("UpdateCheckFailed", resourceCulture);
             }
         }
-
-        /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Checking… ähnelt.
-        /// </summary>
-        public static string CheckForUpdatesRunning {
-            get {
-                return ResourceManager.GetString("CheckForUpdatesRunning", resourceCulture);
-            }
-        }
-
+        
         /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die Wrok is up to date. ähnelt.
         /// </summary>
@@ -1671,16 +1678,7 @@ namespace Wrok.Properties {
                 return ResourceManager.GetString("UpdateUpToDate", resourceCulture);
             }
         }
-
-        /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die The update check failed. ähnelt.
-        /// </summary>
-        public static string UpdateCheckFailed {
-            get {
-                return ResourceManager.GetString("UpdateCheckFailed", resourceCulture);
-            }
-        }
-
+        
         /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die Video – Wrok ähnelt.
         /// </summary>

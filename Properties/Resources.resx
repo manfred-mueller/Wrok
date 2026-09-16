@@ -360,7 +360,7 @@ Tip: right-click an image in Grok, choose “Copy image address”, then press C
     <value>Input:</value>
   </data>
   <data name="MacroVariablesHint" xml:space="preserve">
-    <value>Variables: {input} {date} {time} {username} {clipboard}</value>
+    <value>Variables: {input} {date} {time} {day} {username} {clipboard}</value>
   </data>
   <data name="ClearBrowsingData" xml:space="preserve">
     <value>Delete data</value>
@@ -570,7 +570,8 @@ Macro profiles
 - Import and export refer to the active profile unless "Export all profiles" is chosen.
 
 Macro variables
-- Macro text may contain {date}, {time}, {username}, {clipboard} and {input}.
+- Macro text may contain {date}, {time}, {day}, {username}, {clipboard} and {input}.
+- {day} is the full weekday name in German (e.g. "Montag"), regardless of UI language.
 - {input} or {input:Your question} asks for a value right before sending.
 - The input dialog is multi-line: Enter inserts a line break, Ctrl+Enter sends, Esc aborts.
 - Cancelling discards the whole send.

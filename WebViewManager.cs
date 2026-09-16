@@ -132,7 +132,7 @@ namespace Wrok
         {
             if (_webView.CoreWebView2 == null)
                 throw new InvalidOperationException("CoreWebView2 not initialized.");
-            return await _webView.CoreWebView2.ExecuteScriptAsync(script).ConfigureAwait(false);
+            return await _webView.CoreWebView2.ExecuteScriptAsync(script);
         }
 
         // ------------------------------------------------------------------
@@ -182,7 +182,7 @@ namespace Wrok
             try { await EnsureFocusOnUiThreadAsync(); }
             catch { }
 
-            await Task.Delay(FocusSettleDelayMs).ConfigureAwait(false);
+            await Task.Delay(FocusSettleDelayMs);
 
             var payload    = System.Text.Json.JsonSerializer.Serialize(text);
             var enterArg   = pressEnter ? "true" : "false";
@@ -193,7 +193,7 @@ namespace Wrok
             string? rawResult = null;
             try
             {
-                rawResult = await _webView.CoreWebView2.ExecuteScriptAsync(callScript).ConfigureAwait(false);
+                rawResult = await _webView.CoreWebView2.ExecuteScriptAsync(callScript);
                 Trace.WriteLine($"SendTextAsync JS result: {rawResult}");
             }
             catch (Exception ex)
@@ -205,7 +205,7 @@ namespace Wrok
 
             if (pressEnter)
             {
-                await Task.Delay(ButtonEnableDelayMs).ConfigureAwait(false);
+                await Task.Delay(ButtonEnableDelayMs);
 
                 bool clickSucceeded = await TryClickSendButtonAsync();
                 if (clickSucceeded) return;
@@ -348,11 +348,11 @@ namespace Wrok
 
             try
             {
-                await ExecuteOnUiThreadAsync(buildScript(token)).ConfigureAwait(false);
+                await ExecuteOnUiThreadAsync(buildScript(token));
 
                 using var cts = new CancellationTokenSource(timeout);
                 using var reg = cts.Token.Register(() => tcs.TrySetResult(null));
-                return await tcs.Task.ConfigureAwait(false);
+                return await tcs.Task;
             }
             finally
             {
@@ -586,7 +586,7 @@ namespace Wrok
             string? result = null;
             try
             {
-                result = await _webView.CoreWebView2!.ExecuteScriptAsync(clickScript).ConfigureAwait(false);
+                result = await _webView.CoreWebView2!.ExecuteScriptAsync(clickScript);
                 Trace.WriteLine(string.Format(Properties.Resources.SendTextToWebViewAsyncClickScriptResult0, result));
             }
             catch (Exception ex)
@@ -600,8 +600,8 @@ namespace Wrok
         {
             try
             {
-                await EnsureFocusOnUiThreadAsync().ConfigureAwait(false);
-                await Task.Delay(NativeInputFocusDelayMs).ConfigureAwait(false);
+                await EnsureFocusOnUiThreadAsync();
+                await Task.Delay(NativeInputFocusDelayMs);
                 _input?.PressEnter();
                 Trace.WriteLine("SendEnterViaNativeInputAsync: Enter gesendet.");
             }
@@ -613,14 +613,24 @@ namespace Wrok
 
         private async Task FallbackSendViaNativeInputAsync(string text, bool pressEnter)
         {
+            // Diagnose: _input ist null, wenn CreateInputSimulator() noch nicht (wieder)
+            // gelaufen ist - z. B. kurz nach einer Fensterhandle-Neuerzeugung (passiert bei
+            // jedem Minimieren/Wiederherstellen in den Tray, siehe MainForm.OnHandleDestroyed/
+            // OnHandleCreated). Die _input?.-Aufrufe unten sind dann stille No-Ops: kein
+            // Fehler, aber es wird auch nichts getippt - bisher unauffällig, weil hier nicht
+            // geloggt wurde, ob _input tatsächlich vorhanden war.
+            if (_input == null)
+                Trace.WriteLine("FallbackSendViaNativeInputAsync: _input ist null - TypeText/PressEnter sind No-Ops.");
+
             try
             {
-                await EnsureFocusOnUiThreadAsync().ConfigureAwait(false);
-                await Task.Delay(NativeInputTextDelayMs).ConfigureAwait(false);
+                await EnsureFocusOnUiThreadAsync();
+                await Task.Delay(NativeInputTextDelayMs);
                 if (!string.IsNullOrEmpty(text))
                 {
                     _input?.TypeText(text);
-                    await Task.Delay(NativeInputAfterTextDelayMs).ConfigureAwait(false);
+                    Trace.WriteLine($"FallbackSendViaNativeInputAsync: TypeText aufgerufen (Länge={text.Length}).");
+                    await Task.Delay(NativeInputAfterTextDelayMs);
                 }
                 if (pressEnter)
                 {
@@ -733,7 +743,7 @@ namespace Wrok
                     token => $"window.__wrokFetchImage(" +
                              $"{System.Text.Json.JsonSerializer.Serialize(fullUrl)}, " +
                              $"{System.Text.Json.JsonSerializer.Serialize(token)});",
-                    TimeSpan.FromSeconds(30)).ConfigureAwait(false);
+                    TimeSpan.FromSeconds(30));
 
                 if (string.IsNullOrWhiteSpace(b64))
                 {

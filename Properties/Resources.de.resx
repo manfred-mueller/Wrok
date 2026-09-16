@@ -360,7 +360,7 @@ Tipp: In Grok mit Rechtsklick auf ein Bild „Bildadresse kopieren“ wählen un
     <value>Eingabe:</value>
   </data>
   <data name="MacroVariablesHint" xml:space="preserve">
-    <value>Variablen: {input} {date} {time} {username} {clipboard}</value>
+    <value>Variablen: {input} {date} {time} {day} {username} {clipboard}</value>
   </data>
   <data name="ClearBrowsingData" xml:space="preserve">
     <value>Daten löschen</value>
@@ -570,7 +570,8 @@ Makro-Profile
 - Import und Export beziehen sich auf das aktive Profil, sofern nicht "Alle Profile exportieren" gewählt wird.
 
 Makro-Variablen
-- Makrotext kann {date}, {time}, {username}, {clipboard} und {input} enthalten.
+- Makrotext kann {date}, {time}, {day}, {username}, {clipboard} und {input} enthalten.
+- {day} ist der volle deutsche Wochentagsname (z. B. "Montag").
 - {input} bzw. {input:Deine Frage} fragt unmittelbar vor dem Senden nach einem Wert.
 - Der Eingabedialog ist mehrzeilig: Enter erzeugt einen Zeilenumbruch, Strg+Enter sendet, Esc bricht ab.
 - Abbrechen verwirft den gesamten Sendevorgang.

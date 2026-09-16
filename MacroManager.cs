@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Globalization;
 using System.Text.Json;
 using System.Windows.Forms;
 
@@ -260,10 +261,17 @@ namespace Wrok
             }
         }
 
+        // Feste deutsche Kultur für {day}: die UI/Zielgruppe ist durchgehend
+        // deutsch (siehe Resources.de.resx), unabhängig von der Systemkultur
+        // soll {day} deshalb immer "Montag".."Sonntag" liefern statt vom
+        // zufälligen Thread-CurrentCulture des OS abzuhängen.
+        private static readonly CultureInfo GermanCulture = new("de-DE");
+
         /// <summary>
         /// Ersetzt nicht-interaktive Variablen im Makrotext:
         ///   {date}      → aktuelles Datum (dd.MM.yyyy)
         ///   {time}      → aktuelle Uhrzeit (HH:mm)
+        ///   {day}       → voller Wochentagsname, deutsch (z. B. "Montag")
         ///   {clipboard} → aktueller Zwischenablage-Inhalt (Text)
         ///   {username}  → Windows-Benutzername
         /// Hinweis: {input} bzw. {input:Label} wird NICHT hier aufgelöst, sondern
@@ -274,6 +282,7 @@ namespace Wrok
             var now = DateTime.Now;
             text = text.Replace("{date}",     now.ToString("dd.MM.yyyy"),           StringComparison.OrdinalIgnoreCase);
             text = text.Replace("{time}",     now.ToString("HH:mm"),                StringComparison.OrdinalIgnoreCase);
+            text = text.Replace("{day}",      now.ToString("dddd", GermanCulture),  StringComparison.OrdinalIgnoreCase);
             text = text.Replace("{username}", Environment.UserName,                 StringComparison.OrdinalIgnoreCase);
             text = text.Replace("{clipboard}", GetClipboardText(),                  StringComparison.OrdinalIgnoreCase);
             return text;

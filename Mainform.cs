@@ -1618,8 +1618,13 @@ namespace Wrok
             bool ok = RegisterHotKey(this.Handle, HOTKEY_ID, MOD_CONTROL, (uint)Keys.Space);
             if (!ok) Debug.WriteLine($"RegisterHotKey fehlgeschlagen id={HOTKEY_ID} err={Marshal.GetLastWin32Error()}");
 
-            // Strg+Ö → Bild aus Zwischenablage öffnen
-            ok = RegisterHotKey(this.Handle, HOTKEY_ID_IMAGE, MOD_CONTROL, (uint)Keys.Oem1);
+            // Strg+Ö → Bild aus Zwischenablage öffnen.
+            // WICHTIG: Keys.Oem1 (VK_OEM_1, Scancode 1A) ist auf der deutschen
+            // Tastatur die Ü-Taste, NICHT Ö - das war der eigentliche Bug (per
+            // kbdlayout.info/KBDGR verifiziert: Ö liegt auf Scancode 27 =
+            // VK_OEM_3 = Keys.Oem3). Mit Keys.Oem1 registrierte sich der Hotkey
+            // zwar erfolgreich, reagierte aber nur auf Strg+Ü statt Strg+Ö.
+            ok = RegisterHotKey(this.Handle, HOTKEY_ID_IMAGE, MOD_CONTROL, (uint)Keys.Oem3);
             if (!ok) Trace.WriteLine($"RegisterHotKey fehlgeschlagen id={HOTKEY_ID_IMAGE} (Strg+Ö) err={Marshal.GetLastWin32Error()}");
 
             // Strg+1..Strg+0 für das aktive Profil – immer aktiv, auf jeder Tastatur.
@@ -1878,7 +1883,13 @@ namespace Wrok
         /// </summary>
         private async Task OpenImageFromClipboardAsync()
         {
-            if (_webViewManager == null) return;
+            Trace.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [MainForm] Strg+Ö empfangen, OpenImageFromClipboardAsync gestartet.");
+
+            if (_webViewManager == null)
+            {
+                Trace.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [MainForm] OpenImageFromClipboardAsync: _webViewManager ist null, Abbruch.");
+                return;
+            }
 
             string url = string.Empty;
             try
@@ -1887,6 +1898,8 @@ namespace Wrok
                     url = (Clipboard.GetText() ?? string.Empty).Trim();
             }
             catch (Exception ex) { Log(ex, "Zwischenablage konnte nicht gelesen werden"); }
+
+            Trace.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [MainForm] OpenImageFromClipboardAsync: Zwischenablage-Inhalt='{url}', IsHttpUrl={IsHttpUrl(url)}");
 
             if (!IsHttpUrl(url))
             {
@@ -1900,6 +1913,7 @@ namespace Wrok
             {
                 // Grok-URLs haben keine Dateiendung – Typ über den Content-Type klären.
                 var contentType = await _webViewManager.ProbeContentTypeAsync(url, TimeSpan.FromSeconds(10));
+                Trace.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [MainForm] OpenImageFromClipboardAsync: Content-Type='{contentType}'");
 
                 if (contentType != null &&
                     contentType.Contains("video", StringComparison.OrdinalIgnoreCase))
@@ -1908,9 +1922,23 @@ namespace Wrok
                     return;
                 }
 
-                if (!await _webViewManager.ShowImageViewerAsync(url))
+                bool shown = await _webViewManager.ShowImageViewerAsync(url);
+                Trace.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [MainForm] OpenImageFromClipboardAsync: ShowImageViewerAsync -> {shown}");
+                if (!shown)
                     MessageBox.Show(this, Properties.Resources.ImageLoadFailed,
                         Properties.Resources.Error, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            catch (Exception ex)
+            {
+                // Vorher fehlte dieser catch: eine Exception hier (z. B. Timeout bei
+                // ProbeContentTypeAsync/ShowImageViewerAsync) verschwand komplett
+                // spurlos, weil die Methode "fire-and-forget" per _ = ... aufgerufen
+                // wird - eine ungefangene Exception in einem verworfenen Task wird
+                // von .NET standardmaessig NICHT sichtbar gemeldet (kein Absturz,
+                // kein Log). Das erklaert vermutlich "Strg+Ö tut gar nichts".
+                Log(ex, "OpenImageFromClipboardAsync fehlgeschlagen");
+                MessageBox.Show(this, Properties.Resources.ImageLoadFailed,
+                    Properties.Resources.Error, MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
             finally
             {

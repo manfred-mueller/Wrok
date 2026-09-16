@@ -1,5 +1,18 @@
 ﻿# Changelog
 
+## [1.3.2] - 2026-09-16
+
+### Features
+- **Neue Makro-Variable `{day}`:** voller Wochentagsname, fest auf Deutsch (z. B. „Montag"), unabhängig von der Systemsprache.
+
+### Fixes
+- **Strg+Ö öffnete nichts.** `Keys.Oem1` ist auf der deutschen Tastatur tatsächlich die Ü-Taste, nicht Ö (verifiziert über die vom Tastaturtreiber generierte Scancode-Tabelle). Die Registrierung lief deshalb fehlerfrei durch, reagierte aber nie auf das tatsächlich gedrückte Strg+Ö. Jetzt korrekt auf `Keys.Oem3` registriert.
+- **Makrotext wurde manchmal nicht ins Grok-Chatfeld eingetragen**, u. a. bei Strg+Ziffer-Makros auf manchen Geräten. Ursache: `ConfigureAwait(false)` an mehreren Stellen im WebView-Zugriff ließ den Code nach einem `await` auf einem beliebigen Hintergrund-Thread weiterlaufen statt auf dem UI-Thread – `CoreWebView2` darf aber nur vom UI-Thread aus angesprochen werden. Entfernt; zusätzliches Logging im Fallback-Pfad ergänzt.
+- **Cookie-Einwilligung musste bei jedem Kontowechsel neu bestätigt werden.** Der Kontowechsel löscht die Sitzungscookies für grok.com und accounts.x.ai, was auch das Cookie-Einwilligungs-Cookie mitlöschte. Wird jetzt automatisch weggeklickt („Alle ablehnen") – auf der Anmeldeseite und nach der Rückkehr zu grok.com nach erfolgreichem Login.
+- **Automatischer Login klickte „Anmelden" mitunter zu früh.** Der Button ist während der laufenden Cloudflare-Prüfung nicht deaktiviert; es wird jetzt zusätzlich auf das von Cloudflare selbst befüllte Ergebnisfeld gewartet. Der Sign-in-Flow läuft zudem über von C# aus wiederholte Einzelschritte statt verschachtelter JavaScript-Timer, robuster gegenüber Seitennavigationen zwischen E-Mail- und Passwort-Schritt.
+- **Fehler beim Öffnen eines Bildes aus der Zwischenablage (Strg+Ö) konnten spurlos verschwinden.** Ein fehlender `catch`-Block ließ Ausnahmen in der „fire-and-forget" aufgerufenen Methode ohne jede Rückmeldung verpuffen. Wird jetzt geloggt und gemeldet.
+
+
 ## [1.3.1] - 2026-07-31
 
 ### Features

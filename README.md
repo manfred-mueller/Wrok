@@ -21,7 +21,7 @@ Er arbeitet komplett ohne API-Zugriff und bietet folgende Funktionen:
 
 * Bis zu zehn frei belegbare Makros je Profil mit Hotkeys **Strg+1** bis **Strg+0**
 * Optionaler **Nummernblock-Modus**: die ersten fünf Makros aller drei Profile gleichzeitig auf dem Ziffernblock, ohne Zusatztaste
-* Makro-Variablen: `{input}`, `{date}`, `{time}`, `{username}`, `{clipboard}`
+* Makro-Variablen: `{input}`, `{date}`, `{time}`, `{day}`, `{username}`, `{clipboard}`
 * Boss-Taste **Strg + Leertaste** (sofortiges Minimieren/Wiederherstellen)
 * Medienansicht für Bilder und Videos, links auf voller Bildschirmhöhe – Videos im Endlos-Loop
 * Automatische Fensterminimierung nach einstellbarem Inaktivitäts-Zeitraum
@@ -75,6 +75,7 @@ Makrotext darf folgende Platzhalter enthalten, die unmittelbar vor dem Senden au
 |`{input:Frage}`|Dasselbe, aber der Dialog zeigt deine eigene Beschriftung.|
 |`{date}`|Aktuelles Datum (`TT.MM.JJJJ`)|
 |`{time}`|Aktuelle Uhrzeit (`HH:MM`)|
+|`{day}`|Voller Wochentagsname, deutsch (z. B. „Montag")|
 |`{username}`|Windows-Benutzername|
 |`{clipboard}`|Aktueller Text aus der Zwischenablage|
 
@@ -149,7 +150,7 @@ It works entirely without API access and offers the following features:
 
 * Up to ten freely assignable macros per profile with hotkeys **Ctrl+1** to **Ctrl+0**
 * Optional **numpad mode**: the first five macros of all three profiles at once on the numeric keypad, without a modifier
-* Macro variables: `{input}`, `{date}`, `{time}`, `{username}`, `{clipboard}`
+* Macro variables: `{input}`, `{date}`, `{time}`, `{day}`, `{username}`, `{clipboard}`
 * Boss key **Ctrl + Spacebar** (instant minimize/restore)
 * Media viewer for images and videos, left-aligned at full screen height – videos loop endlessly
 * Automatic window minimization after configurable inactivity period
@@ -208,6 +209,7 @@ The input dialog is multi-line and resizable: `Enter` inserts a line break, **`C
 
 | `{date}` | Current date (`dd.MM.yyyy`) |
 | `{time}` | Current time (`HH:mm`) |
+| `{day}` | Full weekday name, in German (e.g. "Montag"), regardless of UI language |
 | `{username}` | Windows user name |
 | `{clipboard}` | Current clipboard text |
 
