@@ -243,32 +243,20 @@ Continue?</value>
   <data name="MacroProfileDefault" xml:space="preserve">
     <value>Profile {0}</value>
   </data>
-  <data name="NumpadMacroMode" xml:space="preserve">
-    <value>Numpad macro mode (no modifier key)</value>
+  <data name="ProfileMenuFKeyLabel" xml:space="preserve">
+    <value>Ctrl+F{0}</value>
   </data>
-  <data name="NumpadDigitLabel0" xml:space="preserve">
-    <value>Num {0}</value>
+  <data name="ProfileMenuMacroLabel" xml:space="preserve">
+    <value>{0}, then {1}</value>
   </data>
-  <data name="NumpadDivideLabel" xml:space="preserve">
-    <value>Num /</value>
+  <data name="MacroNoHotkey" xml:space="preserve">
+    <value>no hotkey (tray click only)</value>
   </data>
-  <data name="NumpadMultiplyLabel" xml:space="preserve">
-    <value>Num *</value>
+  <data name="MacroPickerRow" xml:space="preserve">
+    <value>{0}: {1}</value>
   </data>
-  <data name="NumpadSubtractLabel" xml:space="preserve">
-    <value>Num -</value>
-  </data>
-  <data name="NumpadAddLabel" xml:space="preserve">
-    <value>Num +</value>
-  </data>
-  <data name="NumpadDecimalLabel" xml:space="preserve">
-    <value>Num .</value>
-  </data>
-  <data name="NumpadModeOffHint" xml:space="preserve">
-    <value>(numpad mode off)</value>
-  </data>
-  <data name="CtrlMacroLabel" xml:space="preserve">
-    <value>Ctrl+{0}</value>
+  <data name="MacroPickerEmptyRow" xml:space="preserve">
+    <value>{0}: (empty)</value>
   </data>
   <data name="CheckForUpdatesMenuItem" xml:space="preserve">
     <value>Check for updates</value>
@@ -296,39 +284,6 @@ Continue?</value>
   </data>
   <data name="UpdateCheckFailed" xml:space="preserve">
     <value>The update check failed. Please try again later or check your connection.</value>
-  </data>
-  <data name="GrokAccountsMenu" xml:space="preserve">
-    <value>Switch Grok account</value>
-  </data>
-  <data name="GrokAccountsEmpty" xml:space="preserve">
-    <value>(no accounts saved)</value>
-  </data>
-  <data name="GrokAccountAdd" xml:space="preserve">
-    <value>Add account…</value>
-  </data>
-  <data name="GrokAccountRemove" xml:space="preserve">
-    <value>Remove account…</value>
-  </data>
-  <data name="GrokAccountAddTitle" xml:space="preserve">
-    <value>Add Grok account</value>
-  </data>
-  <data name="GrokAccountLabelPrompt" xml:space="preserve">
-    <value>Label (e.g. "Personal"):</value>
-  </data>
-  <data name="GrokAccountEmailPrompt" xml:space="preserve">
-    <value>Email address:</value>
-  </data>
-  <data name="GrokAccountRemoveTitle" xml:space="preserve">
-    <value>Remove account</value>
-  </data>
-  <data name="GrokAccountRemovePrompt" xml:space="preserve">
-    <value>Choose the account to remove:</value>
-  </data>
-  <data name="GrokAccountInvalidEmail" xml:space="preserve">
-    <value>Please enter a valid email address.</value>
-  </data>
-  <data name="GrokAccountDuplicate" xml:space="preserve">
-    <value>This account already exists.</value>
   </data>
   <data name="PasswordAutosaveMenuItem" xml:space="preserve">
     <value>Remember passwords in browser</value>
@@ -553,17 +508,17 @@ Shift+Click sends without Enter.</value>
 - Edit: right-click a macro in the tray menu.
 - Send via menu: left-click inserts the text and sends it (text + Enter).
 - Send without Enter: left-click + Shift (or Alt) sends the text WITHOUT a trailing Enter.
-- Hotkeys: Ctrl+1 .. Ctrl+0 send the ten macros of the ACTIVE profile. Enter follows by default,
-  as with left-click; hold Shift or Alt while pressing to suppress it.
-- Numpad mode (optional): additionally, the first five macros of EVERY profile are reachable on the
-  numeric keypad without a modifier - all three profiles at once. Toggle under Settings -&gt; App.
-  Layout: profile 1 = Num0..Num4, profile 2 = Num5..Num9, profile 3 = / * - + ,.
+- Hotkeys: Ctrl+F1, Ctrl+F2, Ctrl+F3 each open a picker popup listing the ten macro titles of that
+  profile (fixed, independent of which profile is shown in the tray menu). Press a digit (1-9, 0
+  for the tenth) to send that macro, or Escape / click elsewhere to cancel. Enter follows the send
+  by default; hold Shift or Alt while pressing the digit to suppress it.
 
 Macro profiles
 - Three named sets of ten macros each, for different characters or scenarios.
-- The first entry of the macro menu names the active profile and expands to the others.
-- Switch: Macros -&gt; [active profile] -&gt; left-click another profile. Ctrl+1 .. Ctrl+0 then send
-  the macros of the newly active profile.
+- The first entry of the macro menu names the active profile and expands to the others. This
+  "active" profile only affects what the tray menu displays/edits - not which profile Ctrl+F1..F3
+  address (those are always fixed to profile 1/2/3).
+- Switch (tray view): Macros -&gt; [active profile] -&gt; left-click another profile.
 - Rename: Macros -&gt; [active profile] -&gt; "Rename active profile".
 - Reset: "Reset active profile" clears the name and all ten macros of the active profile.
   Profiles cannot be removed - there are always exactly three.
@@ -592,7 +547,7 @@ Boss key
 - Logging off, shutting down or an update, however, really close Wrok instead of parking it.
 
 Tray menu
-- Settings -&gt; App: inactivity, macro import/export, start with Windows, numpad mode,
+- Settings -&gt; App: inactivity, macro import/export, start with Windows,
   password saving, proxy, check for updates.
 - Settings -&gt; Grok: opens Grok's own settings page.
 - Tools: rate limits, open image, delete data.

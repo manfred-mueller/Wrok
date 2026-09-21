@@ -156,30 +156,6 @@ namespace Wrok.Properties {
 
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("False")]
-        public bool NumpadMacroModeEnabled {
-            get {
-                return ((bool)(this["NumpadMacroModeEnabled"]));
-            }
-            set {
-                this["NumpadMacroModeEnabled"] = value;
-            }
-        }
-
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("")]
-        public string GrokAccountsJson {
-            get {
-                return ((string)(this["GrokAccountsJson"]));
-            }
-            set {
-                this["GrokAccountsJson"] = value;
-            }
-        }
-
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
         public bool PasswordAutosaveEnabled {
             get {

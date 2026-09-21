@@ -55,11 +55,29 @@ jobs:
         run: |
           # winget-pkgs bekommt taeglich hunderte Commits; der eigene Fork faellt
           # schnell zurueck, und wingetcreate bricht dann mit "could not be synced" ab.
-          try {
-            gh repo sync '${{ github.repository_owner }}/winget-pkgs' --source microsoft/winget-pkgs --force
-            Write-Host "Fork abgeglichen."
-          } catch {
-            Write-Warning "Abgleich fehlgeschlagen - wingetcreate legt den Fork sonst selbst an."
+          #
+          # WICHTIG: PowerShell wertet den Exit-Code externer Programme NICHT als
+          # Fehler - try/catch faengt ein fehlgeschlagenes "gh repo sync" deshalb
+          # NICHT ab (derselbe Stolperstein wie bei dotnet/iscc, siehe
+          # publish-release.ps1). Das war der eigentliche Grund, warum ein
+          # nicht-synchroner Fork bisher unbemerkt bis zu wingetcreate durchlief.
+          # Deshalb hier explizit $LASTEXITCODE pruefen, mit ein paar Versuchen fuer
+          # den Fall, dass upstream gerade waehrenddessen einen neuen Commit bekommt.
+          $maxAttempts = 3
+          $synced = $false
+          for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+            gh repo sync "${{ github.repository_owner }}/winget-pkgs" --source microsoft/winget-pkgs --force
+            if ($LASTEXITCODE -eq 0) {
+              Write-Host "Fork abgeglichen (Versuch $attempt/$maxAttempts)."
+              $synced = $true
+              break
+            }
+            Write-Warning "Abgleich fehlgeschlagen (Versuch $attempt/$maxAttempts, Exit-Code $LASTEXITCODE)."
+            if ($attempt -lt $maxAttempts) { Start-Sleep -Seconds 5 }
+          }
+
+          if (-not $synced) {
+            throw "Fork konnte nach $maxAttempts Versuchen nicht mit microsoft/winget-pkgs synchronisiert werden. Abbruch hier, statt wingetcreate unten mit einem veralteten Fork ins Leere laufen zu lassen."
           }
 
       - name: Manifest aktualisieren und PR einreichen

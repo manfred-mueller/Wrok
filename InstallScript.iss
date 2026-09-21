@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Wrok"
-#define MyAppVersion "1.3.2"
+#define MyAppVersion "1.4.0"
 #define MyAppExeName MyAppName + ".exe"
 #define MyAppPublisher "NASS e.K."
 #define MyAppURL "https://www.nass-ek.de"

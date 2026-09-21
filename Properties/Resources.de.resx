@@ -243,32 +243,20 @@ Fortfahren?</value>
   <data name="MacroProfileDefault" xml:space="preserve">
     <value>Profil {0}</value>
   </data>
-  <data name="NumpadMacroMode" xml:space="preserve">
-    <value>Numpad-Makro-Modus (ohne Zusatztaste)</value>
+  <data name="ProfileMenuFKeyLabel" xml:space="preserve">
+    <value>Strg+F{0}</value>
   </data>
-  <data name="NumpadDigitLabel0" xml:space="preserve">
-    <value>Num {0}</value>
+  <data name="ProfileMenuMacroLabel" xml:space="preserve">
+    <value>{0}, dann {1}</value>
   </data>
-  <data name="NumpadDivideLabel" xml:space="preserve">
-    <value>Num /</value>
+  <data name="MacroNoHotkey" xml:space="preserve">
+    <value>kein Hotkey (nur per Tray-Klick)</value>
   </data>
-  <data name="NumpadMultiplyLabel" xml:space="preserve">
-    <value>Num *</value>
+  <data name="MacroPickerRow" xml:space="preserve">
+    <value>{0}: {1}</value>
   </data>
-  <data name="NumpadSubtractLabel" xml:space="preserve">
-    <value>Num -</value>
-  </data>
-  <data name="NumpadAddLabel" xml:space="preserve">
-    <value>Num +</value>
-  </data>
-  <data name="NumpadDecimalLabel" xml:space="preserve">
-    <value>Num ,</value>
-  </data>
-  <data name="NumpadModeOffHint" xml:space="preserve">
-    <value>(Numpad-Modus aus)</value>
-  </data>
-  <data name="CtrlMacroLabel" xml:space="preserve">
-    <value>Strg+{0}</value>
+  <data name="MacroPickerEmptyRow" xml:space="preserve">
+    <value>{0}: (leer)</value>
   </data>
   <data name="CheckForUpdatesMenuItem" xml:space="preserve">
     <value>Nach Updates suchen</value>
@@ -296,39 +284,6 @@ Fortfahren?</value>
   </data>
   <data name="UpdateCheckFailed" xml:space="preserve">
     <value>Die Update-Prüfung ist fehlgeschlagen. Bitte später erneut versuchen oder die Verbindung prüfen.</value>
-  </data>
-  <data name="GrokAccountsMenu" xml:space="preserve">
-    <value>Grok-Konto wechseln</value>
-  </data>
-  <data name="GrokAccountsEmpty" xml:space="preserve">
-    <value>(keine Konten hinterlegt)</value>
-  </data>
-  <data name="GrokAccountAdd" xml:space="preserve">
-    <value>Konto hinzufügen…</value>
-  </data>
-  <data name="GrokAccountRemove" xml:space="preserve">
-    <value>Konto entfernen…</value>
-  </data>
-  <data name="GrokAccountAddTitle" xml:space="preserve">
-    <value>Grok-Konto hinzufügen</value>
-  </data>
-  <data name="GrokAccountLabelPrompt" xml:space="preserve">
-    <value>Bezeichnung (z. B. „Privat“):</value>
-  </data>
-  <data name="GrokAccountEmailPrompt" xml:space="preserve">
-    <value>E-Mail-Adresse:</value>
-  </data>
-  <data name="GrokAccountRemoveTitle" xml:space="preserve">
-    <value>Konto entfernen</value>
-  </data>
-  <data name="GrokAccountRemovePrompt" xml:space="preserve">
-    <value>Zu entfernendes Konto wählen:</value>
-  </data>
-  <data name="GrokAccountInvalidEmail" xml:space="preserve">
-    <value>Bitte eine gültige E-Mail-Adresse angeben.</value>
-  </data>
-  <data name="GrokAccountDuplicate" xml:space="preserve">
-    <value>Dieses Konto ist bereits vorhanden.</value>
   </data>
   <data name="PasswordAutosaveMenuItem" xml:space="preserve">
     <value>Passwörter im Browser merken</value>
@@ -553,17 +508,17 @@ Umschalt+Klick trägt ein ohne zu senden.</value>
 - Bearbeiten: Rechtsklick auf ein Makro im Tray-Menü.
 - Senden per Menü: Linksklick fügt den Text ein und sendet ihn (Text + Enter).
 - Senden ohne Enter: Linksklick + Umschalt (oder Alt) sendet den Text OHNE abschließendes Enter.
-- Hotkeys: Strg+1 .. Strg+0 senden die zehn Makros des AKTIVEN Profils. Standardmäßig folgt Enter
-  wie beim Linksklick; Umschalt oder Alt beim Drücken unterdrückt es.
-- Nummernblock-Modus (optional): zusätzlich sind die ersten fünf Makros JEDES Profils ohne
-  Zusatztaste über den Ziffernblock erreichbar - alle drei Profile gleichzeitig. Umschalten unter
-  Einstellungen -&gt; App. Belegung: Profil 1 = Num0..Num4, Profil 2 = Num5..Num9, Profil 3 = / * - + ,.
+- Hotkeys: Strg+F1, Strg+F2, Strg+F3 öffnen je ein Auswahl-Popup mit den zehn Makrotiteln dieses
+  Profils (fest zugeordnet, unabhängig davon, welches Profil im Tray-Menü angezeigt wird). Eine
+  Ziffer (1-9, 0 für das zehnte) sendet das Makro, Escape oder Klick daneben bricht ab. Enter folgt
+  standardmäßig; Umschalt oder Alt beim Drücken der Ziffer unterdrückt es.
 
 Makro-Profile
 - Drei benennbare Sätze zu je zehn Makros, etwa für verschiedene Figuren oder Szenarien.
-- Der erste Eintrag im Makro-Menü nennt das aktive Profil und klappt zu den übrigen auf.
-- Wechseln: Makros -&gt; [aktives Profil] -&gt; Linksklick auf ein anderes Profil. Strg+1 bis Strg+0
-  senden danach die Makros des neuen aktiven Profils.
+- Der erste Eintrag im Makro-Menü nennt das aktive Profil und klappt zu den übrigen auf. Dieses
+  "aktive" Profil bestimmt nur, was im Tray-Menü angezeigt/bearbeitet wird - nicht, welches Profil
+  Strg+F1..F3 ansprechen (die sind fest auf Profil 1/2/3 verdrahtet).
+- Wechseln (Tray-Ansicht): Makros -&gt; [aktives Profil] -&gt; Linksklick auf ein anderes Profil.
 - Umbenennen: Makros -&gt; [aktives Profil] -&gt; "Aktives Profil umbenennen".
 - Zurücksetzen: "Aktives Profil zurücksetzen" leert Name und alle zehn Makros des aktiven
   Profils. Profile lassen sich nicht entfernen - es sind immer genau drei.
@@ -593,7 +548,7 @@ Chef-Taste
 - Abmelden, Herunterfahren oder ein Update beenden Wrok dagegen wirklich, statt es wegzulegen.
 
 Tray-Menü
-- Einstellungen -&gt; App: Inaktivität, Makro-Import/-Export, Mit Windows starten, Nummernblock-Modus,
+- Einstellungen -&gt; App: Inaktivität, Makro-Import/-Export, Mit Windows starten,
   Passwort speichern, Proxy, Nach Updates suchen.
 - Einstellungen -&gt; Grok: öffnet Groks eigene Einstellungsseite.
 - Werkzeuge: Rate Limits, Bild öffnen, Daten löschen.

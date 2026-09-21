@@ -19,8 +19,7 @@ winget install --id NASS.Wrok
 
 Er arbeitet komplett ohne API-Zugriff und bietet folgende Funktionen:
 
-* Bis zu zehn frei belegbare Makros je Profil mit Hotkeys **Strg+1** bis **Strg+0**
-* Optionaler **Nummernblock-Modus**: die ersten fünf Makros aller drei Profile gleichzeitig auf dem Ziffernblock, ohne Zusatztaste
+* Bis zu zehn frei belegbare Makros je Profil, erreichbar über **Strg+F1**/**F2**/**F3** (öffnet ein Auswahl-Popup mit den Makrotiteln, Ziffer wählt aus)
 * Makro-Variablen: `{input}`, `{date}`, `{time}`, `{day}`, `{username}`, `{clipboard}`
 * Boss-Taste **Strg + Leertaste** (sofortiges Minimieren/Wiederherstellen)
 * Medienansicht für Bilder und Videos, links auf voller Bildschirmhöhe – Videos im Endlos-Loop
@@ -42,13 +41,13 @@ Alle in dieser Software verwendeten Markennamen und Bezeichnungen sind eingetrag
 
 Das Menü ist in zwei Untermenüs gegliedert:
 
-* **Einstellungen → App** — Inaktivität, Makro-Import/-Export, Mit Windows starten, Nummernblock-Modus, Passwort speichern, Proxy, Nach Updates suchen
+* **Einstellungen → App** — Inaktivität, Makro-Import/-Export, Mit Windows starten, Passwort speichern, Proxy, Nach Updates suchen
 * **Einstellungen → Grok** — öffnet Groks eigene Einstellungsseite
 * **Werkzeuge** — Rate Limits, Bild/Video öffnen, Daten löschen
 
 ### Makro-Profile
 
-Drei benennbare Sätze zu je zehn Makros, etwa für verschiedene Figuren oder Szenarien. `Strg+1` bis `Strg+0` bedienen immer das aktive Profil; ein Profilwechsel legt diese Belegung auf das gewählte Profil um. Im Nummernblock-Modus sind zusätzlich die ersten fünf Makros aller drei Profile gleichzeitig erreichbar.
+Drei benennbare Sätze zu je zehn Makros, etwa für verschiedene Figuren oder Szenarien. `Strg+F1`, `Strg+F2` und `Strg+F3` sprechen fest Profil 1, 2 bzw. 3 an – unabhängig davon, welches Profil im Tray-Menü gerade zum Bearbeiten angezeigt wird ("aktives" Profil).
 
 Der erste Eintrag im Makro-Menü trägt den Namen des aktiven Profils und klappt zu den übrigen auf.
 
@@ -62,8 +61,7 @@ Der erste Eintrag im Makro-Menü trägt den Namen des aktiven Profils und klappt
 * **Bearbeiten:** Rechtsklick auf ein Makro im Tray-Menü.
 * **Über das Menü senden:** Linksklick fügt den Text ein und sendet ihn (Text + Enter).
 * **Ohne Enter senden:** Linksklick + Umschalt (oder Alt) fügt den Text ein, sendet aber **kein** Enter.
-* **Hotkeys:** `Strg+1` … `Strg+0` senden die zehn Makros des **aktiven** Profils. Standardmäßig folgt Enter wie beim Linksklick; Umschalt oder Alt beim Drücken unterdrückt es.
-* **Nummernblock-Modus (optional):** Die ersten fünf Makros jedes Profils liegen ohne Zusatztaste auf dem Ziffernblock — Profil 1 auf `Num0`–`Num4`, Profil 2 auf `Num5`–`Num9`, Profil 3 auf `/ * - + ,`. So sind alle drei Profile gleichzeitig per Tastendruck erreichbar. Umschaltbar unter *Einstellungen → App*; standardmäßig aus, da der Ziffernblock dann systemweit belegt ist.
+* **Hotkeys:** `Strg+F1`, `Strg+F2`, `Strg+F3` öffnen je ein Auswahl-Popup mit den zehn Makrotiteln des jeweiligen Profils (fest zugeordnet, unabhängig vom im Tray angezeigten Profil). Eine Ziffer (1-9, 0 für das zehnte) sendet das Makro; Escape oder Klick daneben bricht ab. Standardmäßig folgt Enter wie beim Linksklick; Umschalt oder Alt beim Drücken der Ziffer unterdrückt es.
 
 #### Makro-Variablen
 
@@ -148,8 +146,7 @@ Wrok sieht beim Start (höchstens einmal täglich) nach, ob auf GitHub eine neue
 
 It works entirely without API access and offers the following features:
 
-* Up to ten freely assignable macros per profile with hotkeys **Ctrl+1** to **Ctrl+0**
-* Optional **numpad mode**: the first five macros of all three profiles at once on the numeric keypad, without a modifier
+* Up to ten freely assignable macros per profile, reachable via **Ctrl+F1**/**F2**/**F3** (opens a picker popup listing the macro titles, a digit selects one)
 * Macro variables: `{input}`, `{date}`, `{time}`, `{day}`, `{username}`, `{clipboard}`
 * Boss key **Ctrl + Spacebar** (instant minimize/restore)
 * Media viewer for images and videos, left-aligned at full screen height – videos loop endlessly
@@ -173,13 +170,13 @@ All brand names and designations used in this software are registered trademarks
 
 The tray menu is grouped into two submenus:
 
-* **Einstellungen → App** — inactivity timeout, macro import/export, start with Windows, numpad mode, password saving, proxy, check for updates
+* **Einstellungen → App** — inactivity timeout, macro import/export, start with Windows, password saving, proxy, check for updates
 * **Einstellungen → Grok** — opens Grok's own settings page
 * **Werkzeuge** — rate limits, open image/video, delete data
 
 ### Macro profiles
 
-Three named sets of ten macros each, for different characters or scenarios. `Ctrl+1` … `Ctrl+0` always drive the active profile; switching a profile moves that assignment to the chosen one. In numpad mode, the first five macros of all three profiles are additionally reachable at the same time.
+Three named sets of ten macros each, for different characters or scenarios. `Ctrl+F1`, `Ctrl+F2` and `Ctrl+F3` always address profile 1, 2 and 3 respectively - independent of which profile the tray menu currently shows for editing (the "active" profile).
 
 The first entry of the macro menu carries the active profile's name and expands to the others.
 
@@ -193,8 +190,7 @@ The first entry of the macro menu carries the active profile's name and expands 
 * **Edit:** Right-click a macro in the tray menu.
 * **Send via menu:** Left-click a macro to insert its text and send it (Send + Enter).
 * **Send without Enter:** Left-click + Shift (or Alt) inserts the text but does NOT send Enter.
-* **Hotkeys:** `Ctrl+1` … `Ctrl+0` send the ten macros of the **active** profile. By default the macro is inserted and followed by Enter (same as left-click). Hold Shift or Alt while pressing the hotkey to suppress the trailing Enter.
-* **Numpad mode (optional):** The first five macros of each profile sit on the numeric keypad without a modifier — profile 1 on `Num0`–`Num4`, profile 2 on `Num5`–`Num9`, profile 3 on `/ * - + ,`. This makes all three profiles reachable at once. Toggle under *Einstellungen → App*; off by default, since the keypad is then claimed system-wide.
+* **Hotkeys:** `Ctrl+F1`, `Ctrl+F2`, `Ctrl+F3` each open a picker popup listing the ten macro titles of that profile (fixed, independent of the profile shown in the tray). A digit (1-9, 0 for the tenth) sends that macro; Escape or clicking elsewhere cancels. By default the macro is followed by Enter (same as left-click); hold Shift or Alt while pressing the digit to suppress it.
 
 #### Macro variables
 

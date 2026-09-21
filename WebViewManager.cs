@@ -628,7 +628,14 @@ namespace Wrok
                 await Task.Delay(NativeInputTextDelayMs);
                 if (!string.IsNullOrEmpty(text))
                 {
-                    _input?.TypeText(text);
+                    // TypeText tippt zeichenweise mit Thread.Sleep(2) dazwischen (siehe
+                    // NativeInput.TypeText) - bei laengeren Makros wuerde das den UI-Thread
+                    // fuer die gesamte Tippdauer blockieren. SendInput selbst ist eine reine
+                    // Win32-API ohne Anforderung an einen bestimmten Thread, daher kann der
+                    // Aufruf gefahrlos auf einen Threadpool-Thread ausgelagert werden.
+                    var input = _input;
+                    if (input != null)
+                        await Task.Run(() => input.TypeText(text));
                     Trace.WriteLine($"FallbackSendViaNativeInputAsync: TypeText aufgerufen (Länge={text.Length}).");
                     await Task.Delay(NativeInputAfterTextDelayMs);
                 }

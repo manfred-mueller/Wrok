@@ -22,11 +22,12 @@ namespace Wrok
     }
 
     /// <summary>
-    /// Ein Satz Makros unter einem Namen – etwa je Figur oder Szenario.
-    /// Das „aktive" Profil wird per Strg+1..Strg+0 gesteuert und ist es auch,
-    /// das im Tray-Menü angezeigt und bearbeitet wird. Zusätzlich sind im
-    /// Nummernblock-Modus die ersten fünf Makros JEDES Profils gleichzeitig auf
-    /// festen Numpad-Tasten erreichbar (siehe MainForm.NumpadMacroKeys).
+    /// Ein Satz Makros unter einem Namen – etwa je Figur oder Szenario. Jedes
+    /// Profil hat einen eigenen, immer aktiven Hotkey (Strg+F1..Strg+F{n}, siehe
+    /// MainForm.ProfileMenuKeys), der ein Auswahl-Popup mit den Makrotiteln
+    /// dieses Profils öffnet – unabhängig davon, welches Profil gerade im
+    /// Tray-Menü zum Bearbeiten angezeigt wird ("aktives" Profil, siehe
+    /// <see cref="MacroManager.ActiveProfile"/>).
     /// </summary>
     internal record MacroProfile(string Name, List<MacroEntry> Macros)
     {
@@ -60,29 +61,12 @@ namespace Wrok
     /// </summary>
     internal sealed class MacroManager
     {
-        // Makros pro Profil, erreichbar über Strg+1..Strg+0 des AKTIVEN Profils.
+        // Makros pro Profil, erreichbar über das Auswahl-Popup (Ziffer 0-9) nach
+        // Öffnen des jeweiligen Profil-Menüs per Strg+F-Taste (siehe MainForm).
         public const int MacroCount = 10;
 
         /// <summary>Anzahl der Makro-Profile (z. B. je Figur oder Szenario).</summary>
         public const int ProfileCount = 3;
-
-        // Zwei getrennte Hotkey-Systeme, jedes mit eigenem ID-Bereich (müssen mit
-        // MainForm übereinstimmen und dürfen sich nicht überlappen):
-        //
-        //   Strg+Ziffer  – CtrlMacroBase+0..9 → immer das aktive Profil, Makro 0..9.
-        //                  Funktioniert auf jeder Tastatur, ist immer aktiv.
-        //   Nummernblock – NumpadMacroBase+0..14 → festes Raster über ALLE Profile,
-        //                  aber nur die ersten NumpadPerProfile Makros je Profil.
-        //                  Optional (Einstellung NumpadMacroModeEnabled), da der
-        //                  Nummernblock dann systemweit belegt ist.
-        public const int CtrlMacroBase   = 0x9100;   // 0x9100..0x9109
-        public const int NumpadMacroBase = 0x9120;   // 0x9120..0x912E
-
-        /// <summary>Wie viele Makros je Profil der Nummernblock-Modus abbildet (die ersten n).</summary>
-        public const int NumpadPerProfile = 5;
-
-        /// <summary>Gesamtzahl der Nummernblock-Slots über alle Profile (ProfileCount × NumpadPerProfile).</summary>
-        public const int NumpadSlots = ProfileCount * NumpadPerProfile;
 
         /// <summary>Version des Exportformats für alle Profile.</summary>
         private const int ExportFormatVersion = 2;
@@ -199,65 +183,36 @@ namespace Wrok
         }
 
         /// <summary>
-        /// Gibt den Text des per Hotkey-ID adressierten Makros zurück,
-        /// mit aufgelösten Variablen. Gibt null zurück wenn leer oder ungültig.
+        /// Makros eines bestimmten Profils (nicht zwingend das im Tray "aktive") –
+        /// für die Anzeige im Auswahl-Popup nach Strg+F-Taste.
         /// </summary>
-        public string? GetTextForHotkey(int hotkeyId)
-        {
-            string text = RawTextForHotkey(hotkeyId);
-            return string.IsNullOrWhiteSpace(text) ? null : ExpandVariables(text);
-        }
-
-        /// <summary>
-        /// Gibt den ROHEN (nicht expandierten) Text des per Hotkey-ID adressierten
-        /// Makros zurück, oder null wenn leer/ungültig. Wird vom Host genutzt, der
-        /// Variablen inkl. {input} selbst auflöst (für die UI-Eingabe).
-        /// </summary>
-        public string? GetRawTextForHotkey(int hotkeyId)
-        {
-            string text = RawTextForHotkey(hotkeyId);
-            return string.IsNullOrWhiteSpace(text) ? null : text;
-        }
-
-        /// <summary>
-        /// Löst eine Hotkey-ID in Profil + lokalen Makroindex auf und liest den Text.
-        ///
-        /// Zwei ID-Bereiche, zwei Regeln (siehe Konstanten oben):
-        ///   Strg+Ziffer  → das gerade aktive Profil, Makro 0..9.
-        ///   Nummernblock → festes Raster, erste NumpadPerProfile Makros je Profil.
-        /// Der eigentliche Sendeweg dahinter ist für beide derselbe.
-        /// </summary>
-        private string RawTextForHotkey(int hotkeyId)
+        public List<MacroEntry> GetMacrosForProfile(int profileIndex)
         {
             lock (_lock)
             {
                 EnsureLoaded();
+                if (profileIndex < 0 || profileIndex >= _profiles!.Count) return new List<MacroEntry>();
+                return _profiles[profileIndex].Macros;
+            }
+        }
 
-                int profileIndex;
-                int localIndex;
-
-                int ctrl = hotkeyId - CtrlMacroBase;
-                int num  = hotkeyId - NumpadMacroBase;
-
-                if (ctrl >= 0 && ctrl < MacroCount)
-                {
-                    profileIndex = _activeIndex;
-                    localIndex   = ctrl;
-                }
-                else if (num >= 0 && num < NumpadSlots)
-                {
-                    profileIndex = num / NumpadPerProfile;
-                    localIndex   = num % NumpadPerProfile;
-                }
-                else
-                {
-                    return string.Empty;
-                }
-
-                if (profileIndex < 0 || profileIndex >= _profiles!.Count) return string.Empty;
+        /// <summary>
+        /// Roher (nicht expandierter) Text eines einzelnen Makros eines bestimmten
+        /// Profils, oder null wenn leer/ungültig. Variablen inkl. {input} löst der
+        /// Host (MainForm.SendMacroTextAsync) selbst auf.
+        /// </summary>
+        public string? GetRawText(int profileIndex, int macroIndex)
+        {
+            lock (_lock)
+            {
+                EnsureLoaded();
+                if (profileIndex < 0 || profileIndex >= _profiles!.Count) return null;
 
                 var macros = _profiles[profileIndex].Macros;
-                return localIndex < macros.Count ? macros[localIndex].Text : string.Empty;
+                if (macroIndex < 0 || macroIndex >= macros.Count) return null;
+
+                string text = macros[macroIndex].Text;
+                return string.IsNullOrWhiteSpace(text) ? null : text;
             }
         }
 

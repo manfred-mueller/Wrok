@@ -1,5 +1,18 @@
 ﻿# Changelog
 
+## [Unreleased]
+
+### Changes
+- **Makro-Hotkeys neu: Strg+F1/F2/F3 statt Strg+Ziffer, Nummernblock-Modus entfernt.** Der Nummernblock-Modus war die unzuverlässigste Stelle im Makro-System (erzwang NumLock, funktionierte auf Notebooks ohne Nummernblock gar nicht). Ersetzt durch: Strg+F1, Strg+F2 bzw. Strg+F3 öffnen ein Auswahl-Popup mit den zehn Makrotiteln des jeweiligen Profils (fest zugeordnet, unabhängig vom im Tray-Menü angezeigten Profil); eine folgende Ziffer (1-9, 0 für das zehnte Makro) sendet es, Escape oder Fokusverlust bricht ab. Funktioniert identisch auf jeder Tastatur. Die Einstellung „Nummernblock-Modus" sowie die zugehörigen Menüpunkte entfallen ersatzlos. Tray-Menü (Bearbeiten per Rechtsklick, Senden per Linksklick, Profilwechsel für die Bearbeitungsansicht) bleibt unverändert.
+
+### Fixes
+- **`NativeInput.TypeText` blockierte kurz den UI-Thread** beim Senden längerer Makros über den Fallback-Tippweg (`Thread.Sleep(2)` pro Zeichen, synchron aufgerufen). Läuft jetzt in `Task.Run`.
+
+### Refactoring
+- Vier identische `try { this.CenterToScreen(); } catch { }`-Stellen in `MainForm.cs` zu einer Hilfsmethode `TryCenterToScreen()` zusammengefasst.
+- `MainForm.cs` (zuvor 1798 Zeilen) nach Zuständigkeit in `partial class`-Dateien aufgeteilt: `MainForm.Window.cs`, `MainForm.Tray.cs`, `MainForm.Macros.cs`, `MainForm.Settings.cs`, `MainForm.Media.cs`.
+- Grok-Kontowechsel-Feature vollständig entfernt (Menü, Sign-in-Automation, `GrokAccountManager`, zugehörige Einstellungen/Ressourcen) – kein wahrgenommener Zusatznutzen gegenüber manueller Anmeldung. Die Passwort-Autosave-Funktion bleibt unverändert bestehen.
+
 ## [1.3.2] - 2026-09-16
 
 ### Features

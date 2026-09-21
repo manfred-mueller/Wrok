@@ -326,15 +326,6 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Ctrl+{0} ähnelt.
-        /// </summary>
-        public static string CtrlMacroLabel {
-            get {
-                return ResourceManager.GetString("CtrlMacroLabel", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die Delete ähnelt.
         /// </summary>
         public static string Delete {
@@ -523,105 +514,6 @@ namespace Wrok.Properties {
         public static string ExportSuccessTitle {
             get {
                 return ResourceManager.GetString("ExportSuccessTitle", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Add account… ähnelt.
-        /// </summary>
-        public static string GrokAccountAdd {
-            get {
-                return ResourceManager.GetString("GrokAccountAdd", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Add Grok account ähnelt.
-        /// </summary>
-        public static string GrokAccountAddTitle {
-            get {
-                return ResourceManager.GetString("GrokAccountAddTitle", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die This account already exists. ähnelt.
-        /// </summary>
-        public static string GrokAccountDuplicate {
-            get {
-                return ResourceManager.GetString("GrokAccountDuplicate", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Email address: ähnelt.
-        /// </summary>
-        public static string GrokAccountEmailPrompt {
-            get {
-                return ResourceManager.GetString("GrokAccountEmailPrompt", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Please enter a valid email address. ähnelt.
-        /// </summary>
-        public static string GrokAccountInvalidEmail {
-            get {
-                return ResourceManager.GetString("GrokAccountInvalidEmail", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Label (e.g. &quot;Personal&quot;): ähnelt.
-        /// </summary>
-        public static string GrokAccountLabelPrompt {
-            get {
-                return ResourceManager.GetString("GrokAccountLabelPrompt", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Remove account… ähnelt.
-        /// </summary>
-        public static string GrokAccountRemove {
-            get {
-                return ResourceManager.GetString("GrokAccountRemove", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Choose the account to remove: ähnelt.
-        /// </summary>
-        public static string GrokAccountRemovePrompt {
-            get {
-                return ResourceManager.GetString("GrokAccountRemovePrompt", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Remove account ähnelt.
-        /// </summary>
-        public static string GrokAccountRemoveTitle {
-            get {
-                return ResourceManager.GetString("GrokAccountRemoveTitle", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die (no accounts saved) ähnelt.
-        /// </summary>
-        public static string GrokAccountsEmpty {
-            get {
-                return ResourceManager.GetString("GrokAccountsEmpty", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Switch Grok account ähnelt.
-        /// </summary>
-        public static string GrokAccountsMenu {
-            get {
-                return ResourceManager.GetString("GrokAccountsMenu", resourceCulture);
             }
         }
         
@@ -917,6 +809,33 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die no hotkey (tray click only) ähnelt.
+        /// </summary>
+        public static string MacroNoHotkey {
+            get {
+                return ResourceManager.GetString("MacroNoHotkey", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die {0}: (empty) ähnelt.
+        /// </summary>
+        public static string MacroPickerEmptyRow {
+            get {
+                return ResourceManager.GetString("MacroPickerEmptyRow", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die {0}: {1} ähnelt.
+        /// </summary>
+        public static string MacroPickerRow {
+            get {
+                return ResourceManager.GetString("MacroPickerRow", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die Profile {0} ähnelt.
         /// </summary>
         public static string MacroProfileDefault {
@@ -1018,7 +937,7 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Variables: {input} {date} {time} {username} {clipboard} ähnelt.
+        ///   Sucht eine lokalisierte Zeichenfolge, die Variables: {input} {date} {time} {day} {username} {clipboard} ähnelt.
         /// </summary>
         public static string MacroVariablesHint {
             get {
@@ -1111,78 +1030,6 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Num + ähnelt.
-        /// </summary>
-        public static string NumpadAddLabel {
-            get {
-                return ResourceManager.GetString("NumpadAddLabel", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Num . ähnelt.
-        /// </summary>
-        public static string NumpadDecimalLabel {
-            get {
-                return ResourceManager.GetString("NumpadDecimalLabel", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Num {0} ähnelt.
-        /// </summary>
-        public static string NumpadDigitLabel0 {
-            get {
-                return ResourceManager.GetString("NumpadDigitLabel0", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Num / ähnelt.
-        /// </summary>
-        public static string NumpadDivideLabel {
-            get {
-                return ResourceManager.GetString("NumpadDivideLabel", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Numpad macro mode (no modifier key) ähnelt.
-        /// </summary>
-        public static string NumpadMacroMode {
-            get {
-                return ResourceManager.GetString("NumpadMacroMode", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die (numpad mode off) ähnelt.
-        /// </summary>
-        public static string NumpadModeOffHint {
-            get {
-                return ResourceManager.GetString("NumpadModeOffHint", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Num * ähnelt.
-        /// </summary>
-        public static string NumpadMultiplyLabel {
-            get {
-                return ResourceManager.GetString("NumpadMultiplyLabel", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Num - ähnelt.
-        /// </summary>
-        public static string NumpadSubtractLabel {
-            get {
-                return ResourceManager.GetString("NumpadSubtractLabel", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die Please check your internet connection and try again. ähnelt.
         /// </summary>
         public static string OfflineBody {
@@ -1270,6 +1117,24 @@ namespace Wrok.Properties {
         public static string PicturesScriptsAndOtherDataDeletedNYouAreStillLoggedIn {
             get {
                 return ResourceManager.GetString("PicturesScriptsAndOtherDataDeletedNYouAreStillLoggedIn", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Ctrl+F{0} ähnelt.
+        /// </summary>
+        public static string ProfileMenuFKeyLabel {
+            get {
+                return ResourceManager.GetString("ProfileMenuFKeyLabel", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die {0}, then {1} ähnelt.
+        /// </summary>
+        public static string ProfileMenuMacroLabel {
+            get {
+                return ResourceManager.GetString("ProfileMenuMacroLabel", resourceCulture);
             }
         }
         
