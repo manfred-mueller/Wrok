@@ -29,7 +29,7 @@ namespace Wrok
 
         // Versionsnummer des JS-Helpers â erhÃ¶hen, sobald __wrokSend oder
         // __wrokEnsureFocus geÃ¤ndert wird.
-        private const int WrokHelperVersion = 7;
+        private const int WrokHelperVersion = 8;
 
         // ------------------------------------------------------------------
         // Felder
@@ -311,7 +311,59 @@ namespace Wrok
                 }
                 else if (msg != null && msg.StartsWith(ResultPrefix, StringComparison.Ordinal))
                     HandleBridgeResult(msg[ResultPrefix.Length..]);
+                else if (msg == "openDevTools")
+                {
+                    // F12 - wird bei aktivem F-Tasten-Override manuell vom JS-Helper
+                    // gemeldet, da AreBrowserAcceleratorKeysEnabled=false Chromiums
+                    // eigenes DevTools-Toggle abschaltet und JS OpenDevToolsWindow()
+                    // nicht selbst aufrufen kann.
+                    try { _webView.CoreWebView2?.OpenDevToolsWindow(); }
+                    catch (Exception ex) { Log(ex, "OpenDevToolsWindow fehlgeschlagen"); }
+                }
+                else if (msg != null && msg.StartsWith("fkey:", StringComparison.Ordinal))
+                    HandleFKeyMessage(msg["fkey:".Length..]);
             };
+
+            // F-Tasten-Override (Makros): MainForm.ProcessCmdKey erreicht die
+            // F-Tasten NICHT, solange das WebView2-Control den Fokus hat (per
+            // echtem Build/Test bestaetigt) - CoreWebView2Controller.
+            // AcceleratorKeyPressed waere der "richtige" Weg, ist aber ueber das
+            // WinForms-WebView2-Control in keiner Version oeffentlich erreichbar
+            // (per Metadaten-Inspektion der tatsaechlichen DLL bestaetigt, siehe
+            // Microsofts eigene Architektur-Doku: CoreWebView2Controller bleibt
+            // in der WinForms-Klasse bewusst privat). Stattdessen: siehe
+            // ConfigureCore (AreBrowserAcceleratorKeysEnabled) + WrokHelper.js
+            // (keydown-Listener) - die Tasten werden dort abgefangen und per
+            // postMessage hierher weitergereicht (siehe HandleFKeyMessage unten).
+        }
+
+        /// <summary>
+        /// Verarbeitet eine vom JS-Helper (WrokHelper.js, keydown-Listener) per
+        /// postMessage gemeldete F-Taste. Format des Payloads: "N:ctrl:shift:alt",
+        /// N = 1..10 (F1..F10) als Dezimalzahl, ctrl/shift/alt je "0" oder "1".
+        /// F11/F12 werden bereits vollstaendig im JS behandelt (Fullscreen bzw.
+        /// "openDevTools"-Nachricht) und kommen hier nie an. Die eigentliche
+        /// Entscheidungslogik (Makro ausloesen, Profil wechseln, Reload) bleibt
+        /// bewusst zentral in MainForm.HandleFKeyOverride, damit sie nicht in
+        /// C# und JS doppelt gepflegt werden muss.
+        /// </summary>
+        private void HandleFKeyMessage(string payload)
+        {
+            var parts = payload.Split(':');
+            if (parts.Length != 4) return;
+            if (!int.TryParse(parts[0], out int n) || n < 1 || n > 10) return;
+
+            System.Windows.Forms.Keys keyCode = System.Windows.Forms.Keys.F1 + (n - 1);
+            bool ctrl  = parts[1] == "1";
+            bool shift = parts[2] == "1";
+            bool alt   = parts[3] == "1";
+
+            if (_owner.IsDisposed || !_owner.IsHandleCreated) return;
+            _owner.BeginInvoke((System.Windows.Forms.MethodInvoker)(() =>
+            {
+                try { _owner.HandleFKeyOverride(keyCode, ctrl, shift, alt); }
+                catch (Exception ex) { Log(ex, "HandleFKeyOverride (JS-Bruecke) fehlgeschlagen"); }
+            }));
         }
 
         // ------------------------------------------------------------------
@@ -425,6 +477,17 @@ namespace Wrok
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
                 "(KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36 Edg/146.0.0.0";
 
+            // F-Tasten-Override (Makros, siehe MainForm.HandleFKeyOverride): Solange
+            // aktiviert, deaktiviert dies Chromiums eigene "Browser-Accelerator-Keys"
+            // (F1, F3, F5, F6, F7, F10, F11, F12, Strg+P/F/Plus/Minus/0 usw.), damit
+            // F1-F12 stattdessen als normale keydown-Events beim Seiten-JS ankommen
+            // (siehe WrokHelper.js) - CoreWebView2Controller.AcceleratorKeyPressed
+            // waere der "saubere" Weg, ist aber ueber das WinForms-WebView2-Control
+            // nicht erreichbar (siehe Kommentar in OnCoreWebView2InitializationCompleted).
+            // Wird beim Umschalten der Tray-Checkbox live nachgezogen, siehe
+            // MainForm.Tray.cs (fKeyOverrideItem.Click).
+            core.Settings.AreBrowserAcceleratorKeysEnabled = !Properties.Settings.Default.FKeyMacroOverrideEnabled;
+
             // Chromiums eigener Passwort-Manager fürs Grok-Konto-Login. Gilt fürs
             // gesamte CoreWebView2Profile (Wroks eigener, isolierter WebView2Data-
             // Ordner), nicht für das Edge-Profil des Nutzers. Wirkt sofort, auch
@@ -515,7 +578,10 @@ namespace Wrok
         private static string BuildHelperScript()
         {
             string template = LoadEmbeddedJs("WrokHelper.js");
-            return template.Replace("__WROK_VERSION__", WrokHelperVersion.ToString());
+            string fKeyEnabled = Properties.Settings.Default.FKeyMacroOverrideEnabled ? "true" : "false";
+            return template
+                .Replace("__WROK_VERSION__", WrokHelperVersion.ToString())
+                .Replace("__WROK_FKEY_ENABLED__", fKeyEnabled);
         }
 
         /// <summary>Liest eine eingebettete JS-Ressource aus der Assembly.</summary>

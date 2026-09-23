@@ -16,23 +16,13 @@ namespace Wrok
         private const int WM_HOTKEY    = 0x0312;
         private const uint MOD_CONTROL = 0x0002;
 
-        /// <summary>
-        /// Öffnet per Strg+F1..Strg+F{n} das Makro-Menü des jeweiligen Profils
-        /// (Index i, 0-basiert → Profil i, registriert unter ProfileMenuHotkeyBase+i).
-        /// Nur einhändig zu bedienende Ein-Tasten-Modifier (Strg) + F-Taste, damit
-        /// weder Windows-reservierte Kombinationen (Win+Ziffer) noch die AltGr-
-        /// Kollision (Strg+Alt) noch die Windows-Sprachumschaltung (Strg+Umschalt)
-        /// betroffen sind. Die eigentliche Makro-Auswahl (0-9) erfolgt danach im
-        /// Popup von MacroPickerForm, nicht über einen weiteren globalen Hotkey.
-        /// Vier Einträge geben eine Profil-Reserve über die aktuellen drei Profile
-        /// hinaus (siehe MacroManager.ProfileCount).
-        /// </summary>
-        private static readonly Keys[] ProfileMenuKeys =
-        {
-            Keys.F1, Keys.F2, Keys.F3, Keys.F4
-        };
-
-        private const int ProfileMenuHotkeyBase = 0x9100;   // 0x9100..0x9103
+        // F1–F10 (ohne Modifier) feuern per lokaler Tastenbehandlung (siehe
+        // MainForm.Macros.HandleFKeyOverride) die Makros des aktiven Profils,
+        // Strg+Umschalt+F1..F{ProfileCount} wechselt das aktive Profil. Kein
+        // globaler Hotkey mehr nötig - alles greift nur, wenn Wrok den
+        // Tastaturfokus hat (siehe ProcessCmdKey unten und
+        // WebViewManager.OnCoreWebView2InitializationCompleted für den Fall,
+        // dass das WebView2-Control selbst fokussiert ist).
 
         private const int WM_THEMECHANGED    = 0x031A;
         private const int WM_SETTINGCHANGE   = 0x001A;
@@ -81,10 +71,6 @@ namespace Wrok
 
         private RateLimitManager?      _rateLimitManager;
         private ToolStripMenuItem?     _rateLimitMenu;
-
-        // Waehrend geoeffnet: Referenz aufs offene Makro-Auswahl-Popup, damit
-        // MinimizeToTray es beim Ausblenden des Hauptfensters mitschliessen kann.
-        private MacroPickerForm? _activeMacroPicker;
 
         // ------------------------------------------------------------------
         // P/Invoke
@@ -182,6 +168,30 @@ namespace Wrok
             this.BringToFront();
             this.Activate();
             _inactivity?.Reset("Fenster wieder angezeigt");
+        }
+
+        // ------------------------------------------------------------------
+        // F-Tasten-Override (Makros) - lokale Tastenbehandlung
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// Greift, wenn ein normales WinForms-Control (nicht der WebView2-Inhalt
+        /// selbst) den Fokus hat. Für den Fall, dass die Grok-Seite im WebView2
+        /// fokussiert ist, ruft WebViewManager denselben Weg über
+        /// HandleFKeyOverride direkt auf (CoreWebView2.AcceleratorKeyPressed).
+        /// </summary>
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            Keys keyCode = keyData & Keys.KeyCode;
+            if (keyCode >= Keys.F1 && keyCode <= Keys.F12)
+            {
+                bool ctrl  = (keyData & Keys.Control) == Keys.Control;
+                bool shift = (keyData & Keys.Shift)   == Keys.Shift;
+                bool alt   = (keyData & Keys.Alt)     == Keys.Alt;
+                if (HandleFKeyOverride(keyCode, ctrl, shift, alt))
+                    return true;
+            }
+            return base.ProcessCmdKey(ref msg, keyData);
         }
 
         // ------------------------------------------------------------------

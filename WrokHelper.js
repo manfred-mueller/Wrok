@@ -10,6 +10,69 @@
     });
 
     // -----------------------------------------------------------------------
+    // F-Tasten-Override (Makros)
+    //
+    // Greift nur, solange die Host-Checkbox aktiv ist - dann hat der Host
+    // (siehe WebViewManager.ConfigureCore) CoreWebView2.Settings.
+    // AreBrowserAcceleratorKeysEnabled=false gesetzt, wodurch Chromiums eigene
+    // Behandlung von F1-F12 als "Browser-Accelerator-Keys" wegfaellt und diese
+    // Tasten stattdessen hier als normale keydown-Events ankommen. Ist die
+    // Checkbox aus, bleibt AreBrowserAcceleratorKeysEnabled=true (Standard) -
+    // Chromium faengt F1/F3/F5/F6/F7/F10/F11/F12 dann weiterhin selbst ab,
+    // bevor sie ueberhaupt hier ankommen; F2/F4/F8/F9 kommen zwar immer an,
+    // werden unten aber durch __wrokFKeyEnabled=false ignoriert.
+    // -----------------------------------------------------------------------
+
+    window.__wrokFKeyEnabled = __WROK_FKEY_ENABLED__;
+    window.__wrokSetFKeyEnabled = function (v) { window.__wrokFKeyEnabled = !!v; };
+
+    // keyCode 112-123 = F1-F12 (deprecated, aber fuer WebView2/Chromium stabil
+    // und einfacher als e.key-String-Vergleiche mit Layout-Sonderfaellen).
+    var F_KEYCODES = { 112: 1, 113: 2, 114: 3, 115: 4, 116: 5, 117: 6, 118: 7, 119: 8, 120: 9, 121: 10, 122: 11, 123: 12 };
+
+    window.addEventListener('keydown', function (e) {
+        if (!window.__wrokFKeyEnabled) return;
+        var n = F_KEYCODES[e.keyCode];
+        if (!n) return;
+        if (e.altKey) return; // Alt+F4 & Co. nie anfassen.
+
+        if (n === 11) {
+            // Fullscreen - manuell, da Chromiums native Behandlung bei
+            // deaktivierten Accelerator-Keys wegfaellt. Bleibt unabhaengig vom
+            // Makro-Override immer die native F11-Funktion.
+            e.preventDefault();
+            e.stopPropagation();
+            try {
+                if (document.fullscreenElement || document.webkitFullscreenElement) {
+                    (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+                } else {
+                    var el = document.documentElement;
+                    (el.requestFullscreen || el.webkitRequestFullscreen).call(el);
+                }
+            } catch (ex) { }
+            return;
+        }
+        if (n === 12) {
+            // DevTools - JS kann das Fenster nicht selbst oeffnen, daher an den
+            // Host melden (siehe WebViewManager.WebMessageReceived).
+            e.preventDefault();
+            e.stopPropagation();
+            try { window.chrome.webview.postMessage('openDevTools'); } catch (ex) { }
+            return;
+        }
+
+        // F1-F10 (+ Strg/Umschalt-Kombinationen): Entscheidungslogik (Makro
+        // ausloesen, Profil wechseln, Reload) bleibt zentral in C#
+        // (MainForm.HandleFKeyOverride, siehe WebViewManager.HandleFKeyMessage).
+        e.preventDefault();
+        e.stopPropagation();
+        try {
+            window.chrome.webview.postMessage(
+                'fkey:' + n + ':' + (e.ctrlKey ? 1 : 0) + ':' + (e.shiftKey ? 1 : 0) + ':' + (e.altKey ? 1 : 0));
+        } catch (ex) { }
+    }, true);
+
+    // -----------------------------------------------------------------------
     // Hilfsfunktionen
     // -----------------------------------------------------------------------
 

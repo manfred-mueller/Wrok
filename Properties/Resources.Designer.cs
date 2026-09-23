@@ -1599,5 +1599,50 @@ namespace Wrok.Properties {
                 return ResourceManager.GetString("WrokClickToOpen", resourceCulture);
             }
         }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die F-Tasten fuer Makros (F1-F10) aehnelt.
+        /// </summary>
+        public static string FKeyOverrideMenuItem {
+            get {
+                return ResourceManager.GetString("FKeyOverrideMenuItem", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die F1-F10 feuern die Makros des aktiven Profils aehnelt.
+        /// </summary>
+        public static string FKeyOverrideHint {
+            get {
+                return ResourceManager.GetString("FKeyOverrideHint", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die F{0} aehnelt.
+        /// </summary>
+        public static string FKeyMacroHotkeyLabel {
+            get {
+                return ResourceManager.GetString("FKeyMacroHotkeyLabel", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Makro-Profil gewechselt aehnelt.
+        /// </summary>
+        public static string ProfileSwitchedBalloonTitle {
+            get {
+                return ResourceManager.GetString("ProfileSwitchedBalloonTitle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Aktives Profil: {0} aehnelt.
+        /// </summary>
+        public static string ProfileSwitchedBalloonText {
+            get {
+                return ResourceManager.GetString("ProfileSwitchedBalloonText", resourceCulture);
+            }
+        }
     }
 }

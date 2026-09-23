@@ -297,5 +297,17 @@ namespace Wrok.Properties {
                 this["LastUpdateCheckUtc"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool FKeyMacroOverrideEnabled {
+            get {
+                return ((bool)(this["FKeyMacroOverrideEnabled"]));
+            }
+            set {
+                this["FKeyMacroOverrideEnabled"] = value;
+            }
+        }
     }
 }

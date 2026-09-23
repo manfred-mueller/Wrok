@@ -108,9 +108,6 @@ namespace Wrok
         private void MinimizeToTray()
         {
             HideMediaViewer();
-            // Offenes Makro-Auswahl-Popup ergibt ohne sichtbares Hauptfenster
-            // keinen Sinn mehr - mitschließen statt verwaist stehen zu lassen.
-            _activeMacroPicker?.Close();
             this.WindowState   = FormWindowState.Minimized;
             this.Opacity       = 0;
             this.ShowInTaskbar = false;
@@ -206,10 +203,6 @@ namespace Wrok
             ok = RegisterHotKey(this.Handle, HOTKEY_ID_IMAGE, MOD_CONTROL, (uint)Keys.Oem3);
             if (!ok) Trace.WriteLine($"RegisterHotKey fehlgeschlagen id={HOTKEY_ID_IMAGE} (Strg+Ö) err={Marshal.GetLastWin32Error()}");
 
-            // Strg+F1..Strg+F{n} öffnen je das Makro-Menü eines Profils – immer
-            // aktiv, auf jeder Tastatur.
-            RegisterProfileMenuHotkeys();
-
             _theme?.Refresh();
             EnsureTrayIconVisible();
         }
@@ -219,7 +212,6 @@ namespace Wrok
             _rateLimitManager?.StopAutoRefresh();
             try { UnregisterHotKey(this.Handle, HOTKEY_ID); } catch { }
             try { UnregisterHotKey(this.Handle, HOTKEY_ID_IMAGE); } catch { }
-            UnregisterProfileMenuHotkeys();
 
             _webViewManager?.DisposeInputSimulator();
             _theme?.StopListening();   // wird in OnHandleCreated wieder angemeldet

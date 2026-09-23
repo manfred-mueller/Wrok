@@ -258,6 +258,21 @@ Continue?</value>
   <data name="MacroPickerEmptyRow" xml:space="preserve">
     <value>{0}: (empty)</value>
   </data>
+  <data name="FKeyOverrideMenuItem" xml:space="preserve">
+    <value>F-keys for macros (F1-F10)</value>
+  </data>
+  <data name="FKeyOverrideHint" xml:space="preserve">
+    <value>F1-F10 fire the active profile's macros, Ctrl+F5 reloads, Ctrl+Shift+F1-F3 switches the profile. F11/F12 stay unchanged (fullscreen/DevTools). Only active while Wrok has keyboard focus.</value>
+  </data>
+  <data name="FKeyMacroHotkeyLabel" xml:space="preserve">
+    <value>F{0}</value>
+  </data>
+  <data name="ProfileSwitchedBalloonTitle" xml:space="preserve">
+    <value>Macro profile switched</value>
+  </data>
+  <data name="ProfileSwitchedBalloonText" xml:space="preserve">
+    <value>Active profile: {0}</value>
+  </data>
   <data name="CheckForUpdatesMenuItem" xml:space="preserve">
     <value>Check for updates</value>
   </data>

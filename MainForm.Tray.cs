@@ -64,6 +64,31 @@ namespace Wrok
             macroIoMenu.DropDownItems.Add(Properties.Resources.MacrosImport,       null, (s, e) => ImportMacros());
             appMenu.DropDownItems.Add(macroIoMenu);
 
+            // F1-F10 direkt als Makro-Hotkeys, Strg+F5 = Reload, Strg+Umschalt+F1-3
+            // wechselt das Profil - siehe MainForm.HandleFKeyOverride. Default aus.
+            // Schaltet zusaetzlich live AreBrowserAcceleratorKeysEnabled um (siehe
+            // WebViewManager.ConfigureCore) und synchronisiert den JS-Helper
+            // (WrokHelper.js: __wrokSetFKeyEnabled), damit die Umstellung sofort
+            // greift - kein Neustart/Reload noetig.
+            var fKeyOverrideItem = new ToolStripMenuItem(Properties.Resources.FKeyOverrideMenuItem)
+            {
+                CheckOnClick = false,
+                Checked      = Properties.Settings.Default.FKeyMacroOverrideEnabled
+            };
+            fKeyOverrideItem.ToolTipText = Properties.Resources.FKeyOverrideHint;
+            fKeyOverrideItem.Click += (s, e) =>
+            {
+                bool desired = !fKeyOverrideItem.Checked;
+                Properties.Settings.Default.FKeyMacroOverrideEnabled = desired;
+                Properties.Settings.Default.Save();
+                if (_webView?.CoreWebView2 != null)
+                    _webView.CoreWebView2.Settings.AreBrowserAcceleratorKeysEnabled = !desired;
+                _ = _webViewManager?.ExecuteScriptAsync(
+                    $"if (window.__wrokSetFKeyEnabled) window.__wrokSetFKeyEnabled({(desired ? "true" : "false")});");
+                fKeyOverrideItem.Checked = desired;
+            };
+            appMenu.DropDownItems.Add(fKeyOverrideItem);
+
             var autostartItem = new ToolStripMenuItem(Properties.Resources.StartWithWindows)
             {
                 CheckOnClick = false,

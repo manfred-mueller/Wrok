@@ -258,6 +258,21 @@ Fortfahren?</value>
   <data name="MacroPickerEmptyRow" xml:space="preserve">
     <value>{0}: (leer)</value>
   </data>
+  <data name="FKeyOverrideMenuItem" xml:space="preserve">
+    <value>F-Tasten fuer Makros (F1-F10)</value>
+  </data>
+  <data name="FKeyOverrideHint" xml:space="preserve">
+    <value>F1-F10 feuern die Makros des aktiven Profils, Strg+F5 laedt neu, Strg+Umschalt+F1-F3 wechselt das Profil. F11/F12 bleiben unveraendert (Vollbild/DevTools). Nur wirksam, wenn Wrok den Tastaturfokus hat.</value>
+  </data>
+  <data name="FKeyMacroHotkeyLabel" xml:space="preserve">
+    <value>F{0}</value>
+  </data>
+  <data name="ProfileSwitchedBalloonTitle" xml:space="preserve">
+    <value>Makro-Profil gewechselt</value>
+  </data>
+  <data name="ProfileSwitchedBalloonText" xml:space="preserve">
+    <value>Aktives Profil: {0}</value>
+  </data>
   <data name="CheckForUpdatesMenuItem" xml:space="preserve">
     <value>Nach Updates suchen</value>
   </data>

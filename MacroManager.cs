@@ -22,12 +22,10 @@ namespace Wrok
     }
 
     /// <summary>
-    /// Ein Satz Makros unter einem Namen – etwa je Figur oder Szenario. Jedes
-    /// Profil hat einen eigenen, immer aktiven Hotkey (Strg+F1..Strg+F{n}, siehe
-    /// MainForm.ProfileMenuKeys), der ein Auswahl-Popup mit den Makrotiteln
-    /// dieses Profils öffnet – unabhängig davon, welches Profil gerade im
-    /// Tray-Menü zum Bearbeiten angezeigt wird ("aktives" Profil, siehe
-    /// <see cref="MacroManager.ActiveProfile"/>).
+    /// Ein Satz Makros unter einem Namen – etwa je Figur oder Szenario. Nur die
+    /// Makros des im Tray-Menü aktiven Profils sind per F1..F{MacroCount} direkt
+    /// erreichbar (siehe MainForm.HandleFKeyOverride); Strg+Umschalt+F-Taste
+    /// wechselt, welches Profil das ist (<see cref="MacroManager.ActiveProfile"/>).
     /// </summary>
     internal record MacroProfile(string Name, List<MacroEntry> Macros)
     {

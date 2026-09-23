@@ -128,9 +128,6 @@ namespace Wrok
             macrosMenu.DropDownItems.Add(BuildActiveProfileMenu());
             macrosMenu.DropDownItems.Add(new ToolStripSeparator());
 
-
-            int active = _macroManager.ActiveProfile;
-
             var macros = _macroManager.GetMacros();
             for (int i = 1; i <= MacroManager.MacroCount; i++)
             {
@@ -138,13 +135,10 @@ namespace Wrok
 
                 var macroItem = new ToolStripMenuItem(entry.DisplayName(i)) { Tag = i - 1 };
 
-                // Erreichbar über Strg+F-Taste des aktiven Profils (öffnet das
-                // Auswahl-Popup), dort dann Ziffer (Makro 10 → 0) zum Feuern.
-                string ctrlDigit     = i <= 9 ? i.ToString() : "0";
-                string hotkeyDisplay = active >= 0 && active < ProfileMenuKeys.Length
-                    ? string.Format(Properties.Resources.ProfileMenuMacroLabel,
-                        string.Format(Properties.Resources.ProfileMenuFKeyLabel, active + 1), ctrlDigit)
-                    : Properties.Resources.MacroNoHotkey;
+                // Direkt per F-Taste erreichbar (F1..F{MacroCount}), aber nur wenn
+                // dieses Profil das aktive ist und der F-Tasten-Override in den
+                // Einstellungen aktiviert wurde (siehe HandleFKeyOverride).
+                string hotkeyDisplay = string.Format(Properties.Resources.FKeyMacroHotkeyLabel, i);
                 string preview = string.IsNullOrWhiteSpace(entry.Text)
                     ? Properties.Resources.EmptyMacro
                     : (entry.Text.Length > 80 ? entry.Text[..80] + "…" : entry.Text);
@@ -293,59 +287,77 @@ namespace Wrok
         }
 
         // ------------------------------------------------------------------
-        // Makro-Menü-Hotkeys
+        // F-Tasten-Override (Makros) - Kernlogik
         // ------------------------------------------------------------------
 
         /// <summary>
-        /// Registriert je Profil einen festen Strg+F-Hotkey (F1 = Profil 1, usw.),
-        /// der das Auswahl-Popup dieses Profils öffnet. Anzahl begrenzt durch
-        /// Math.Min, falls ProfileMenuKeys einmal kürzer sein sollte als
-        /// MacroManager.ProfileCount (Puffer für zukünftige Profile).
+        /// Zentrale Entscheidung für eine gedrückte F-Taste (F1-F12), egal ob sie
+        /// über ProcessCmdKey (WinForms-Control fokussiert) oder über
+        /// WebViewManager/CoreWebView2.AcceleratorKeyPressed (WebView2-Inhalt
+        /// fokussiert) hereinkommt. Gibt true zurück, wenn die Taste verarbeitet
+        /// wurde (Aufrufer soll sie dann schlucken).
+        ///
+        /// Bewusst nur wirksam, wenn Wrok den Tastaturfokus hat - kein globaler
+        /// Hotkey, kein Eingriff in andere Anwendungen. F11/F12 bleiben in jedem
+        /// Fall unangetastet (natives Vollbild/DevTools).
         /// </summary>
-        private void RegisterProfileMenuHotkeys()
+        internal bool HandleFKeyOverride(Keys keyCode, bool control, bool shift, bool alt)
         {
-            int count = Math.Min(MacroManager.ProfileCount, ProfileMenuKeys.Length);
-            for (int i = 0; i < count; i++)
-            {
-                bool ok = RegisterHotKey(this.Handle, ProfileMenuHotkeyBase + i, MOD_CONTROL, (uint)ProfileMenuKeys[i]);
-                if (!ok) Debug.WriteLine($"RegisterHotKey fehlgeschlagen profil-menue={i} err={Marshal.GetLastWin32Error()}");
-            }
-        }
+            if (alt) return false;   // Alt+F4 & Co. nie anfassen
+            if (!Properties.Settings.Default.FKeyMacroOverrideEnabled) return false;
+            if (keyCode == Keys.F11 || keyCode == Keys.F12) return false;
 
-        private void UnregisterProfileMenuHotkeys()
-        {
-            int count = Math.Min(MacroManager.ProfileCount, ProfileMenuKeys.Length);
-            for (int i = 0; i < count; i++)
-                try { UnregisterHotKey(this.Handle, ProfileMenuHotkeyBase + i); } catch { }
+            int fIndex = keyCode switch
+            {
+                Keys.F1 => 0, Keys.F2 => 1, Keys.F3 => 2, Keys.F4 => 3, Keys.F5 => 4,
+                Keys.F6 => 5, Keys.F7 => 6, Keys.F8 => 7, Keys.F9 => 8, Keys.F10 => 9,
+                _ => -1
+            };
+            if (fIndex < 0) return false;
+
+            if (control && shift)
+            {
+                if (fIndex >= MacroManager.ProfileCount) return false;
+                SwitchProfileViaHotkey(fIndex);
+                return true;
+            }
+
+            if (control)
+            {
+                // Einzige verbliebene "Standardfunktion": Strg+F5 = Neu laden.
+                // WebView2 läuft ohne sichtbare Browser-Chrome, daher haben die
+                // übrigen F-Tasten hier ohnehin keine relevante Default-Aktion.
+                if (keyCode == Keys.F5)
+                    try { _webView?.CoreWebView2?.Reload(); } catch { }
+                return true;
+            }
+
+            _ = PerformMacroAsync(_macroManager.ActiveProfile, fIndex);
+            return true;
         }
 
         /// <summary>
-        /// Zeigt das Auswahl-Popup für ein Profil und feuert bei Auswahl das
-        /// entsprechende Makro. Läuft synchron auf dem UI-Thread (vom
-        /// WM_HOTKEY-Dispatch aus aufgerufen), das Popup selbst blockiert per
-        /// ShowDialog kurz, bis Ziffer/Escape gedrückt, der Fokus verloren wird
-        /// oder MinimizeToTray es (über _activeMacroPicker) mitschließt.
-        /// Öffnet gar nicht erst, wenn das Hauptfenster gerade ausgeblendet ist.
+        /// Wechselt das aktive Profil per Strg+Umschalt+F-Taste und bestätigt das
+        /// per kurzer Balloon-Tip-Meldung, da sonst keine Rückmeldung sichtbar
+        /// wäre, ohne das Tray-Menü zu öffnen.
         /// </summary>
-        private void ShowMacroPicker(int profileIndex)
+        private void SwitchProfileViaHotkey(int index)
         {
             try
             {
-                if (this.WindowState == FormWindowState.Minimized || this.Opacity == 0.0) return;
+                if (index == _macroManager.ActiveProfile) return;
 
-                var macros = _macroManager.GetMacrosForProfile(profileIndex);
-                if (macros.Count == 0) return;
+                _macroManager.SwitchProfile(index);
+                RefreshMacrosMenu();
 
-                int picked = MacroPickerForm.PickOption(ProfileLabel(profileIndex), macros,
-                    onShown: f => _activeMacroPicker = f);
-                _activeMacroPicker = null;
-
-                if (picked >= 0)
-                    _ = PerformMacroAsync(profileIndex, picked);
+                trayIcon?.ShowBalloonTip(1500,
+                    Properties.Resources.ProfileSwitchedBalloonTitle,
+                    string.Format(Properties.Resources.ProfileSwitchedBalloonText, ProfileLabel(index)),
+                    ToolTipIcon.Info);
             }
             catch (Exception ex)
             {
-                Log(ex, "ShowMacroPicker fehlgeschlagen");
+                Log(ex, "SwitchProfileViaHotkey fehlgeschlagen");
             }
         }
 
@@ -382,12 +394,6 @@ namespace Wrok
                         else if (id == HOTKEY_ID_IMAGE)
                         {
                             this.BeginInvoke((System.Windows.Forms.MethodInvoker)(() => _ = OpenImageFromClipboardAsync()));
-                        }
-                        else
-                        {
-                            int profileIndex = id - ProfileMenuHotkeyBase;
-                            if (profileIndex >= 0 && profileIndex < MacroManager.ProfileCount && profileIndex < ProfileMenuKeys.Length)
-                                this.BeginInvoke((System.Windows.Forms.MethodInvoker)(() => ShowMacroPicker(profileIndex)));
                         }
                     }
                     catch { }
