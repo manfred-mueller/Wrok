@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-09-21
+
 ### Changes
 - **Makro-Hotkeys neu: Strg+F1/F2/F3 statt Strg+Ziffer, Nummernblock-Modus entfernt.** Der Nummernblock-Modus war die unzuverlässigste Stelle im Makro-System (erzwang NumLock, funktionierte auf Notebooks ohne Nummernblock gar nicht). Ersetzt durch: Strg+F1, Strg+F2 bzw. Strg+F3 öffnen ein Auswahl-Popup mit den zehn Makrotiteln des jeweiligen Profils (fest zugeordnet, unabhängig vom im Tray-Menü angezeigten Profil); eine folgende Ziffer (1-9, 0 für das zehnte Makro) sendet es, Escape oder Fokusverlust bricht ab. Funktioniert identisch auf jeder Tastatur. Die Einstellung „Nummernblock-Modus" sowie die zugehörigen Menüpunkte entfallen ersatzlos. Tray-Menü (Bearbeiten per Rechtsklick, Senden per Linksklick, Profilwechsel für die Bearbeitungsansicht) bleibt unverändert.
 
@@ -12,6 +14,13 @@
 - Vier identische `try { this.CenterToScreen(); } catch { }`-Stellen in `MainForm.cs` zu einer Hilfsmethode `TryCenterToScreen()` zusammengefasst.
 - `MainForm.cs` (zuvor 1798 Zeilen) nach Zuständigkeit in `partial class`-Dateien aufgeteilt: `MainForm.Window.cs`, `MainForm.Tray.cs`, `MainForm.Macros.cs`, `MainForm.Settings.cs`, `MainForm.Media.cs`.
 - Grok-Kontowechsel-Feature vollständig entfernt (Menü, Sign-in-Automation, `GrokAccountManager`, zugehörige Einstellungen/Ressourcen) – kein wahrgenommener Zusatznutzen gegenüber manueller Anmeldung. Die Passwort-Autosave-Funktion bleibt unverändert bestehen.
+
+
+## [1.5.0] - 2026-09-23
+
+### Changes
+- **Makro-Hotkeys erneut überarbeitet: F1–F10 lösen direkt aus, kein Auswahl-Popup mehr.** Das mit 1.4.0 eingeführte Strg+F1/F2/F3-Auswahl-Popup (`MacroPickerForm`) entfällt wieder. Stattdessen: F1 bis F10 (ohne Zusatztaste) feuern sofort die zehn Makros des aktiven Profils, ohne Zwischenschritt. Strg+F5 lädt die Seite neu. Strg+Umschalt+F1/F2/F3 wechselt das aktive Profil, bestätigt durch einen kurzen Balloon-Tip im Infobereich. F11 (Vollbild) und F12 (Entwicklerwerkzeuge) bleiben davon unberührt. Das gesamte Schema ist über eine neue Checkbox im Tray-Menü („F-Tasten für Makros (F1-F10)") aktivierbar, standardmäßig aus, und wirkt nur, solange Wrok den Tastaturfokus hat.
+- **Technischer Hintergrund:** Die WinForms-Wrapper-Klasse von WebView2 macht `CoreWebView2Controller.AcceleratorKeyPressed` in keiner SDK-Version öffentlich zugänglich, und `ProcessCmdKey` erreicht F-Tasten nachweislich nicht, solange das WebView2-Control selbst den Fokus hat. Gelöst über `CoreWebView2.Settings.AreBrowserAcceleratorKeysEnabled = false` (nur bei aktiver Checkbox) zusammen mit einem `keydown`-Listener im injizierten JS-Helfer (`WrokHelper.js`), der die Tasten per `postMessage` an den Host weiterreicht. F11/F12 werden dabei ebenfalls im JS manuell nachgebildet (Fullscreen-API bzw. Anstoßen von `OpenDevToolsWindow()` im Host), da Chromiums eigene Behandlung dieser Tasten mit abgeschaltet wird, sobald die Checkbox aktiv ist.
 
 ## [1.5.1] - 2026-09-24
 
