@@ -9,16 +9,16 @@ namespace Wrok
 {
     /// <summary>
     /// Kapselt die gesamte WebView2-Interaktion:
-    ///   â¢ Initialisierung inkl. User-Data-Pfad und User-Agent-Spoofing
-    ///   â¢ Laden des JS-Helpers aus eingebetteten Ressourcen
-    ///   â¢ Senden von Text (mit optionalem Enter) Ã¼ber JS + NativeInput-Fallback
-    ///   â¢ Anzeige der Offline-Seite
-    ///   â¢ Internet-KonnektivitÃ¤tsprÃ¼fung
+    ///   • Initialisierung inkl. User-Data-Pfad und User-Agent-Spoofing
+    ///   • Laden des JS-Helpers aus eingebetteten Ressourcen
+    ///   • Senden von Text (mit optionalem Enter) über JS + NativeInput-Fallback
+    ///   • Anzeige der Offline-Seite
+    ///   • Internet-Konnektivitätsprüfung
     /// </summary>
     internal sealed class WebViewManager
     {
         // ------------------------------------------------------------------
-        // Timing-Konstanten fÃ¼r Focus/UI-Settle
+        // Timing-Konstanten für Focus/UI-Settle
         // ------------------------------------------------------------------
 
         private const int FocusSettleDelayMs      = 120;
@@ -27,9 +27,9 @@ namespace Wrok
         private const int NativeInputTextDelayMs   = 150;
         private const int NativeInputAfterTextDelayMs = 40;
 
-        // Versionsnummer des JS-Helpers â erhÃ¶hen, sobald __wrokSend oder
-        // __wrokEnsureFocus geÃ¤ndert wird.
-        private const int WrokHelperVersion = 8;
+        // Versionsnummer des JS-Helpers – erhöhen, sobald __wrokSend oder
+        // __wrokEnsureFocus geändert wird.
+        private const int WrokHelperVersion = 9;
 
         // ------------------------------------------------------------------
         // Felder
@@ -40,7 +40,7 @@ namespace Wrok
         private readonly Action _onActivityReset;
         private NativeInput? _input;
 
-        // Shared HttpClient â einmal pro Prozess.
+        // Shared HttpClient – einmal pro Prozess.
         private static readonly HttpClient _httpClient = new();
 
         /// <summary>
@@ -57,9 +57,9 @@ namespace Wrok
         // Konstruktor
         // ------------------------------------------------------------------
 
-        /// <param name="webView">Das bereits dem Form hinzugefÃ¼gte WebView2-Control.</param>
-        /// <param name="owner">EigentÃ¼mer-Form (fÃ¼r BeginInvoke und SetForegroundWindow).</param>
-        /// <param name="onActivityReset">Callback, der bei NutzeraktivitÃ¤t im WebView aufgerufen wird.</param>
+        /// <param name="webView">Das bereits dem Form hinzugefügte WebView2-Control.</param>
+        /// <param name="owner">Eigentümer-Form (für BeginInvoke und SetForegroundWindow).</param>
+        /// <param name="onActivityReset">Callback, der bei Nutzeraktivität im WebView aufgerufen wird.</param>
         public WebViewManager(WebView2 webView, MainForm owner, Action onActivityReset)
         {
             _webView = webView;
@@ -73,7 +73,7 @@ namespace Wrok
 
         /// <summary>
         /// Erstellt die CoreWebView2-Umgebung, richtet User-Agent und Header ein
-        /// und injiziert den JS-Helper in alle kÃ¼nftigen Dokumente.
+        /// und injiziert den JS-Helper in alle künftigen Dokumente.
         /// </summary>
         public async Task InitializeAsync()
         {
@@ -125,7 +125,26 @@ namespace Wrok
         public void DisposeInputSimulator() => _input = null;
 
         /// <summary>
-        /// FÃ¼hrt ein JavaScript-Script im WebView aus und gibt das Ergebnis zurÃ¼ck.
+        /// Wartet kurz (Default: bis zu 300ms, alle 25ms geprüft) auf den
+        /// NativeInput-Simulator, falls er gerade null ist. _input ist genau in dem
+        /// schmalen Fenster zwischen OnHandleDestroyed und dem nächsten
+        /// OnHandleCreated null - das passiert bei JEDEM Minimieren/Wiederherstellen
+        /// in den Tray (WinForms erzeugt dabei das Fensterhandle neu, siehe
+        /// MainForm.Window.cs). Löst ein Makro (über die JS-Bridge, auf einem
+        /// BeginInvoke-Callback) in genau diesem Moment aus, wären TypeText/PressEnter
+        /// sonst stille No-Ops. CreateInputSimulator() läuft normalerweise nur wenige
+        /// Millisekunden später wieder an, daher reicht kurzes Abwarten meist aus.
+        /// </summary>
+        private async Task<NativeInput?> WaitForInputSimulatorAsync(int maxWaitMs = 300, int pollMs = 25)
+        {
+            var sw = Stopwatch.StartNew();
+            while (_input == null && sw.ElapsedMilliseconds < maxWaitMs)
+                await Task.Delay(pollMs);
+            return _input;
+        }
+
+        /// <summary>
+        /// Führt ein JavaScript-Script im WebView aus und gibt das Ergebnis zurück.
         /// Wirft eine Exception wenn CoreWebView2 nicht initialisiert ist.
         /// </summary>
         public async Task<string?> ExecuteScriptAsync(string script)
@@ -172,7 +191,7 @@ namespace Wrok
 
         /// <summary>
         /// Sendet <paramref name="text"/> in das aktive Eingabefeld des WebViews.
-        /// Falls <paramref name="pressEnter"/> true ist, wird anschlieÃend Enter ausgelÃ¶st.
+        /// Falls <paramref name="pressEnter"/> true ist, wird anschließend Enter ausgelöst.
         /// </summary>
         public async Task SendTextAsync(string text, bool pressEnter = false)
         {
@@ -190,17 +209,7 @@ namespace Wrok
                              $"return window.__wrokSend ? window.__wrokSend({payload}, {enterArg}) : false; }} " +
                              $"catch(e) {{ return false; }} }})();";
 
-            string? rawResult = null;
-            try
-            {
-                rawResult = await _webView.CoreWebView2.ExecuteScriptAsync(callScript);
-                Trace.WriteLine($"SendTextAsync JS result: {rawResult}");
-            }
-            catch (Exception ex)
-            {
-                Trace.WriteLine(string.Format(Properties.Resources.ParsingClickScriptResultFailed0, ex));
-            }
-
+            string? rawResult = await ExecuteScriptAndLogAsync(callScript, r => $"SendTextAsync JS result: {r}");
             bool jsSucceeded = ParseJsBoolResult(rawResult);
 
             if (pressEnter)
@@ -221,12 +230,12 @@ namespace Wrok
                 return;
             }
 
-            // VollstÃ¤ndiger Fallback Ã¼ber NativeInput.
+            // Vollständiger Fallback über NativeInput.
             await FallbackSendViaNativeInputAsync(text, pressEnter);
         }
 
         // ------------------------------------------------------------------
-        // KonnektivitÃ¤t
+        // Konnektivität
         // ------------------------------------------------------------------
 
         public async Task<bool> HasInternetConnectionAsync(int attempts = 2, int timeoutSeconds = 4)
@@ -236,12 +245,16 @@ namespace Wrok
                 if (!System.Net.NetworkInformation.NetworkInterface.GetIsNetworkAvailable())
                     return false;
             }
-            catch { /* SchnellprÃ¼fung nicht kritisch */ }
+            catch { /* Schnellprüfung nicht kritisch */ }
 
+            // Alle drei bewusst HTTPS: eine reine HTTP-URL koennte in einem
+            // unsicheren Netz (offenes WLAN, kompromittierter Router) von einem
+            // Man-in-the-Middle gefaelscht werden und so eine nicht vorhandene
+            // Verbindung vortaeuschen (oder umgekehrt unterdruecken).
             var urls = new[]
             {
                 "https://clients3.google.com/generate_204",
-                "http://detectportal.firefox.com/success.txt",
+                "https://detectportal.firefox.com/success.txt",
                 "https://www.bing.com/"
             };
 
@@ -267,7 +280,7 @@ namespace Wrok
                                 return true;
                         }
                     }
-                    catch { /* nÃ¤chste URL probieren */ }
+                    catch { /* nächste URL probieren */ }
                 }
 
                 if (attempt + 1 < attempts)
@@ -409,6 +422,29 @@ namespace Wrok
             finally
             {
                 _pendingResults.TryRemove(token, out _);
+            }
+        }
+
+        /// <summary>
+        /// Führt ein SYNCHRONES (nicht Promise-basiertes) Skript aus und gibt dessen
+        /// Rückgabewert direkt zurück - funktioniert nur, weil z. B. __wrokSend rein
+        /// synchron ist (für Promise-/async-Ergebnisse siehe CallBridgeAsync oben).
+        /// Kapselt das gemeinsame Ausführen+Loggen+Fehlerbehandeln, das zuvor in
+        /// SendTextAsync und TryClickSendButtonAsync unabhängig dupliziert war.
+        /// </summary>
+        private async Task<string?> ExecuteScriptAndLogAsync(string script, Func<string?, string> successLogFormat)
+        {
+            if (_webView.CoreWebView2 == null) return null;
+            try
+            {
+                string? result = await _webView.CoreWebView2.ExecuteScriptAsync(script);
+                Trace.WriteLine(successLogFormat(result));
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine(string.Format(Properties.Resources.ParsingClickScriptResultFailed0, ex));
+                return null;
             }
         }
 
@@ -573,7 +609,7 @@ namespace Wrok
         }
 
         /// <summary>
-        /// LÃ¤dt WrokHelper.js aus den eingebetteten Ressourcen und setzt die Versionsnummer ein.
+        /// Lädt WrokHelper.js aus den eingebetteten Ressourcen und setzt die Versionsnummer ein.
         /// </summary>
         private static string BuildHelperScript()
         {
@@ -649,16 +685,8 @@ namespace Wrok
   } catch(e){ return false; }
 })();";
 
-            string? result = null;
-            try
-            {
-                result = await _webView.CoreWebView2!.ExecuteScriptAsync(clickScript);
-                Trace.WriteLine(string.Format(Properties.Resources.SendTextToWebViewAsyncClickScriptResult0, result));
-            }
-            catch (Exception ex)
-            {
-                Trace.WriteLine(string.Format(Properties.Resources.ParsingClickScriptResultFailed0, ex));
-            }
+            string? result = await ExecuteScriptAndLogAsync(clickScript,
+                r => string.Format(Properties.Resources.SendTextToWebViewAsyncClickScriptResult0, r));
             return ParseJsBoolResult(result);
         }
 
@@ -668,7 +696,14 @@ namespace Wrok
             {
                 await EnsureFocusOnUiThreadAsync();
                 await Task.Delay(NativeInputFocusDelayMs);
-                _input?.PressEnter();
+
+                var input = await WaitForInputSimulatorAsync();
+                if (input == null)
+                {
+                    Trace.WriteLine("SendEnterViaNativeInputAsync: _input auch nach Warten null - Enter wurde NICHT gesendet.");
+                    return;
+                }
+                input.PressEnter();
                 Trace.WriteLine("SendEnterViaNativeInputAsync: Enter gesendet.");
             }
             catch (Exception ex)
@@ -679,19 +714,17 @@ namespace Wrok
 
         private async Task FallbackSendViaNativeInputAsync(string text, bool pressEnter)
         {
-            // Diagnose: _input ist null, wenn CreateInputSimulator() noch nicht (wieder)
-            // gelaufen ist - z. B. kurz nach einer Fensterhandle-Neuerzeugung (passiert bei
-            // jedem Minimieren/Wiederherstellen in den Tray, siehe MainForm.OnHandleDestroyed/
-            // OnHandleCreated). Die _input?.-Aufrufe unten sind dann stille No-Ops: kein
-            // Fehler, aber es wird auch nichts getippt - bisher unauffällig, weil hier nicht
-            // geloggt wurde, ob _input tatsächlich vorhanden war.
-            if (_input == null)
-                Trace.WriteLine("FallbackSendViaNativeInputAsync: _input ist null - TypeText/PressEnter sind No-Ops.");
-
             try
             {
                 await EnsureFocusOnUiThreadAsync();
                 await Task.Delay(NativeInputTextDelayMs);
+
+                // Siehe WaitForInputSimulatorAsync: kurz abwarten statt sofort als
+                // No-Op aufzugeben, falls _input gerade im Handle-Recreate-Fenster ist.
+                var input = await WaitForInputSimulatorAsync();
+                if (input == null)
+                    Trace.WriteLine("FallbackSendViaNativeInputAsync: _input auch nach Warten null - TypeText/PressEnter sind No-Ops.");
+
                 if (!string.IsNullOrEmpty(text))
                 {
                     // TypeText tippt zeichenweise mit Thread.Sleep(2) dazwischen (siehe
@@ -699,15 +732,16 @@ namespace Wrok
                     // fuer die gesamte Tippdauer blockieren. SendInput selbst ist eine reine
                     // Win32-API ohne Anforderung an einen bestimmten Thread, daher kann der
                     // Aufruf gefahrlos auf einen Threadpool-Thread ausgelagert werden.
-                    var input = _input;
                     if (input != null)
+                    {
                         await Task.Run(() => input.TypeText(text));
-                    Trace.WriteLine($"FallbackSendViaNativeInputAsync: TypeText aufgerufen (Länge={text.Length}).");
+                        Trace.WriteLine($"FallbackSendViaNativeInputAsync: TypeText aufgerufen (Länge={text.Length}).");
+                    }
                     await Task.Delay(NativeInputAfterTextDelayMs);
                 }
-                if (pressEnter)
+                if (pressEnter && input != null)
                 {
-                    _input?.PressEnter();
+                    input.PressEnter();
                     Trace.WriteLine("FallbackSendViaNativeInputAsync: Enter gesendet.");
                 }
             }
@@ -748,7 +782,7 @@ namespace Wrok
     <div class=""wrapper"">
       <img src=""data:image/png;base64,{base64}"" alt=""offline"" />
       <h1>offline / keine Verbindung</h1>
-      <p>Bitte Ã¼berprÃ¼fen Sie Ihre Internetverbindung und versuchen Sie es erneut.</p>
+      <p>Bitte überprüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.</p>
     </div>
   </body>
 </html>";

@@ -1,4 +1,4 @@
-﻿# Changelog
+# Changelog
 
 ## [Unreleased]
 
@@ -12,6 +12,24 @@
 - Vier identische `try { this.CenterToScreen(); } catch { }`-Stellen in `MainForm.cs` zu einer Hilfsmethode `TryCenterToScreen()` zusammengefasst.
 - `MainForm.cs` (zuvor 1798 Zeilen) nach Zuständigkeit in `partial class`-Dateien aufgeteilt: `MainForm.Window.cs`, `MainForm.Tray.cs`, `MainForm.Macros.cs`, `MainForm.Settings.cs`, `MainForm.Media.cs`.
 - Grok-Kontowechsel-Feature vollständig entfernt (Menü, Sign-in-Automation, `GrokAccountManager`, zugehörige Einstellungen/Ressourcen) – kein wahrgenommener Zusatznutzen gegenüber manueller Anmeldung. Die Passwort-Autosave-Funktion bleibt unverändert bestehen.
+
+## [1.5.1] - 2026-09-24
+
+### Fixes
+- **Offline-Meldung zeigte Umlaute als Steuerzeichen statt lesbarer Zeichen.** In `WebViewManager.cs` war Text an mehreren Stellen doppelt falsch kodiert (UTF-8, versehentlich als Latin-1 gelesen und erneut als UTF-8 gespeichert) – u. a. in der Meldung „Bitte überprüfen Sie Ihre Internetverbindung…". Betraf ausschließlich diese eine Datei; korrigiert.
+- **Zweitinstanz-Aktivierung broadcastete die echte Windows-Systemnachricht `WM_SHOWWINDOW`** an alle laufenden Programme (`HWND_BROADCAST`) statt nur an Wrok selbst – andere Anwendungen mit eigener `WM_SHOWWINDOW`-Behandlung konnten das fälschlich als echten Sichtbarkeits-Wechsel interpretieren. Läuft jetzt über eine eigene, per `RegisterWindowMessage` registrierte private Nachricht.
+- **Mögliches Wettrennen beim Start zwischen Proxy-Initialisierung und erster Seitennavigation.** `LoadUrlAsync` konnte parallel zur (ggf. proxy-konfigurierten) `CoreWebView2`-Umgebungserstellung einen zweiten, konkurrierenden `EnsureCoreWebView2Async`-Aufruf mit abweichenden Parametern auslösen. Wartet jetzt auf denselben Initialisierungs-Task.
+- **Internetverbindungs-Prüfung nutzte eine reine HTTP-URL**, die in einem unsicheren Netz gefälscht werden könnte. Auf HTTPS umgestellt.
+- **Fehlschlag der Chef-Taste-Registrierung (Strg+Leertaste) blieb bisher nur im Log sichtbar.** Zeigt jetzt einmal pro Programmlauf einen Warnhinweis im Infobereich.
+- **Makro-Text konnte nach einem Minimieren/Wiederherstellen unbemerkt verloren gehen**, wenn der NativeInput-Fallback in der kurzen Lücke zwischen Fensterhandle-Zerstörung und -Neuerzeugung ausgelöst wurde. Wartet jetzt kurz auf die Wiederherstellung, statt sofort stillschweigend aufzugeben.
+- **Hilfetext im Info-Dialog beschrieb noch das alte Strg+F1/F2/F3-Auswahl-Popup** statt des aktuellen F1–F10-Direktschemas. Korrigiert (DE + EN).
+
+### Intern
+- Bild-Klick-Erkennung in `WrokHelper.js` läuft nur noch im Top-Frame (nicht in eingebetteten iframes) und schließt interaktive Elemente (Buttons, Links, Formularfelder) von der Hintergrundbild-Heuristik aus.
+- `SendTextAsync`/`TryClickSendButtonAsync` nutzen jetzt einen gemeinsamen Skript-Ausführung-Helfer statt dupliziertem Try/Catch/Log-Code.
+- Log-Rotation begrenzt jetzt die Anzahl aufbewahrter Archiv-Logs (zuvor unbegrenztes Wachstum).
+- Tote Resource-Einträge (`MacroPickerRow`, `MacroPickerEmptyRow`) aus dem abgelösten Makro-Popup-Ansatz entfernt.
+
 
 ## [1.3.2] - 2026-09-16
 

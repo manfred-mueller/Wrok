@@ -26,9 +26,13 @@ namespace Wrok
 
         private const int WM_THEMECHANGED    = 0x031A;
         private const int WM_SETTINGCHANGE   = 0x001A;
-        private const int WM_SHOWWINDOW      = 0x0018;
         private const int WM_QUERYENDSESSION = 0x0011;
         private const int WM_ENDSESSION      = 0x0016;
+
+        // Private Fensternachricht statt der echten WM_SHOWWINDOW-Systemnachricht,
+        // siehe Program.cs (ShowRequestMessageName) - derselbe String liefert
+        // prozessuebergreifend denselben Wert.
+        private static readonly int WM_WROK_SHOW = (int)RegisterWindowMessage(Program.ShowRequestMessageName);
 
         private readonly string baseUrl = "https://grok.com/";
         private readonly (string name, string url)[] menuPages = new[]
@@ -44,6 +48,7 @@ namespace Wrok
 
         private WebView2?          _webView;
         private WebViewManager?    _webViewManager;
+        private Task?              _webViewInitTask;
         private MacroManager       _macroManager = new();
 
         private NotifyIcon?        trayIcon;
@@ -72,6 +77,11 @@ namespace Wrok
         private RateLimitManager?      _rateLimitManager;
         private ToolStripMenuItem?     _rateLimitMenu;
 
+        // Nur einmal pro Prozesslaufzeit warnen, nicht bei jedem Minimieren/
+        // Wiederherstellen erneut (das erzeugt jedes Mal ein neues Fensterhandle
+        // und damit einen erneuten RegisterHotKey-Versuch, siehe OnHandleCreated).
+        private bool _bossKeyRegistrationWarned;
+
         // ------------------------------------------------------------------
         // P/Invoke
         // ------------------------------------------------------------------
@@ -80,6 +90,8 @@ namespace Wrok
         private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        private static extern uint RegisterWindowMessage(string lpString);
 
         // ------------------------------------------------------------------
         // Konstruktor
@@ -97,7 +109,7 @@ namespace Wrok
             LoadWindowSettings();
             _inactivity.LoadSettings();
 
-            _ = InitializeWebViewAsync();
+            _webViewInitTask = InitializeWebViewAsync();
             _inactivity.Start();
             _ = InitializeRateLimitManagerAsync();
 
@@ -150,6 +162,17 @@ namespace Wrok
         {
             try
             {
+                // Erst die (ggf. proxy-konfigurierte) CoreWebView2-Umgebung fertig
+                // aufbauen lassen (siehe WebViewManager.InitializeAsync), statt hier
+                // parallel loszulaufen - sonst kann NavigateAsyncs eigener
+                // EnsureCoreWebView2Async(null)-Fallback mit der eigentlichen,
+                // proxy-konfigurierten Initialisierung um die Wette laufen (zwei
+                // konkurrierende EnsureCoreWebView2Async-Aufrufe mit unterschiedlichen
+                // Environments). InitializeWebViewAsync faengt eigene Fehler bereits
+                // intern ab, wirft also nie - der await hier ist unkritisch.
+                if (_webViewInitTask != null)
+                    await _webViewInitTask;
+
                 if (_webViewManager != null)
                     await _webViewManager.NavigateAsync(url);
             }

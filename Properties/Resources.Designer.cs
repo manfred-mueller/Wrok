@@ -527,6 +527,24 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Boss key unavailable ähnelt.
+        /// </summary>
+        public static string BossKeyRegistrationFailedBalloonTitle {
+            get {
+                return ResourceManager.GetString("BossKeyRegistrationFailedBalloonTitle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Ctrl+Space could not be registered ähnelt.
+        /// </summary>
+        public static string BossKeyRegistrationFailedBalloonText {
+            get {
+                return ResourceManager.GetString("BossKeyRegistrationFailedBalloonText", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die The image could not be loaded. See the log for details. ähnelt.
         /// </summary>
         public static string ImageLoadFailed {
@@ -817,25 +835,7 @@ namespace Wrok.Properties {
             }
         }
         
-        /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die {0}: (empty) ähnelt.
-        /// </summary>
-        public static string MacroPickerEmptyRow {
-            get {
-                return ResourceManager.GetString("MacroPickerEmptyRow", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die {0}: {1} ähnelt.
-        /// </summary>
-        public static string MacroPickerRow {
-            get {
-                return ResourceManager.GetString("MacroPickerRow", resourceCulture);
-            }
-        }
-        
-        /// <summary>
+/// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die Profile {0} ähnelt.
         /// </summary>
         public static string MacroProfileDefault {

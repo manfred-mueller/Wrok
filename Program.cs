@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Linq;
 using System.IO.Pipes;
 using System.Runtime.InteropServices;
 
@@ -12,10 +13,24 @@ namespace Wrok
         private static Mutex? _singleInstanceMutex;
 
         private const int HWND_BROADCAST = 0xFFFF;
-        private const int WM_SHOWWINDOW = 0x0018;
+
+        // Eigene, private Fensternachricht statt der echten Windows-Systemnachricht
+        // WM_SHOWWINDOW: die wurde zuvor per HWND_BROADCAST an ALLE Top-Level-Fenster
+        // auf dem Desktop geschickt - andere laufende Anwendungen mit eigener
+        // WM_SHOWWINDOW-Behandlung koennten das faelschlich als echten
+        // Sichtbarkeits-Wechsel interpretieren. RegisterWindowMessage liefert fuer
+        // denselben String prozessuebergreifend immer denselben Wert und wird von
+        // fremden Fenstern einfach ignoriert (Standard-Win32-Muster fuer private
+        // IPC-Nachrichten, siehe z. B. "TaskbarCreated").
+        internal const string ShowRequestMessageName = "Wrok_ShowRequest_F3B2A6D1";
 
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool PostMessage(IntPtr hWnd, int Msg, IntPtr wParam, IntPtr lParam);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        private static extern uint RegisterWindowMessage(string lpString);
+
+        private static readonly int WM_WROK_SHOW = (int)RegisterWindowMessage(ShowRequestMessageName);
 
         [STAThread]
         private static void Main()
@@ -31,10 +46,14 @@ namespace Wrok
 
                 var logFile = Path.Combine(logsDir, "app.log");
 
-                // Keep a rolling simple policy: rename existing file if bigger than 5 MB
+                // Keep a rolling simple policy: rename existing file if bigger than 5 MB,
+                // then prune old archives beyond a small retention count - otherwise the
+                // archived app-<timestamp>.log files pile up forever for a long-running
+                // "portable" tool that nobody ever manually cleans out.
                 try
                 {
                     const long maxSize = 5 * 1024 * 1024;
+                    const int maxArchives = 5;
                     if (File.Exists(logFile))
                     {
                         var fi = new FileInfo(logFile);
@@ -44,6 +63,19 @@ namespace Wrok
                             try { File.Move(logFile, archived); } catch { /* ignore */ }
                         }
                     }
+
+                    try
+                    {
+                        var oldArchives = new DirectoryInfo(logsDir)
+                            .GetFiles("app-*.log")
+                            .OrderByDescending(f => f.LastWriteTimeUtc)
+                            .Skip(maxArchives);
+                        foreach (var old in oldArchives)
+                        {
+                            try { old.Delete(); } catch { /* ignore einzelne Datei */ }
+                        }
+                    }
+                    catch { /* defensive - Aufraeumen ist nicht kritisch */ }
                 }
                 catch { /* defensive */ }
 
@@ -202,8 +234,8 @@ namespace Wrok
                                 var message = reader.ReadLine();
                                 if (string.Equals(message, "SHOW", StringComparison.OrdinalIgnoreCase))
                                 {
-                                    // Broadcast WM_SHOWWINDOW � MainForm.WndProc will react and bring the window forward.
-                                    PostMessage((IntPtr)HWND_BROADCAST, WM_SHOWWINDOW, IntPtr.Zero, IntPtr.Zero);
+                                    // Eigene Nachricht broadcasten - MainForm.WndProc reagiert darauf und holt das Fenster nach vorne.
+                                    PostMessage((IntPtr)HWND_BROADCAST, WM_WROK_SHOW, IntPtr.Zero, IntPtr.Zero);
                                 }
                             }
                         }

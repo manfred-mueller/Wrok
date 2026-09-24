@@ -252,12 +252,6 @@ Fortfahren?</value>
   <data name="MacroNoHotkey" xml:space="preserve">
     <value>kein Hotkey (nur per Tray-Klick)</value>
   </data>
-  <data name="MacroPickerRow" xml:space="preserve">
-    <value>{0}: {1}</value>
-  </data>
-  <data name="MacroPickerEmptyRow" xml:space="preserve">
-    <value>{0}: (leer)</value>
-  </data>
   <data name="FKeyOverrideMenuItem" xml:space="preserve">
     <value>F-Tasten fuer Makros (F1-F10)</value>
   </data>
@@ -523,16 +517,18 @@ Umschalt+Klick trägt ein ohne zu senden.</value>
 - Bearbeiten: Rechtsklick auf ein Makro im Tray-Menü.
 - Senden per Menü: Linksklick fügt den Text ein und sendet ihn (Text + Enter).
 - Senden ohne Enter: Linksklick + Umschalt (oder Alt) sendet den Text OHNE abschließendes Enter.
-- Hotkeys: Strg+F1, Strg+F2, Strg+F3 öffnen je ein Auswahl-Popup mit den zehn Makrotiteln dieses
-  Profils (fest zugeordnet, unabhängig davon, welches Profil im Tray-Menü angezeigt wird). Eine
-  Ziffer (1-9, 0 für das zehnte) sendet das Makro, Escape oder Klick daneben bricht ab. Enter folgt
-  standardmäßig; Umschalt oder Alt beim Drücken der Ziffer unterdrückt es.
+- Hotkeys: In Einstellungen -&gt; App die Checkbox "F-Tasten für Makros (F1-F10)" aktivieren
+  (standardmäßig aus). Dann feuern F1 bis F10 sofort die zehn Makros des aktiven Profils, ohne
+  Zwischenschritt. Strg+F5 lädt die Seite neu. Strg+Umschalt+F1/F2/F3 wechselt das aktive Profil,
+  eine kurze Meldung im Infobereich bestätigt den Wechsel. F11 (Vollbild) und F12
+  (Entwicklerwerkzeuge) bleiben davon unberührt. Wirksam nur, solange Wrok den Tastaturfokus hat;
+  ist die Checkbox aus, verhalten sich alle F-Tasten wie gewohnt.
 
 Makro-Profile
 - Drei benennbare Sätze zu je zehn Makros, etwa für verschiedene Figuren oder Szenarien.
 - Der erste Eintrag im Makro-Menü nennt das aktive Profil und klappt zu den übrigen auf. Dieses
-  "aktive" Profil bestimmt nur, was im Tray-Menü angezeigt/bearbeitet wird - nicht, welches Profil
-  Strg+F1..F3 ansprechen (die sind fest auf Profil 1/2/3 verdrahtet).
+  "aktive" Profil bestimmt sowohl, was im Tray-Menü angezeigt/bearbeitet wird, als auch, welche
+  Makros F1-F10 feuern - wechseln lässt es sich per Tray-Klick oder per Strg+Umschalt+F1-F3.
 - Wechseln (Tray-Ansicht): Makros -&gt; [aktives Profil] -&gt; Linksklick auf ein anderes Profil.
 - Umbenennen: Makros -&gt; [aktives Profil] -&gt; "Aktives Profil umbenennen".
 - Zurücksetzen: "Aktives Profil zurücksetzen" leert Name und alle zehn Makros des aktiven
@@ -691,7 +687,7 @@ Fortfahren?</value>
     <value>offline / keine Verbindung</value>
   </data>
   <data name="OfflineBody" xml:space="preserve">
-    <value>Bitte überprüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.</value>
+    <value>Bitte überprüfen Sie Ihre Internetverbindung und versuchen es erneut.</value>
   </data>
   <data name="RateLimits" xml:space="preserve">
     <value>Rate Limits</value>
@@ -728,5 +724,11 @@ Fortfahren?</value>
   </data>
   <data name="HotkeyToggleFailed" xml:space="preserve">
     <value>Hotkey-Toggle fehlgeschlagen: {0}</value>
+  </data>
+  <data name="BossKeyRegistrationFailedBalloonTitle" xml:space="preserve">
+    <value>Chef-Taste nicht verfügbar</value>
+  </data>
+  <data name="BossKeyRegistrationFailedBalloonText" xml:space="preserve">
+    <value>Strg+Leertaste konnte nicht registriert werden - ein anderes laufendes Programm belegt diese Kombination bereits. Wrok neu starten oder die Kombination im anderen Programm ändern.</value>
   </data>
 </root>

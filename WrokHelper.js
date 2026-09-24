@@ -1,4 +1,14 @@
 (function () {
+    // Nur im Top-Frame aktiv. Der Helper wird ohne Frame-Filter per
+    // AddScriptToExecuteOnDocumentCreatedAsync in JEDES Dokument injiziert
+    // (siehe WebViewManager.OnCoreWebView2InitializationCompleted) - ohne diesen
+    // Guard wuerden F-Tasten-Override und Bild-/Video-Klick-Erkennung auch in
+    // eingebetteten iframes greifen (z. B. ein kuenftiges Zahlungs- oder
+    // OAuth-iframe von grok.com). Der Host (WebViewManager.ExecuteScriptAsync,
+    // CoreWebView2.ExecuteScriptAsync) spricht ohnehin immer den Top-Frame an,
+    // daher verlieren __wrokSend & Co. hier nichts.
+    if (window.top !== window) return;
+
     var REQUIRED = __WROK_VERSION__;
     if (window.__wrok && window.__wrok.v >= REQUIRED) return;
     window.__wrok = { v: REQUIRED };
@@ -271,6 +281,21 @@
             return !!url && url.indexOf('data:') !== 0 && !IGNORE_URL.test(url);
         }
 
+        // Interaktive Elemente von der (unspezifischeren) CSS-Hintergrundbild-Erkennung
+        // ausschliessen - ein Button/Link/Formularelement, das nur dekorativ per
+        // background-image gestaltet ist (statt eines <img>), soll beim Klick seine
+        // eigentliche Funktion ausloesen und nicht faelschlich den Bildbetrachter
+        // oeffnen. Gilt bewusst NICHT fuer <img>/<video> selbst - ein Bild innerhalb
+        // eines Links/Buttons soll weiterhin normal oeffnen.
+        var INTERACTIVE_SEL = 'button, [role="button"], a, input, select, textarea, ' +
+            '[contenteditable="true"], [role="link"], [role="menuitem"], [role="tab"], ' +
+            '[role="checkbox"], [role="radio"], [role="switch"]';
+
+        function isInteractive(node) {
+            try { return typeof node.matches === 'function' && node.matches(INTERACTIVE_SEL); }
+            catch (e) { return false; }
+        }
+
         // Liefert { url, kind } eines Elements – kind ist 'image' oder 'video'.
         // Kein URL-Pattern-Matching auf Dateiendungen, da Grok CDN-Pfade ohne
         // Endung verwendet (z. B. .../projects/<id>/<id>/asset).
@@ -292,6 +317,8 @@
                     var url = node.currentSrc || node.src || node.getAttribute('src') || '';
                     return isContentUrl(url) ? { url: url, kind: 'image' } : null;
                 }
+                if (isInteractive(node)) return null;
+
                 var r = node.getBoundingClientRect();
                 if (r.width < MIN_SIZE || r.height < MIN_SIZE) return null;
                 var bg = window.getComputedStyle(node).backgroundImage;

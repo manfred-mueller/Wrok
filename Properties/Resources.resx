@@ -252,12 +252,6 @@ Continue?</value>
   <data name="MacroNoHotkey" xml:space="preserve">
     <value>no hotkey (tray click only)</value>
   </data>
-  <data name="MacroPickerRow" xml:space="preserve">
-    <value>{0}: {1}</value>
-  </data>
-  <data name="MacroPickerEmptyRow" xml:space="preserve">
-    <value>{0}: (empty)</value>
-  </data>
   <data name="FKeyOverrideMenuItem" xml:space="preserve">
     <value>F-keys for macros (F1-F10)</value>
   </data>
@@ -523,16 +517,17 @@ Shift+Click sends without Enter.</value>
 - Edit: right-click a macro in the tray menu.
 - Send via menu: left-click inserts the text and sends it (text + Enter).
 - Send without Enter: left-click + Shift (or Alt) sends the text WITHOUT a trailing Enter.
-- Hotkeys: Ctrl+F1, Ctrl+F2, Ctrl+F3 each open a picker popup listing the ten macro titles of that
-  profile (fixed, independent of which profile is shown in the tray menu). Press a digit (1-9, 0
-  for the tenth) to send that macro, or Escape / click elsewhere to cancel. Enter follows the send
-  by default; hold Shift or Alt while pressing the digit to suppress it.
+- Hotkeys: enable the "F-keys for macros (F1-F10)" checkbox under Settings -&gt; App (off by
+  default). F1 through F10 then instantly fire the ten macros of the active profile, with no extra
+  step. Ctrl+F5 reloads the page. Ctrl+Shift+F1/F2/F3 switches the active profile, confirmed by a
+  short tray notice. F11 (fullscreen) and F12 (developer tools) are unaffected. Only active while
+  Wrok has keyboard focus; with the checkbox off, all F-keys behave as usual.
 
 Macro profiles
 - Three named sets of ten macros each, for different characters or scenarios.
 - The first entry of the macro menu names the active profile and expands to the others. This
-  "active" profile only affects what the tray menu displays/edits - not which profile Ctrl+F1..F3
-  address (those are always fixed to profile 1/2/3).
+  "active" profile decides both what the tray menu displays/edits and which macros F1-F10 fire -
+  switch it via the tray menu or via Ctrl+Shift+F1-F3.
 - Switch (tray view): Macros -&gt; [active profile] -&gt; left-click another profile.
 - Rename: Macros -&gt; [active profile] -&gt; "Rename active profile".
 - Reset: "Reset active profile" clears the name and all ten macros of the active profile.
@@ -727,5 +722,11 @@ Continue?</value>
   </data>
   <data name="HotkeyToggleFailed" xml:space="preserve">
     <value>Hotkey toggle failed: {0}</value>
+  </data>
+  <data name="BossKeyRegistrationFailedBalloonTitle" xml:space="preserve">
+    <value>Boss key unavailable</value>
+  </data>
+  <data name="BossKeyRegistrationFailedBalloonText" xml:space="preserve">
+    <value>Ctrl+Space could not be registered - another running program is already using it. Restart Wrok, or free the shortcut in the other program.</value>
   </data>
 </root>

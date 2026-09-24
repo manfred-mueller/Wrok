@@ -192,7 +192,26 @@ namespace Wrok
             _webViewManager?.CreateInputSimulator();
 
             bool ok = RegisterHotKey(this.Handle, HOTKEY_ID, MOD_CONTROL, (uint)Keys.Space);
-            if (!ok) Debug.WriteLine($"RegisterHotKey fehlgeschlagen id={HOTKEY_ID} err={Marshal.GetLastWin32Error()}");
+            if (!ok)
+            {
+                Debug.WriteLine($"RegisterHotKey fehlgeschlagen id={HOTKEY_ID} err={Marshal.GetLastWin32Error()}");
+
+                // Chef-Taste ist die sicherheitskritischste Funktion der App - ein
+                // stiller Trace-Log-Eintrag reicht hier nicht, das wuerde niemand
+                // rechtzeitig bemerken. Nur einmal pro Prozesslaufzeit anzeigen.
+                if (!_bossKeyRegistrationWarned)
+                {
+                    _bossKeyRegistrationWarned = true;
+                    try
+                    {
+                        trayIcon?.ShowBalloonTip(4000,
+                            Properties.Resources.BossKeyRegistrationFailedBalloonTitle,
+                            Properties.Resources.BossKeyRegistrationFailedBalloonText,
+                            ToolTipIcon.Warning);
+                    }
+                    catch { }
+                }
+            }
 
             // Strg+Ö → Bild aus Zwischenablage öffnen.
             // WICHTIG: Keys.Oem1 (VK_OEM_1, Scancode 1A) ist auf der deutschen

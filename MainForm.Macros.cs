@@ -371,6 +371,22 @@ namespace Wrok
 
         protected override void WndProc(ref Message m)
         {
+            // Eigene, private Nachricht (siehe Program.cs/WM_WROK_SHOW) statt eines
+            // switch-case: RegisterWindowMessage liefert einen Laufzeitwert, keine
+            // Kompilierzeit-Konstante, kann also nicht als case-Label stehen.
+            if (m.Msg == WM_WROK_SHOW)
+            {
+                try
+                {
+                    this.BeginInvoke((System.Windows.Forms.MethodInvoker)(() =>
+                    {
+                        if (this.WindowState == FormWindowState.Minimized) this.WindowState = FormWindowState.Normal;
+                        this.Show(); this.BringToFront(); this.Activate();
+                    }));
+                }
+                catch { }
+            }
+
             switch (m.Msg)
             {
                 case WM_HOTKEY:
@@ -416,17 +432,6 @@ namespace Wrok
                     if (m.WParam == IntPtr.Zero) _sessionEnding = false;
                     break;
 
-                case WM_SHOWWINDOW:
-                    try
-                    {
-                        this.BeginInvoke((System.Windows.Forms.MethodInvoker)(() =>
-                        {
-                            if (this.WindowState == FormWindowState.Minimized) this.WindowState = FormWindowState.Normal;
-                            this.Show(); this.BringToFront(); this.Activate();
-                        }));
-                    }
-                    catch { }
-                    break;
             }
             base.WndProc(ref m);
         }
