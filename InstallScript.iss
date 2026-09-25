@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Wrok"
-#define MyAppVersion "1.5.1"
+#define MyAppVersion "1.6.0"
 #define MyAppExeName MyAppName + ".exe"
 #define MyAppPublisher "NASS e.K."
 #define MyAppURL "https://www.nass-ek.de"
@@ -42,9 +42,11 @@ DisableProgramGroupPage=yes
 ; Explizit: Installation fuer alle Benutzer nach Program Files.
 ; Muss zu "Scope: machine" im WinGet-Manifest passen.
 PrivilegesRequired=admin
-; Laufende Instanz beim Update automatisch schliessen, sonst sind die Dateien
-; gesperrt und eine stille WinGet-Aktualisierung schlaegt fehl.
-AppMutex=Global\Wrok_SingleInstanceMutex
+; Interaktiv: eine laufende Instanz wird ueber [Code] (CloseRunningWrokIfNeeded)
+; nach Rueckfrage aktiv beendet - siehe dort, ersetzt die fruehere AppMutex-Direktive,
+; die nur passiv gewartet, aber nichts geschlossen hat.
+; Still (WinGet-Hintergrund-Update): CloseApplications=force bleibt als Netz, falls
+; eine Datei trotzdem noch gesperrt ist - ganz ohne Dialog, unveraendert wie bisher.
 CloseApplications=force
 RestartApplications=no
 VersionInfoVersion={#MyAppVersion}
@@ -98,6 +100,54 @@ Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}
 const
   OldUninstallKey =
     'Software\Microsoft\Windows\CurrentVersion\Uninstall\{A5101A1F-25B3-4297-B279-A34FE3354AA3}_is1';
+  WrokMutexName = 'Global\Wrok_SingleInstanceMutex';
+
+{ Ersetzt die fruehere AppMutex-Direktive: die zeigte bei erkannter laufender
+  Instanz nur einen Warte-Dialog ("bitte selbst schliessen, dann OK klicken"),
+  schloss aber nichts selbst. Hier wird stattdessen aktiv nachgefragt und bei
+  Zustimmung die laufende Instanz wirklich beendet.
+  Im stillen Modus (WinGet-Hintergrund-Update) wird bewusst nichts gefragt -
+  dafuer sorgt weiterhin CloseApplications=force beim Dateizugriff, ganz ohne
+  Dialog, unveraendert wie bisher. }
+function CloseRunningWrokIfNeeded(): Boolean;
+var
+  ResultCode: Integer;
+  Elapsed: Integer;
+begin
+  Result := True;
+
+  if WizardSilent() then
+    Exit;
+
+  if not CheckForMutexes(WrokMutexName) then
+    Exit;
+
+  if MsgBox('Wrok wird gerade ausgefuehrt und muss vor der Installation beendet werden.' + #13#10 +
+            'Ungespeicherte Aenderungen (z. B. gerade bearbeitete Makros) gehen dabei verloren.' + #13#10#13#10 +
+            'Jetzt schliessen und fortfahren?',
+            mbConfirmation, MB_YESNO) = IDNO then
+  begin
+    Result := False;
+    Exit;
+  end;
+
+  Exec('taskkill.exe', '/F /IM {#MyAppExeName}', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+
+  { Kurz abwarten, bis der Mutex tatsaechlich freigegeben ist. }
+  Elapsed := 0;
+  while CheckForMutexes(WrokMutexName) and (Elapsed < 5000) do
+  begin
+    Sleep(200);
+    Elapsed := Elapsed + 200;
+  end;
+
+  if CheckForMutexes(WrokMutexName) then
+  begin
+    MsgBox('Wrok konnte nicht automatisch beendet werden. Bitte schliesse es manuell und starte das Setup erneut.',
+           mbError, MB_OK);
+    Result := False;
+  end;
+end;
 
 function InitializeSetup(): Boolean;
 var
@@ -106,13 +156,19 @@ var
 begin
   Result := True;
 
-  { Pr fe zuerst HKLM, dann HKCU, ob eine alte Wrok-Installation existiert }
+  if not CloseRunningWrokIfNeeded() then
+  begin
+    Result := False;
+    Exit;
+  end;
+
+  { Pruefe zuerst HKLM, dann HKCU, ob eine alte Wrok-Installation existiert }
   if RegQueryStringValue(HKLM, OldUninstallKey, 'UninstallString', UninstPath) or
      RegQueryStringValue(HKCU, OldUninstallKey, 'UninstallString', UninstPath) then
   begin
     Log('Vorherige Wrok-Installation gefunden. Starte Deinstallation: ' + UninstPath);
 
-    { Anf hrungszeichen entfernen, damit wir eigene Parameter anh ngen k nnen }
+    { Anfuehrungszeichen entfernen, damit wir eigene Parameter anhaengen koennen }
     UninstPath := RemoveQuotes(UninstPath);
 
     { Alte Version wirklich lautlos deinstallieren.
@@ -121,13 +177,13 @@ begin
     if not Exec(UninstPath, '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART', '', SW_HIDE,
                 ewWaitUntilTerminated, ResultCode) then
     begin
-      Log('Fehler beim Starten des Uninstallers. R ckgabecode: ' + IntToStr(ResultCode));
-      { Wenn du im Fehlerfall abbrechen willst, kommentiere die n chste Zeile aus: }
+      Log('Fehler beim Starten des Uninstallers. Rueckgabecode: ' + IntToStr(ResultCode));
+      { Wenn du im Fehlerfall abbrechen willst, kommentiere die naechste Zeile aus: }
       { Result := False; }
     end
     else
     begin
-      Log('Alte Wrok-Version deinstalliert. R ckgabecode: ' + IntToStr(ResultCode));
+      Log('Alte Wrok-Version deinstalliert. Rueckgabecode: ' + IntToStr(ResultCode));
     end;
   end
   else

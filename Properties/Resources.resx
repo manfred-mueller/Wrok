@@ -306,6 +306,9 @@ Continue?</value>
   <data name="OpenLastImage" xml:space="preserve">
     <value>Open last image</value>
   </data>
+  <data name="ManageFilesMenuItem" xml:space="preserve">
+    <value>Manage files…</value>
+  </data>
   <data name="MenuTools" xml:space="preserve">
     <value>Tools</value>
   </data>
@@ -363,6 +366,9 @@ You are logged out.</value>
   </data>
   <data name="VideoViewerTitle" xml:space="preserve">
     <value>Video – Wrok</value>
+  </data>
+  <data name="FilesViewerTitle" xml:space="preserve">
+    <value>Files – Wrok</value>
   </data>
   <data name="SaveImageTitle" xml:space="preserve">
     <value>Save image</value>

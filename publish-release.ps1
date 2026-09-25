@@ -77,7 +77,7 @@ if (-not $DryRun) {
 }
 
 # --- 1. Version ermitteln ---------------------------------------------------
-$assemblyInfo = Get-Content 'Properties\AssemblyInfo.cs' -Raw
+$assemblyInfo = Get-Content 'Properties\AssemblyInfo.cs' -Raw -Encoding utf8
 $version = [regex]::Match($assemblyInfo, 'AssemblyFileVersion\("(\d+\.\d+\.\d+)').Groups[1].Value
 
 if ([string]::IsNullOrWhiteSpace($version)) {
@@ -201,7 +201,7 @@ if ($exists) {
 $notesFile = $null
 
 if (Test-Path 'CHANGELOG.md') {
-    $changelog = Get-Content 'CHANGELOG.md' -Raw
+    $changelog = Get-Content 'CHANGELOG.md' -Raw -Encoding utf8
 
     # Abschnitt der aktuellen Version: von "## [1.1.0]" bis zur naechsten "## "-Ueberschrift.
     $pattern = '(?ms)^##\s*\[' + [regex]::Escape($version) + '\].*?$(.*?)(?=^##\s|\z)'

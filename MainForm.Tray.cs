@@ -173,6 +173,12 @@ namespace Wrok
             toolsMenu.DropDownItems.Add(Properties.Resources.OpenLastImage, null,
                 (s, e) => OpenLastImage());
 
+            // Groks eigene Dateiverwaltung (grok.com/files) - Uploads und von
+            // Grok/Imagine erzeugte Dateien ansehen, herunterladen, löschen.
+            // Eigenes Fenster statt Navigation im Hauptfenster, siehe FilesViewerForm.
+            toolsMenu.DropDownItems.Add(Properties.Resources.ManageFilesMenuItem, null,
+                (s, e) => ShowFilesViewer());
+
             toolsMenu.DropDownItems.Add(new ToolStripSeparator());
             toolsMenu.DropDownItems.Add(Properties.Resources.ClearCache, null,
                 async (s, e) => await ClearCacheAsync());

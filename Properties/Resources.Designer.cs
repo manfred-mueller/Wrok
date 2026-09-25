@@ -1084,6 +1084,15 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Manage files… ähnelt.
+        /// </summary>
+        public static string ManageFilesMenuItem {
+            get {
+                return ResourceManager.GetString("ManageFilesMenuItem", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die Parsing clickScript result failed: {0} ähnelt.
         /// </summary>
         public static string ParsingClickScriptResultFailed0 {
@@ -1550,6 +1559,15 @@ namespace Wrok.Properties {
         public static string VideoViewerTitle {
             get {
                 return ResourceManager.GetString("VideoViewerTitle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Files – Wrok ähnelt.
+        /// </summary>
+        public static string FilesViewerTitle {
+            get {
+                return ResourceManager.GetString("FilesViewerTitle", resourceCulture);
             }
         }
         

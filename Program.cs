@@ -104,8 +104,6 @@ namespace Wrok
                 return;
             }
 
-            UpgradeSettingsIfNeeded();
-
             // In the single (first) instance: start a named-pipe server to receive SHOW messages.
             StartNamedPipeServer();
 
@@ -123,35 +121,6 @@ namespace Wrok
             catch
             {
                 // Swallow exceptions on shutdown; not critical.
-            }
-        }
-
-        /// <summary>
-        /// Übernimmt beim ersten Start einer neuen Assembly-Version die
-        /// Einstellungen (Makros, Grok-Konten, Fensterposition usw.) aus der
-        /// zuletzt installierten Vorgängerversion. .NET legt Settings pro
-        /// AssemblyVersion in einem eigenen Ordner ab und startet dort ohne
-        /// diesen Aufruf mit lauter Standardwerten - Settings.Default.Upgrade()
-        /// kopiert die alten Werte einmalig rüber, bevor sie gelesen werden.
-        /// SettingsUpgraded verhindert, dass das bei jedem Start erneut passiert
-        /// (was sonst z. B. absichtlich geänderte Werte wieder überschreiben
-        /// würde, falls aus Versehen zwei Ordner nebeneinander existieren).
-        /// </summary>
-        private static void UpgradeSettingsIfNeeded()
-        {
-            try
-            {
-                if (!Properties.Settings.Default.SettingsUpgraded)
-                {
-                    Properties.Settings.Default.Upgrade();
-                    Properties.Settings.Default.SettingsUpgraded = true;
-                    Properties.Settings.Default.Save();
-                    Trace.WriteLine("Settings aus vorheriger Version übernommen (Settings.Default.Upgrade).");
-                }
-            }
-            catch (Exception ex)
-            {
-                Trace.WriteLine($"UpgradeSettingsIfNeeded fehlgeschlagen: {ex}");
             }
         }
 

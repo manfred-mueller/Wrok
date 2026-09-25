@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-09-25
+
+### Features
+- **Dateiverwaltung (grok.com/files) in eigenem Fenster.** Neuer Tray-Eintrag unter *Werkzeuge → Dateien verwalten…* öffnet Groks eigene Dateiübersicht (Uploads und von Grok/Imagine erzeugte Bilder, inkl. Suche, Sortierung und Löschen) in einem separaten Fenster mit eigenem WebView2, das dieselbe `CoreWebView2Environment` wie das Hauptfenster nutzt – kein erneutes Anmelden nötig, der Haupt-Chat bleibt währenddessen unberührt (analog zum bestehenden Video-Player).
+
+### Fixes
+- **Einstellungen (Makros, Fenstergröße, Proxy usw.) gingen bei praktisch jedem Neustart verloren, nicht erst bei einem Versionswechsel.** Ursache: Wrok wird als Single-File-Publish gebaut; dadurch liefert .NET für die ausführende Assembly keinen stabilen Pfad mehr, wodurch der Ordner für Benutzereinstellungen bei jedem Start neu und leer angelegt wurde (`%LocalAppData%\...\Wrok_Url_<hash>\...`). Ein eigener `SettingsProvider` (`WrokSettingsProvider`) speichert jetzt stattdessen alle Einstellungen in einer einzigen festen Datei (`%LocalAppData%\Wrok\settings.json`), unabhängig von Version und Startpfad. Der dadurch überflüssig gewordene alte Migrations-Mechanismus (`Settings.Default.Upgrade()` beim ersten Start einer neuen Version) ist entfernt.
+- **Installer wartete beim interaktiven Aufruf nur passiv auf das manuelle Schließen einer laufenden Wrok-Instanz**, statt sie selbst zu schließen. Fragt jetzt nach Rückfrage aktiv nach und beendet die laufende Instanz selbst; der stille Hintergrund-Update-Pfad über winget bleibt unverändert.
+
+### Intern
+- Fehlende Umlaute in mehreren alten Kommentaren des Setup-Skripts (`InstallScript.iss`) wiederhergestellt.
+
+
 ## [1.4.0] - 2026-09-21
 
 ### Changes

@@ -306,6 +306,9 @@ Fortfahren?</value>
   <data name="OpenLastImage" xml:space="preserve">
     <value>Letztes Bild öffnen</value>
   </data>
+  <data name="ManageFilesMenuItem" xml:space="preserve">
+    <value>Dateien verwalten…</value>
+  </data>
   <data name="MenuTools" xml:space="preserve">
     <value>Werkzeuge</value>
   </data>
@@ -363,6 +366,9 @@ Sie sind abgemeldet.</value>
   </data>
   <data name="VideoViewerTitle" xml:space="preserve">
     <value>Video – Wrok</value>
+  </data>
+  <data name="FilesViewerTitle" xml:space="preserve">
+    <value>Dateien – Wrok</value>
   </data>
   <data name="SaveImageTitle" xml:space="preserve">
     <value>Bild speichern</value>
