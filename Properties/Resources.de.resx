@@ -274,13 +274,13 @@ Fortfahren?</value>
     <value>Fragt beim Start einmal täglich bei GitHub nach einer neueren Version. Dabei wird GitHub kontaktiert.</value>
   </data>
   <data name="UpdateAvailableMenuItem" xml:space="preserve">
-    <value>Update verfügbar: {0}</value>
+    <value>Update {0} installieren</value>
   </data>
   <data name="UpdateAvailableTitle" xml:space="preserve">
     <value>Update verfügbar</value>
   </data>
   <data name="UpdateAvailableBalloon" xml:space="preserve">
-    <value>Wrok {0} ist verfügbar. Zum Öffnen der Release-Seite hier klicken.</value>
+    <value>Wrok {0} ist verfügbar. Zum Installieren hier klicken.</value>
   </data>
   <data name="CheckForUpdatesButton" xml:space="preserve">
     <value>Nach Updates suchen</value>
@@ -293,6 +293,15 @@ Fortfahren?</value>
   </data>
   <data name="UpdateCheckFailed" xml:space="preserve">
     <value>Die Update-Prüfung ist fehlgeschlagen. Bitte später erneut versuchen oder die Verbindung prüfen.</value>
+  </data>
+  <data name="UpdateInstallConfirm" xml:space="preserve">
+    <value>Wrok {0} jetzt herunterladen und installieren? Die App startet danach automatisch neu.</value>
+  </data>
+  <data name="UpdateDownloading" xml:space="preserve">
+    <value>Update wird heruntergeladen…</value>
+  </data>
+  <data name="UpdateInstallFailed" xml:space="preserve">
+    <value>Das Update konnte nicht heruntergeladen oder installiert werden. Bitte später erneut versuchen oder manuell von der Release-Seite installieren.</value>
   </data>
   <data name="PasswordAutosaveMenuItem" xml:space="preserve">
     <value>Passwörter im Browser merken</value>

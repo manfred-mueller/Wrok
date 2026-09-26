@@ -156,6 +156,108 @@ namespace Wrok
             Application.Exit();
         }
 
+        /// <summary>
+        /// Startet den (bereits heruntergeladenen und signaturgeprüften, siehe
+        /// UpdateInstaller) Installer und beendet die laufende Instanz danach - fürs
+        /// Selbst-Update aus der App heraus, analog zu RestartApplication() oben,
+        /// nur eben mit einem zwischengeschalteten Setup statt einem reinen
+        /// Neustart.
+        ///
+        /// Ablauf:
+        ///  1. Installer per ShellExecute starten (nötig für die UAC-Erhöhung über
+        ///     dessen eingebettetes Manifest - PrivilegesRequired=admin in
+        ///     InstallScript.iss; ein normaler Process.Start ohne ShellExecute würde
+        ///     nur mit "Elevation erforderlich" fehlschlagen, statt den UAC-Dialog
+        ///     zu zeigen).
+        ///  2. Einen von uns unabhängigen kleinen Warte-Prozess anstossen, der auf
+        ///     das Ende des Installers wartet und danach Wrok neu startet. Not-
+        ///     wendig, weil unser eigener Prozess selbst nicht mehr da sein wird,
+        ///     wenn der Installer fertig ist: Entweder er beendet sich gleich unten
+        ///     selbst, oder - falls das Timing eng wird - vorher schon durch
+        ///     CloseApplications=force im Setup (das über den Windows Restart
+        ///     Manager per WM_QUERYENDSESSION genau die laufende Instanz schliesst,
+        ///     deren Programmdatei ersetzt werden soll - siehe auch _sessionEnding
+        ///     in MainForm.cs, das für genau diesen Fall ein echtes Beenden statt
+        ///     eines Minimierens in den Tray erzwingt).
+        ///  3. Mutex freigeben und Application.Exit() - wie bei RestartApplication().
+        /// </summary>
+        public static void RestartApplicationForUpdate(string installerPath)
+        {
+            var exePath = Environment.ProcessPath ?? Application.ExecutablePath;
+
+            try
+            {
+                var installer = Process.Start(new ProcessStartInfo
+                {
+                    FileName = installerPath,
+                    Arguments = "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /NOICONS",
+                    UseShellExecute = true
+                });
+
+                if (installer != null)
+                {
+                    StartRelaunchWatcher(installer.Id, exePath);
+                }
+                else
+                {
+                    Trace.WriteLine("RestartApplicationForUpdate: Installer-Prozess konnte nicht ermittelt werden.");
+                }
+            }
+            catch (Exception ex)
+            {
+                // Installer nicht gestartet (z. B. UAC-Dialog abgebrochen) - dann auch
+                // nicht die laufende Instanz beenden, sonst bleibt der Nutzer ganz
+                // ohne laufendes Wrok zurück.
+                Trace.WriteLine($"RestartApplicationForUpdate: Installer konnte nicht gestartet werden: {ex}");
+                return;
+            }
+
+            try
+            {
+                _singleInstanceMutex?.ReleaseMutex();
+                _singleInstanceMutex?.Dispose();
+                _singleInstanceMutex = null;
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"RestartApplicationForUpdate: Mutex-Freigabe fehlgeschlagen: {ex}");
+            }
+
+            Application.Exit();
+        }
+
+        /// <summary>
+        /// Wartet - unabhängig vom (gleich endenden) aktuellen Prozess - auf das Ende
+        /// des Installers und startet danach Wrok neu. Läuft bewusst unerhöht
+        /// (PowerShell selbst braucht keine Admin-Rechte; nur der Installer, der schon
+        /// separat läuft, brauchte sie). Rein informativ: schlägt das Starten des
+        /// Watchers fehl, bleibt Wrok nach dem Update einfach zu - der Nutzer kann es
+        /// dann manuell wieder öffnen, das Update selbst ist davon nicht betroffen.
+        /// </summary>
+        private static void StartRelaunchWatcher(int installerProcessId, string exePath)
+        {
+            try
+            {
+                var script =
+                    $"Wait-Process -Id {installerProcessId} -ErrorAction SilentlyContinue; " +
+                    "Start-Sleep -Milliseconds 500; " +
+                    $"Start-Process -FilePath '{exePath}'";
+
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "powershell.exe",
+                    Arguments = $"-NoProfile -WindowStyle Hidden -Command \"{script}\"",
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    WindowStyle = ProcessWindowStyle.Hidden
+                });
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"StartRelaunchWatcher: Warte-Prozess konnte nicht gestartet werden: {ex}");
+            }
+        }
+
         private static void NotifyExistingInstance()
         {
             try

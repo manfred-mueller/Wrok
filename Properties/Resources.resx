@@ -274,13 +274,13 @@ Continue?</value>
     <value>Checks GitHub for a newer version once a day at startup. This contacts GitHub.</value>
   </data>
   <data name="UpdateAvailableMenuItem" xml:space="preserve">
-    <value>Update available: {0}</value>
+    <value>Install update {0}</value>
   </data>
   <data name="UpdateAvailableTitle" xml:space="preserve">
     <value>Update available</value>
   </data>
   <data name="UpdateAvailableBalloon" xml:space="preserve">
-    <value>Wrok {0} is available. Click here to open the release page.</value>
+    <value>Wrok {0} is available. Click here to install it.</value>
   </data>
   <data name="CheckForUpdatesButton" xml:space="preserve">
     <value>Check for updates</value>
@@ -293,6 +293,15 @@ Continue?</value>
   </data>
   <data name="UpdateCheckFailed" xml:space="preserve">
     <value>The update check failed. Please try again later or check your connection.</value>
+  </data>
+  <data name="UpdateInstallConfirm" xml:space="preserve">
+    <value>Download and install Wrok {0} now? The app will restart automatically once the update is installed.</value>
+  </data>
+  <data name="UpdateDownloading" xml:space="preserve">
+    <value>Downloading update…</value>
+  </data>
+  <data name="UpdateInstallFailed" xml:space="preserve">
+    <value>The update could not be downloaded or installed. Please try again later or install it manually from the release page.</value>
   </data>
   <data name="PasswordAutosaveMenuItem" xml:space="preserve">
     <value>Remember passwords in browser</value>

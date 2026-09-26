@@ -227,8 +227,9 @@ namespace Wrok
             if (trayIcon != null)
             {
                 trayIcon.MouseClick += (s, e) => { if (e.Button == MouseButtons.Left) Reactivate(); };
-                // Klick auf den Update-Ballon öffnet die Release-Seite.
-                trayIcon.BalloonTipClicked += (s, e) => OpenPendingUpdateUrl();
+                // Klick auf den Update-Ballon stößt Download+Installation an
+                // (bzw. öffnet als Fallback die Release-Seite, siehe InstallOrOpenPendingUpdate).
+                trayIcon.BalloonTipClicked += (s, e) => InstallOrOpenPendingUpdate();
             }
         }
 
@@ -283,7 +284,7 @@ namespace Wrok
         {
             try
             {
-                _pendingUpdateUrl = info.ReleaseUrl;
+                _pendingUpdate = info;
 
                 // Menüeintrag ganz oben – bleibt sichtbar, auch wenn der Ballon weg ist.
                 if (_updateMenuItem == null && trayMenu != null)
@@ -293,7 +294,7 @@ namespace Wrok
                     {
                         Font = new Font(trayMenu.Font, FontStyle.Bold)
                     };
-                    item.Click += (s, e) => OpenPendingUpdateUrl();
+                    item.Click += (s, e) => InstallOrOpenPendingUpdate();
 
                     trayMenu.Items.Insert(0, new ToolStripSeparator());
                     trayMenu.Items.Insert(0, item);
@@ -309,9 +310,56 @@ namespace Wrok
             catch (Exception ex) { Log(ex, "Update-Hinweis anzeigen fehlgeschlagen"); }
         }
 
-        private void OpenPendingUpdateUrl()
+        /// <summary>
+        /// Reaktion auf Klick (Ballon oder Menüeintrag): Nach Rückfrage Installer
+        /// herunterladen, signaturprüfen und starten, dann die App über
+        /// Program.RestartApplicationForUpdate neu starten. Ohne passendes
+        /// Installer-Asset im Release (z. B. ein reines Vorab-/Quelltext-Release)
+        /// fällt das Verhalten auf das bisherige "Release-Seite im Browser öffnen"
+        /// zurück.
+        /// </summary>
+        private async void InstallOrOpenPendingUpdate()
         {
-            var url = _pendingUpdateUrl;
+            var info = _pendingUpdate;
+            if (info == null) return;
+
+            if (string.IsNullOrWhiteSpace(info.InstallerUrl))
+            {
+                OpenReleasePage(info.ReleaseUrl);
+                return;
+            }
+
+            var answer = MessageBox.Show(
+                this,
+                string.Format(Properties.Resources.UpdateInstallConfirm, info.TagName),
+                Properties.Resources.UpdateAvailableTitle,
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (answer != DialogResult.Yes) return;
+
+            try
+            {
+                trayIcon?.ShowBalloonTip(
+                    4000,
+                    Properties.Resources.UpdateAvailableTitle,
+                    Properties.Resources.UpdateDownloading,
+                    ToolTipIcon.Info);
+
+                var installerPath = await UpdateInstaller.DownloadAsync(info);
+                Program.RestartApplicationForUpdate(installerPath);
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Update-Installation fehlgeschlagen");
+                MessageBox.Show(
+                    this,
+                    Properties.Resources.UpdateInstallFailed,
+                    Properties.Resources.UpdateAvailableTitle,
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void OpenReleasePage(string url)
+        {
             if (string.IsNullOrWhiteSpace(url)) return;
 
             try

@@ -163,13 +163,7 @@ namespace Wrok
                 switch (result.Outcome)
                 {
                     case UpdateOutcome.UpdateAvailable when result.Info != null:
-                        var answer = MessageBox.Show(
-                            this,
-                            string.Format(Properties.Resources.UpdateAvailableBalloon, result.Info.TagName),
-                            Properties.Resources.UpdateAvailableTitle,
-                            MessageBoxButtons.YesNo, MessageBoxIcon.Information);
-                        if (answer == DialogResult.Yes)
-                            OpenUrl(result.Info.ReleaseUrl);
+                        await OfferInstallAsync(result.Info);
                         break;
 
                     case UpdateOutcome.UpToDate:
@@ -191,8 +185,59 @@ namespace Wrok
             }
             finally
             {
-                btnUpdate.Text = original;
-                btnUpdate.Enabled = true;
+                // Nach einer erfolgreich angestossenen Installation beendet sich die
+                // App gleich selbst (Program.RestartApplicationForUpdate) - btnUpdate
+                // existiert dann u.U. nicht mehr in einem gültigen Zustand.
+                if (!IsDisposed)
+                {
+                    btnUpdate.Text = original;
+                    btnUpdate.Enabled = true;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Nach Bestätigung: Installer herunterladen, signaturprüfen, starten und die
+        /// App neu starten (siehe Program.RestartApplicationForUpdate). Ohne
+        /// passendes Installer-Asset im Release fällt das Verhalten auf das bisherige
+        /// "Release-Seite im Browser öffnen" zurück.
+        /// </summary>
+        private async Task OfferInstallAsync(UpdateInfo info)
+        {
+            if (string.IsNullOrWhiteSpace(info.InstallerUrl))
+            {
+                var fallbackAnswer = MessageBox.Show(
+                    this,
+                    string.Format(Properties.Resources.UpdateAvailableBalloon, info.TagName),
+                    Properties.Resources.UpdateAvailableTitle,
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Information);
+                if (fallbackAnswer == DialogResult.Yes)
+                    OpenUrl(info.ReleaseUrl);
+                return;
+            }
+
+            var answer = MessageBox.Show(
+                this,
+                string.Format(Properties.Resources.UpdateInstallConfirm, info.TagName),
+                Properties.Resources.UpdateAvailableTitle,
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (answer != DialogResult.Yes) return;
+
+            try
+            {
+                btnUpdate.Text = Properties.Resources.UpdateDownloading;
+
+                var installerPath = await UpdateInstaller.DownloadAsync(info);
+                Program.RestartApplicationForUpdate(installerPath);
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"OfferInstallAsync failed: {ex}");
+                MessageBox.Show(
+                    this,
+                    Properties.Resources.UpdateInstallFailed,
+                    Properties.Resources.UpdateAvailableTitle,
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

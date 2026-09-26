@@ -70,8 +70,9 @@ namespace Wrok
         // in den Tray zu minimieren (sonst blockiert es ein stilles Upgrade).
         private bool _sessionEnding;
 
-        // URL der neueren Version, sobald die Update-Prüfung fündig wird.
-        private string? _pendingUpdateUrl;
+        // Update-Info, sobald die Prüfung fündig wird - für den Tray-Menüpunkt/
+        // Ballon (Klick löst Download+Installation aus, siehe MainForm.Tray.cs).
+        private UpdateInfo? _pendingUpdate;
         private ToolStripItem? _updateMenuItem;
 
         private RateLimitManager?      _rateLimitManager;

@@ -1545,6 +1545,33 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Download and install Wrok {0} now? The app will restart automatically once the update is installed. ähnelt.
+        /// </summary>
+        public static string UpdateInstallConfirm {
+            get {
+                return ResourceManager.GetString("UpdateInstallConfirm", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Downloading update… ähnelt.
+        /// </summary>
+        public static string UpdateDownloading {
+            get {
+                return ResourceManager.GetString("UpdateDownloading", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die The update could not be downloaded or installed. Please try again later or install it manually from the release page. ähnelt.
+        /// </summary>
+        public static string UpdateInstallFailed {
+            get {
+                return ResourceManager.GetString("UpdateInstallFailed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die Wrok is up to date. ähnelt.
         /// </summary>
         public static string UpdateUpToDate {

@@ -7,7 +7,8 @@ using System.Text.Json;
 namespace Wrok
 {
     /// <summary>Ergebnis einer erfolgreichen Update-Prüfung.</summary>
-    internal sealed record UpdateInfo(Version LatestVersion, string TagName, string ReleaseUrl);
+    internal sealed record UpdateInfo(
+        Version LatestVersion, string TagName, string ReleaseUrl, string? InstallerUrl);
 
     /// <summary>Ausgang einer manuellen Prüfung (für den About-Dialog).</summary>
     internal enum UpdateOutcome { UpToDate, UpdateAvailable, Failed }
@@ -131,8 +132,35 @@ namespace Wrok
             string url = root.TryGetProperty("html_url", out var u) ? (u.GetString() ?? string.Empty) : string.Empty;
 
             if (!TryParseTag(tag, out var latest)) return (false, null);
+            if (latest <= current) return (true, null);
 
-            return (true, latest > current ? new UpdateInfo(latest, tag, url) : null);
+            string? installerUrl = FindInstallerAssetUrl(root);
+            return (true, new UpdateInfo(latest, tag, url, installerUrl));
+        }
+
+        /// <summary>
+        /// Sucht im Release-JSON das Setup-Asset (Name wie "Wrok-Setup-1.6.0.exe",
+        /// siehe OutputBaseFilename in InstallScript.iss) und liefert dessen direkten
+        /// Download-Link. Null, wenn kein passendes Asset im Release liegt (z. B. bei
+        /// einem Release ohne angehängte Binärdatei) - der Aufrufer fällt dann auf das
+        /// bisherige Verhalten (Release-Seite im Browser öffnen) zurück.
+        /// </summary>
+        private static string? FindInstallerAssetUrl(JsonElement root)
+        {
+            if (!root.TryGetProperty("assets", out var assets) || assets.ValueKind != JsonValueKind.Array)
+                return null;
+
+            foreach (var asset in assets.EnumerateArray())
+            {
+                var name = asset.TryGetProperty("name", out var n) ? n.GetString() : null;
+                if (name == null) continue;
+                if (!name.StartsWith("Wrok-Setup-", StringComparison.OrdinalIgnoreCase)) continue;
+                if (!name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)) continue;
+
+                return asset.TryGetProperty("browser_download_url", out var dl) ? dl.GetString() : null;
+            }
+
+            return null;
         }
 
         private static void StampChecked()
