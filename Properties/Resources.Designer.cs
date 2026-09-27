@@ -1581,6 +1581,15 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Wrok cannot display this file format ({0}). ähnelt.
+        /// </summary>
+        public static string UnsupportedMediaFormat {
+            get {
+                return ResourceManager.GetString("UnsupportedMediaFormat", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die Video – Wrok ähnelt.
         /// </summary>
         public static string VideoViewerTitle {

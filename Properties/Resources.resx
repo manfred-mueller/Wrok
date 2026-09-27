@@ -560,6 +560,8 @@ Media viewer
 - Clicking an image or video in Grok opens it in its own window, placed on the left at full
   screen height while Wrok fills the rest. Videos play muted in an endless loop.
 - Alternatively: right-click the media -&gt; "Copy image address", then press Ctrl+Ö.
+- Local files too: copy an image or video in Explorer (Ctrl+C or "Copy as path"),
+  then press Ctrl+Ö.
 - Ctrl+Ö without a usable clipboard reopens the last media item. Images are cached
   locally for this and need neither network nor an active session.
 - Inside the window: Esc closes, + / - and the mouse wheel zoom, Ctrl+F fits,
@@ -743,5 +745,10 @@ Continue?</value>
   </data>
   <data name="BossKeyRegistrationFailedBalloonText" xml:space="preserve">
     <value>Ctrl+Space could not be registered - another running program is already using it. Restart Wrok, or free the shortcut in the other program.</value>
+  </data>
+  <data name="UnsupportedMediaFormat" xml:space="preserve">
+    <value>Wrok cannot display this file format ({0}).
+
+Supported: images (JPG, PNG, BMP, GIF, TIFF, ICO) and videos (MP4, M4V, WebM, MOV, OGV).</value>
   </data>
 </root>

@@ -561,6 +561,8 @@ Medienansicht
 - Bild oder Video in Grok anklicken öffnet es in einem eigenen Fenster, links auf voller
   Bildschirmhöhe; Wrok nimmt den Rest ein. Videos laufen stumm im Endlos-Loop.
 - Alternativ: Rechtsklick auf das Medium -&gt; "Bildadresse kopieren", dann Strg+Ö.
+- Auch lokale Dateien: Bild oder Video im Explorer kopieren (Strg+C oder
+  "Als Pfad kopieren"), dann Strg+Ö.
 - Strg+Ö ohne passende Zwischenablage öffnet das zuletzt angezeigte Medium.
   Bilder werden dafür lokal zwischengespeichert und brauchen weder Netzwerk noch Anmeldung.
 - Im Medienfenster: Esc schließt, + / - und Mausrad zoomen, Strg+F passt ein,
@@ -745,5 +747,10 @@ Fortfahren?</value>
   </data>
   <data name="BossKeyRegistrationFailedBalloonText" xml:space="preserve">
     <value>Strg+Leertaste konnte nicht registriert werden - ein anderes laufendes Programm belegt diese Kombination bereits. Wrok neu starten oder die Kombination im anderen Programm ändern.</value>
+  </data>
+  <data name="UnsupportedMediaFormat" xml:space="preserve">
+    <value>Dieses Dateiformat kann Wrok nicht anzeigen ({0}).
+
+Unterstützt: Bilder (JPG, PNG, BMP, GIF, TIFF, ICO) und Videos (MP4, M4V, WebM, MOV, OGV).</value>
   </data>
 </root>

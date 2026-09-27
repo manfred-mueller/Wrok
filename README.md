@@ -87,6 +87,7 @@ Bilder und Videos aus Grok lassen sich in einem eigenen Fenster öffnen, das lin
 
 * **Per Klick öffnen:** Bild oder Video in Grok anklicken.
 * **Per Tastenkombination:** Rechtsklick auf das Medium → *Bildadresse kopieren*, dann `Strg+Ö`.
+* **Lokale Dateien:** Bild oder Video im Explorer kopieren (`Strg+C` oder *Als Pfad kopieren*), dann `Strg+Ö`. Unterstützt werden JPG, PNG, BMP, GIF, TIFF und ICO sowie MP4, M4V, WebM, MOV und OGV. Auch lokal geöffnete Medien gelten danach als „zuletzt geöffnet“.
 * **Zuletzt geöffnetes erneut anzeigen:** `Strg+Ö` drücken, wenn nichts Brauchbares in der Zwischenablage steht, oder *Werkzeuge → Letztes Bild öffnen*. Bilder werden lokal unter `%LOCALAPPDATA%\\Wrok\\images` zwischengespeichert und öffnen daher ohne Netzwerk und ohne gültige Sitzung.
 * **Videos** laufen stumm im Endlos-Loop; über die Bedienelemente lässt sich der Ton zuschalten.
 

@@ -27,8 +27,15 @@ namespace Wrok
         // Ursprung grok.com zu geben, damit die Session-Cookies greifen.
         private const string PlayerUrl = "https://grok.com/__wrok_player";
 
+        // Virtueller Host für lokale Videodateien: WebView2 darf aus einer
+        // https-Seite nicht auf file:// zugreifen, deshalb wird der Ordner der
+        // Datei per SetVirtualHostNameToFolderMapping unter diesem Namen
+        // eingeblendet (inkl. Range-Requests, d. h. Spulen funktioniert).
+        private const string LocalMediaHost = "wrok-media.local";
+
         private readonly WebView2 _web;
         private readonly string   _url;
+        private          string   _playUrl;   // _url oder die virtuelle Adresse einer lokalen Datei
         private readonly CoreWebView2Environment? _env;
 
         /// <summary>
@@ -40,6 +47,7 @@ namespace Wrok
         public VideoViewerForm(string url, CoreWebView2Environment? env)
         {
             _url = url ?? throw new ArgumentNullException(nameof(url));
+            _playUrl = _url;
             _env = env;
 
             Text            = Properties.Resources.VideoViewerTitle;
@@ -73,6 +81,20 @@ namespace Wrok
                 core.Settings.AreDefaultContextMenusEnabled = true;
                 core.Settings.IsStatusBarEnabled            = false;
 
+                // Lokale Datei? Dann ihren Ordner über einen virtuellen Host freigeben.
+                if (!_url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+                    !_url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) &&
+                    File.Exists(_url))
+                {
+                    var dir = Path.GetDirectoryName(Path.GetFullPath(_url));
+                    if (!string.IsNullOrEmpty(dir))
+                    {
+                        core.SetVirtualHostNameToFolderMapping(
+                            LocalMediaHost, dir, CoreWebView2HostResourceAccessKind.Allow);
+                        _playUrl = $"https://{LocalMediaHost}/{Uri.EscapeDataString(Path.GetFileName(_url))}";
+                    }
+                }
+
                 core.WebMessageReceived += (s, args) =>
                 {
                     var msg = args.TryGetWebMessageAsString();
@@ -100,7 +122,7 @@ namespace Wrok
                         if (!args.Request.Uri.StartsWith(PlayerUrl, StringComparison.OrdinalIgnoreCase)) return;
                         if (_env == null) return;
 
-                        var html  = BuildPlayerHtml(_url);
+                        var html  = BuildPlayerHtml(_playUrl);
                         var bytes = System.Text.Encoding.UTF8.GetBytes(html);
                         var ms    = new MemoryStream(bytes);
 

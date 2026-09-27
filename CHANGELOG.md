@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [1.6.2] - 2026-09-27
+
+### Features
+- **Strg+Ö öffnet jetzt auch lokale Bilder und Videos.** Neben einer kopierten Bildadresse erkennt Strg+Ö eine im Explorer kopierte Datei (`Strg+C`) sowie einen als Text kopierten Pfad (*Als Pfad kopieren*, auch mit Anführungszeichen oder als `file:///`-URI). Bilder (JPG, PNG, BMP, GIF, TIFF, ICO) öffnen im Bild-Viewer, Videos (MP4, M4V, WebM, MOV, OGV) im Video-Player; dafür wird der Ordner der Datei im Player-WebView2 per `SetVirtualHostNameToFolderMapping` eingeblendet. Lokal geöffnete Medien gelten anschließend als „letztes Bild“: Bilder werden wie Grok-Bilder als Kopie zwischengespeichert, Videos werden über ihren Pfad erneut abgespielt. Die Originaldatei wird dabei nie als Cache-Datei eingetragen, sodass *Browserdaten löschen* sie nicht anfasst.
+
 ## [1.6.0] - 2026-09-25
 
 ### Features

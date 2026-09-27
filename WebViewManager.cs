@@ -904,7 +904,7 @@ namespace Wrok
         /// wird überschrieben) und merkt Pfad und Quell-URL in den Settings.
         /// Als PNG gespeichert, damit es später verlustfrei und sicher ladbar ist.
         /// </summary>
-        private static void SaveAsLastImage(System.Drawing.Bitmap bmp, string url)
+        internal static void SaveAsLastImage(System.Drawing.Bitmap bmp, string url)
         {
             try
             {
