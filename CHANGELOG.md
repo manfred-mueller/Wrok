@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+## [1.6.3] - 2026-09-27
+
+### Fixes
+- **Update-Hinweis verschwand nach einem Neustart.** Wurde Wrok innerhalb von 20 Stunden nach dem Fund eines Updates neu gestartet, griff die Tagesdrossel und der Tray-Eintrag fehlte, obwohl das Update noch ausstand. Eine gefundene Version wird jetzt gemerkt und nach dem Neustart ohne erneute Anfrage bei GitHub wieder angezeigt; nach dem Update verwirft Wrok den Hinweis selbst. Auch eine fehlgeschlagene Prüfung (z. B. offline) lässt einen bekannten Hinweis nicht mehr verschwinden.
+- **Neue Versionen wurden nur beim Start erkannt.** Läuft Wrok länger durch, prüft es jetzt auch während der Laufzeit, weiterhin höchstens einmal in 20 Stunden (ein stündlicher Timer sieht nur nach, ob die Prüfung fällig ist). Ein bereits angezeigtes Update erzeugt dabei keinen erneuten Ballon.
+- **Manuelle Update-Prüfung im Info-Fenster legt jetzt auch den Tray-Eintrag an**, wenn dort ein Update gefunden, aber nicht sofort installiert wurde.
+
+### Intern
+- **`publish-release.ps1` prüft vor dem Bauen, ob CHANGELOG.md einen Abschnitt für die zu veröffentlichende Version enthält.** Fehlt er oder ist er leer, bricht ein echtes Release sofort ab (bei `-DryRun` nur eine Warnung). Der bisherige stille Rückfall auf aus Commit-Titeln erzeugte Release-Notizen entfällt.
+
 ## [1.6.2] - 2026-09-27
 
 ### Features

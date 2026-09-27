@@ -74,6 +74,7 @@ namespace Wrok
         // Ballon (Klick löst Download+Installation aus, siehe MainForm.Tray.cs).
         private UpdateInfo? _pendingUpdate;
         private ToolStripItem? _updateMenuItem;
+        private System.Windows.Forms.Timer? _updateTimer;   // stündlich: ist die nächste Prüfung fällig?
 
         private RateLimitManager?      _rateLimitManager;
         private ToolStripMenuItem?     _rateLimitMenu;
@@ -123,8 +124,10 @@ namespace Wrok
 
             UpdateTrayMenuInactivityState();
 
-            // Nach dem Aufbau: still im Hintergrund nach einer neueren Version sehen.
+            // Nach dem Aufbau: still im Hintergrund nach einer neueren Version sehen –
+            // und danach stündlich nachsehen, ob die nächste Prüfung fällig ist.
             StartUpdateCheck();
+            StartUpdateTimer();
         }
 
         // ------------------------------------------------------------------

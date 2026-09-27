@@ -112,6 +112,34 @@ if (-not $DryRun) {
     }
 }
 
+# --- 1c. CHANGELOG-Abschnitt pruefen ----------------------------------------
+# Frueh statt spaet, aus demselben Grund wie oben: Ein fehlender Abschnitt soll
+# nicht erst nach mehreren Minuten Bauzeit auffallen. Frueher wurden in dem Fall
+# stillschweigend Notizen aus den Commit-Titeln erzeugt - so ist 1.6.1 ohne
+# Eintrag veroeffentlicht worden. Jetzt bricht ein echtes Release ab; bei
+# -DryRun genuegt eine Warnung, damit Probelaeufe weiter ohne Eintrag gehen.
+$notes = $null
+
+if (Test-Path 'CHANGELOG.md') {
+    $changelog = Get-Content 'CHANGELOG.md' -Raw -Encoding utf8
+
+    # Abschnitt der aktuellen Version: von "## [1.1.0]" bis zur naechsten "## "-Ueberschrift.
+    $pattern = '(?ms)^##\s*\[' + [regex]::Escape($version) + '\].*?$(.*?)(?=^##\s|\z)'
+    $match   = [regex]::Match($changelog, $pattern)
+
+    if ($match.Success) { $notes = $match.Groups[1].Value.Trim() }
+}
+
+if ([string]::IsNullOrWhiteSpace($notes)) {
+    $msg = "CHANGELOG.md enthaelt keinen (oder einen leeren) Abschnitt '## [$version]'. " +
+           "Bitte Eintrag ergaenzen, committen und pushen."
+    if ($DryRun) { Write-Host "`n$msg" -ForegroundColor Yellow }
+    else         { throw $msg }
+}
+else {
+    Write-Host "CHANGELOG-Abschnitt fuer $version gefunden." -ForegroundColor Cyan
+}
+
 # --- 2. Alte Ausgaben entfernen ---------------------------------------------
 # Absichtlich mehr als nur der publish-Ordner: Auch die Zwischenergebnisse unter
 # obj verschwinden, damit kein inkrementeller Bau ein veraltetes Teilstueck
@@ -195,30 +223,14 @@ if ($exists) {
     gh release delete $tag --yes --cleanup-tag
 }
 
-# --- 5. Release-Notizen aus dem CHANGELOG ziehen ----------------------------
+# --- 5. Release-Notizen aus dem CHANGELOG ----------------------------------
 # Der gepflegte CHANGELOG-Abschnitt ist fuer Leser deutlich nuetzlicher als
-# eine automatisch erzeugte Liste von Commit-Titeln.
-$notesFile = $null
-
-if (Test-Path 'CHANGELOG.md') {
-    $changelog = Get-Content 'CHANGELOG.md' -Raw -Encoding utf8
-
-    # Abschnitt der aktuellen Version: von "## [1.1.0]" bis zur naechsten "## "-Ueberschrift.
-    $pattern = '(?ms)^##\s*\[' + [regex]::Escape($version) + '\].*?$(.*?)(?=^##\s|\z)'
-    $match   = [regex]::Match($changelog, $pattern)
-
-    if ($match.Success) {
-        $notes = $match.Groups[1].Value.Trim()
-        if (-not [string]::IsNullOrWhiteSpace($notes)) {
-            $notesFile = [System.IO.Path]::GetTempFileName()
-            Set-Content -Path $notesFile -Value $notes -Encoding utf8
-            Write-Host "Release-Notizen aus CHANGELOG.md uebernommen." -ForegroundColor Cyan
-        }
-    }
-    else {
-        Write-Host "Kein CHANGELOG-Abschnitt fuer $version gefunden - GitHub erzeugt die Notizen." -ForegroundColor Yellow
-    }
-}
+# eine automatisch erzeugte Liste von Commit-Titeln. Ermittelt und geprueft
+# wurde er bereits in Schritt 1c - hier kommt ein echtes Release nur mit
+# vorhandenem Abschnitt an.
+$notesFile = [System.IO.Path]::GetTempFileName()
+Set-Content -Path $notesFile -Value $notes -Encoding utf8
+Write-Host "Release-Notizen aus CHANGELOG.md uebernommen." -ForegroundColor Cyan
 
 $kind = if ($PreRelease) { 'Vorabversion' } else { 'Release' }
 Write-Host "`nLege $kind $tag an..." -ForegroundColor Cyan
@@ -227,15 +239,14 @@ Write-Host "`nLege $kind $tag an..." -ForegroundColor Cyan
 # beim Aendern vergessen werden.
 $ghArgs = @('release', 'create', $tag, $setup, '--title', "Wrok $tag")
 
-if ($notesFile) { $ghArgs += @('--notes-file', $notesFile) }
-else            { $ghArgs += '--generate-notes' }
+$ghArgs += @('--notes-file', $notesFile)
 
 if ($PreRelease) { $ghArgs += '--prerelease' }
 
 gh @ghArgs
 $ghExit = $LASTEXITCODE
 
-if ($notesFile) { Remove-Item $notesFile -Force -ErrorAction SilentlyContinue }
+Remove-Item $notesFile -Force -ErrorAction SilentlyContinue
 
 # Auch hier gilt: externe Programme lassen PowerShell nicht von selbst abbrechen.
 if ($ghExit -ne 0) {

@@ -195,6 +195,12 @@ namespace Wrok
                 // dem Bildschirm - CenterParent würde den Dialog dann relativ zu
                 // dieser verschobenen Position zeigen statt zentriert.
                 Dialogs.ShowCentered(dlg, this);
+
+                // Hat die manuelle Prüfung im Dialog ein Update gefunden (und wurde
+                // es dort nicht installiert), den Menüeintrag nachziehen – ohne
+                // Ballon, der Nutzer hat den Hinweis gerade eben gesehen.
+                var pending = UpdateChecker.GetPendingUpdate();
+                if (pending != null) ShowUpdateNotice(pending, showBalloon: false);
             });
             trayMenu.Items.Add(new ToolStripSeparator());
             trayMenu.Items.Add(Properties.Resources.Exit, null, (s, e) => Application.Exit());
@@ -265,6 +271,23 @@ namespace Wrok
         /// Stößt die Update-Prüfung an (best-effort, ohne den Start zu blockieren).
         /// Bei einer neueren Version erscheint ein Tray-Ballon und ein Menüeintrag.
         /// </summary>
+        /// <summary>
+        /// Wrok läuft oft tagelang durch; ohne diesen Timer würde ein neues Release
+        /// erst beim nächsten Start bemerkt. Der Timer fragt NICHT stündlich bei
+        /// GitHub an – CheckAsync hält die 20-Stunden-Drossel ein und liefert
+        /// dazwischen nur das gemerkte Update (ohne Netzzugriff).
+        /// </summary>
+        private void StartUpdateTimer()
+        {
+            try
+            {
+                _updateTimer = new System.Windows.Forms.Timer { Interval = (int)TimeSpan.FromHours(1).TotalMilliseconds };
+                _updateTimer.Tick += (s, e) => StartUpdateCheck();
+                _updateTimer.Start();
+            }
+            catch (Exception ex) { Log(ex, "Update-Timer konnte nicht gestartet werden"); }
+        }
+
         private void StartUpdateCheck()
         {
             _ = Task.Run(async () =>
@@ -280,11 +303,24 @@ namespace Wrok
             });
         }
 
-        private void ShowUpdateNotice(UpdateInfo info)
+        private void ShowUpdateNotice(UpdateInfo info, bool showBalloon = true)
         {
             try
             {
+                // Dasselbe Update wird schon angezeigt (z. B. stündlicher Timer
+                // innerhalb der Drosselzeit) → nichts tun, vor allem kein neuer Ballon.
+                if (_pendingUpdate != null &&
+                    string.Equals(_pendingUpdate.TagName, info.TagName, StringComparison.OrdinalIgnoreCase))
+                {
+                    _pendingUpdate = info;   // URLs könnten sich geändert haben
+                    return;
+                }
+
                 _pendingUpdate = info;
+
+                // Eintrag existiert schon (ältere Version angekündigt) → nur umbenennen.
+                if (_updateMenuItem != null)
+                    _updateMenuItem.Text = string.Format(Properties.Resources.UpdateAvailableMenuItem, info.TagName);
 
                 // Menüeintrag ganz oben – bleibt sichtbar, auch wenn der Ballon weg ist.
                 if (_updateMenuItem == null && trayMenu != null)
@@ -300,6 +336,8 @@ namespace Wrok
                     trayMenu.Items.Insert(0, item);
                     _updateMenuItem = item;
                 }
+
+                if (!showBalloon) return;
 
                 trayIcon?.ShowBalloonTip(
                     8000,

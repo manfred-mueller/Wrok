@@ -26,6 +26,11 @@ namespace Wrok
     /// Datenschutz: Der Aufruf verrät GitHub die IP-Adresse des Nutzers. Deshalb
     /// abschaltbar (Einstellung <c>CheckForUpdates</c>) und auf einmal täglich
     /// gedrosselt (<c>LastUpdateCheckUtc</c>).
+    ///
+    /// Eine gefundene neuere Version wird gemerkt (<c>PendingUpdate*</c>), damit
+    /// der Hinweis auch nach einem Neustart innerhalb der Drosselzeit sichtbar
+    /// bleibt – ohne dafür erneut bei GitHub anzufragen. Sobald die laufende
+    /// Version gleich oder neuer ist (also nach dem Update), wird er verworfen.
     /// </summary>
     internal static class UpdateChecker
     {
@@ -63,14 +68,19 @@ namespace Wrok
             try
             {
                 if (!Properties.Settings.Default.CheckForUpdates) return null;
-                if (!DueForCheck()) return null;
+
+                // Gedrosselt: nicht anfragen, aber ein bereits bekanntes Update
+                // weiterhin melden (z. B. nach einem Neustart).
+                if (!DueForCheck()) return GetPendingUpdate();
 
                 // Zeitstempel VOR dem Aufruf setzen: Auch wenn die Anfrage scheitert,
                 // soll nicht bei jedem Start erneut gegen GitHub gelaufen werden.
                 StampChecked();
 
                 var (ok, info) = await FetchLatestAsync();
-                return ok ? info : null;   // "aktuell" (info == null) hier wie "kein Hinweis"
+
+                // Bei einem Fehler (z. B. offline) den gemerkten Hinweis nicht verlieren.
+                return ok ? info : GetPendingUpdate();
             }
             catch (Exception ex)
             {
@@ -89,7 +99,7 @@ namespace Wrok
             try
             {
                 StampChecked();
-                var (ok, info) = await FetchLatestAsync();
+                var (ok, info) = await FetchLatestAsync();   // merkt ein gefundenes Update selbst
                 if (!ok) return new UpdateCheckResult(UpdateOutcome.Failed, null);
                 return info != null
                     ? new UpdateCheckResult(UpdateOutcome.UpdateAvailable, info)
@@ -100,6 +110,65 @@ namespace Wrok
                 Trace.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [UpdateChecker] Manuelle Prüfung fehlgeschlagen: {ex}");
                 return new UpdateCheckResult(UpdateOutcome.Failed, null);
             }
+        }
+
+        /// <summary>
+        /// Liefert das gemerkte, noch ausstehende Update – oder null, wenn keins
+        /// gemerkt ist oder die laufende Version inzwischen gleich/neuer ist (dann
+        /// wird der Eintrag gleich mit verworfen). Fragt NICHT bei GitHub an.
+        /// </summary>
+        public static UpdateInfo? GetPendingUpdate()
+        {
+            try
+            {
+                var s   = Properties.Settings.Default;
+                var tag = s.PendingUpdateTag;
+                if (string.IsNullOrWhiteSpace(tag)) return null;
+
+                var current = CurrentVersion();
+                if (current == null || !TryParseTag(tag, out var latest)) return null;
+
+                if (latest <= current)
+                {
+                    ClearPending();
+                    return null;
+                }
+
+                return new UpdateInfo(latest, tag, s.PendingUpdateReleaseUrl,
+                    string.IsNullOrWhiteSpace(s.PendingUpdateInstallerUrl) ? null : s.PendingUpdateInstallerUrl);
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [UpdateChecker] Gemerktes Update nicht lesbar: {ex}");
+                return null;
+            }
+        }
+
+        private static void SavePending(UpdateInfo info)
+        {
+            try
+            {
+                var s = Properties.Settings.Default;
+                s.PendingUpdateTag          = info.TagName;
+                s.PendingUpdateReleaseUrl   = info.ReleaseUrl;
+                s.PendingUpdateInstallerUrl = info.InstallerUrl ?? string.Empty;
+                s.Save();
+            }
+            catch { /* nicht kritisch */ }
+        }
+
+        private static void ClearPending()
+        {
+            try
+            {
+                var s = Properties.Settings.Default;
+                if (string.IsNullOrEmpty(s.PendingUpdateTag)) return;
+                s.PendingUpdateTag          = string.Empty;
+                s.PendingUpdateReleaseUrl   = string.Empty;
+                s.PendingUpdateInstallerUrl = string.Empty;
+                s.Save();
+            }
+            catch { /* nicht kritisch */ }
         }
 
         /// <summary>
@@ -126,16 +195,25 @@ namespace Wrok
 
             // Vorabversionen zählen nicht als Update.
             if (root.TryGetProperty("prerelease", out var pre) && pre.ValueKind == JsonValueKind.True)
+            {
+                ClearPending();
                 return (true, null);
+            }
 
             string tag = root.TryGetProperty("tag_name", out var t) ? (t.GetString() ?? string.Empty) : string.Empty;
             string url = root.TryGetProperty("html_url", out var u) ? (u.GetString() ?? string.Empty) : string.Empty;
 
             if (!TryParseTag(tag, out var latest)) return (false, null);
-            if (latest <= current) return (true, null);
+            if (latest <= current)
+            {
+                ClearPending();   // aktuell – ein evtl. gemerkter Hinweis ist überholt
+                return (true, null);
+            }
 
             string? installerUrl = FindInstallerAssetUrl(root);
-            return (true, new UpdateInfo(latest, tag, url, installerUrl));
+            var info = new UpdateInfo(latest, tag, url, installerUrl);
+            SavePending(info);
+            return (true, info);
         }
 
         /// <summary>

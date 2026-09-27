@@ -288,6 +288,42 @@ namespace Wrok.Properties {
 
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string PendingUpdateTag {
+            get {
+                return ((string)(this["PendingUpdateTag"]));
+            }
+            set {
+                this["PendingUpdateTag"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string PendingUpdateReleaseUrl {
+            get {
+                return ((string)(this["PendingUpdateReleaseUrl"]));
+            }
+            set {
+                this["PendingUpdateReleaseUrl"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string PendingUpdateInstallerUrl {
+            get {
+                return ((string)(this["PendingUpdateInstallerUrl"]));
+            }
+            set {
+                this["PendingUpdateInstallerUrl"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("False")]
         public bool FKeyMacroOverrideEnabled {
             get {

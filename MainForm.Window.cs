@@ -243,6 +243,7 @@ namespace Wrok
             if (!this.RecreatingHandle)
             {
                 _inactivity?.Dispose();
+                _updateTimer?.Dispose();
                 DisposeTrayIcon();
             }
             base.OnHandleDestroyed(e);
