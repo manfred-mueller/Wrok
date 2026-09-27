@@ -7,6 +7,11 @@
 ### Features
 - **Strg+Ö öffnet jetzt auch lokale Bilder und Videos.** Neben einer kopierten Bildadresse erkennt Strg+Ö eine im Explorer kopierte Datei (`Strg+C`) sowie einen als Text kopierten Pfad (*Als Pfad kopieren*, auch mit Anführungszeichen oder als `file:///`-URI). Bilder (JPG, PNG, BMP, GIF, TIFF, ICO) öffnen im Bild-Viewer, Videos (MP4, M4V, WebM, MOV, OGV) im Video-Player; dafür wird der Ordner der Datei im Player-WebView2 per `SetVirtualHostNameToFolderMapping` eingeblendet. Lokal geöffnete Medien gelten anschließend als „letztes Bild“: Bilder werden wie Grok-Bilder als Kopie zwischengespeichert, Videos werden über ihren Pfad erneut abgespielt. Die Originaldatei wird dabei nie als Cache-Datei eingetragen, sodass *Browserdaten löschen* sie nicht anfasst.
 
+## [1.6.1] - 2026-09-26
+
+### Features
+- **Updates direkt aus Wrok installieren.** Ist eine neue Version verfügbar, erscheint ganz oben im Tray-Menü ein fett hervorgehobener Eintrag *Update vX.Y.Z installieren*; auch Klick auf den Update-Ballon und die Schaltfläche im Info-Fenster lösen die Installation aus. Nach Rückfrage lädt Wrok das Setup-Asset des Releases herunter (`UpdateInstaller`), prüft dessen Authenticode-Signatur, startet es mit UAC-Erhöhung und startet sich nach Abschluss der Installation automatisch neu (`Program.RestartApplicationForUpdate`). Enthält ein Release kein Setup-Asset, wird wie bisher die Release-Seite im Browser geöffnet.
+
 ## [1.6.0] - 2026-09-25
 
 ### Features
