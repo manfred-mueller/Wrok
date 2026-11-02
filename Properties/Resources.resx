@@ -751,4 +751,43 @@ Continue?</value>
 
 Supported: images (JPG, PNG, BMP, GIF, TIFF, ICO) and videos (MP4, M4V, WebM, MOV, OGV).</value>
   </data>
+  <data name="VideosMenu" xml:space="preserve">
+    <value>Videos</value>
+  </data>
+  <data name="VideoSlotMenuItem" xml:space="preserve">
+    <value>{0}: {1}</value>
+  </data>
+  <data name="VideoSlotEmpty" xml:space="preserve">
+    <value>(empty)</value>
+  </data>
+  <data name="VideoSlotTooltip" xml:space="preserve">
+    <value>Strg+{0}: play · right-click: edit</value>
+  </data>
+  <data name="VideoSlotEditTitle" xml:space="preserve">
+    <value>Video slot {0}</value>
+  </data>
+  <data name="VideosExport" xml:space="preserve">
+    <value>Export…</value>
+  </data>
+  <data name="VideosImport" xml:space="preserve">
+    <value>Import…</value>
+  </data>
+  <data name="VideosFileFilter" xml:space="preserve">
+    <value>Video slots (*.json)|*.json|All files (*.*)|*.*</value>
+  </data>
+  <data name="VideosExportFailed" xml:space="preserve">
+    <value>The video slots could not be exported.</value>
+  </data>
+  <data name="VideosImportConfirm" xml:space="preserve">
+    <value>The current video slots will be replaced. Continue?</value>
+  </data>
+  <data name="VideosImportInvalid" xml:space="preserve">
+    <value>The file is not a valid video slot file.</value>
+  </data>
+  <data name="VideosImportDone" xml:space="preserve">
+    <value>The video slots were imported.</value>
+  </data>
+  <data name="VideosImportExport" xml:space="preserve">
+    <value>Videos Import/Export</value>
+  </data>
 </root>

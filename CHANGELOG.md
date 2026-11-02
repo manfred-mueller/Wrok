@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+## [1.6.4] - 2026-11-02
+
+### Features
+- **Videos mit Ton.** Videos im Video-Fenster starten jetzt mit Ton. Verweigert der Browser das, startet das Video stumm.
+- **F11 und F12 steuern das Video.** F11 pausiert, F12 setzt fort, auch wenn das Hauptfenster den Fokus hat. Solange ein Video-Fenster offen ist, sind im Hauptfenster die Browser-Tastenkürzel deaktiviert (z. B. Zoom mit Strg+Plus).
+- **Strg+F11 schaltet das Vollbild um, Strg+F12 öffnet die DevTools.** Die F11- und F12-Tasten ohne Strg sind dafür frei.
+- **Videos-Menü mit neun Video-Slots.** Links oder lokale Videodateien lassen sich benennen und per Strg+1 bis Strg+9 abspielen, auch aus dem Video-Fenster heraus. Ein neuer Slot ersetzt das laufende Video. Import und Export laufen über eine eigene Datei.
+- **Panikschalter.** Strg+Umschalt+Leertaste beendet Wrok sofort, ohne Nachfrage.
+- **Makro-Import/-Export im Makro-Menü.** Der Eintrag wandert aus den Einstellungen in das Makro-Menü, das Videos-Menü hat einen entsprechenden Eintrag.
+
+### Intern
+- Die Menütexte des Videos-Menüs sind lokalisiert (Deutsch und Englisch).
+
 ## [1.6.3] - 2026-09-27
 
 ### Fixes

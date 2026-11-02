@@ -16,6 +16,8 @@ namespace Wrok
     /// Tastenkürzel:
     ///   Esc      schließen
     ///   Strg+P   anheften (immer im Vordergrund)
+    ///   F11      pausieren
+    ///   F12      fortsetzen
     /// </summary>
     internal sealed class VideoViewerForm : Form
     {
@@ -43,6 +45,9 @@ namespace Wrok
         /// Vorher lässt sich das Seitenverhältnis nicht kennen.
         /// </summary>
         public event Action<Size>? VideoSizeKnown;
+
+        /// <summary>Wird gemeldet, wenn Strg+1 bis Strg+9 im Viewer gedrückt wird (1 bis 9).</summary>
+        public event Action<int>? VideoSlotRequested;
 
         public VideoViewerForm(string url, CoreWebView2Environment? env)
         {
@@ -81,6 +86,10 @@ namespace Wrok
                 core.Settings.AreDefaultContextMenusEnabled = true;
                 core.Settings.IsStatusBarEnabled            = false;
 
+                // Browser-Accelerators aus, damit F11/F12 die Player-Seite erreichen
+                // (Pause/Fortsetzen) statt Chromiums Vollbild bzw. DevTools auszulösen.
+                core.Settings.AreBrowserAcceleratorKeysEnabled = false;
+
                 // Lokale Datei? Dann ihren Ordner über einen virtuellen Host freigeben.
                 if (!_url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
                     !_url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) &&
@@ -98,6 +107,12 @@ namespace Wrok
                 core.WebMessageReceived += (s, args) =>
                 {
                     var msg = args.TryGetWebMessageAsString();
+                    if (msg != null && msg.StartsWith("videoSlot:", StringComparison.Ordinal))
+                    {
+                        if (int.TryParse(msg["videoSlot:".Length..], out int slotNo))
+                            VideoSlotRequested?.Invoke(slotNo);
+                        return;
+                    }
                     if (msg == null || !msg.StartsWith("videoSize:", StringComparison.Ordinal)) return;
 
                     var parts = msg["videoSize:".Length..].Split('x');
@@ -145,8 +160,8 @@ namespace Wrok
         }
 
         /// <summary>
-        /// Minimale Player-Seite: Endlos-Loop, stumm gestartet (sonst greift die
-        /// Autoplay-Sperre), mit Bedienelementen zum Aufdrehen.
+        /// Minimale Player-Seite: Endlos-Loop, startet mit Ton (Browser-Flag
+        /// --autoplay-policy, Fallback stumm), mit Bedienelementen.
         /// </summary>
         private static string BuildPlayerHtml(string url)
         {
@@ -159,7 +174,7 @@ namespace Wrok
   video {{ width:100%; height:100%; object-fit:contain; display:block; background:#1c1c1c; }}
 </style></head>
 <body>
-<video id=""v"" loop autoplay muted playsinline controls></video>
+<video id=""v"" loop autoplay playsinline controls></video>
 <script>
   (function () {{
     var v = document.getElementById('v');
@@ -169,9 +184,24 @@ namespace Wrok
         window.chrome.webview.postMessage('videoSize:' + v.videoWidth + 'x' + v.videoHeight);
       }} catch (e) {{}}
     }});
-    // Autoplay kann trotz muted abgelehnt werden – dann erneut versuchen.
+    // Start mit Ton. Verweigert der Browser das, startet das Video stumm.
     var p = v.play();
-    if (p && p.catch) p.catch(function () {{ setTimeout(function () {{ v.play(); }}, 300); }});
+    if (p && p.catch) p.catch(function () {{
+      v.muted = true;
+      v.play();
+    }});
+    // F11 pausiert, F12 setzt fort.
+    document.addEventListener('keydown', function (e) {{
+      if (e.key === 'F11') {{ e.preventDefault(); v.pause(); }}
+      else if (e.key === 'F12') {{ e.preventDefault(); v.play().catch(function () {{}}); }}
+    }});
+    // Strg+1 bis Strg+9: Video-Slot im Hauptfenster abspielen lassen.
+    document.addEventListener('keydown', function (e) {{
+      if (e.ctrlKey && !e.altKey && !e.shiftKey && e.keyCode >= 49 && e.keyCode <= 57) {{
+        e.preventDefault();
+        try {{ window.chrome.webview.postMessage('videoSlot:' + (e.keyCode - 48)); }} catch (err) {{}}
+      }}
+    }});
   }})();
 </script>
 </body></html>";
@@ -179,10 +209,29 @@ namespace Wrok
 
         private void OnKeyDown(object? sender, KeyEventArgs e)
         {
+            if (e.Control && !e.Shift && !e.Alt && e.KeyCode >= Keys.D1 && e.KeyCode <= Keys.D9)
+            {
+                e.SuppressKeyPress = true;
+                VideoSlotRequested?.Invoke((int)e.KeyCode - (int)Keys.D0);
+                return;
+            }
+
             switch (e.KeyCode)
             {
                 case Keys.Escape:
                     Close();
+                    break;
+
+                // Hat das Formular statt des Videoframes den Fokus, sieht es F11/F12.
+                // Dann den Frame fokussieren und dort pausieren bzw. starten.
+                case Keys.F11:
+                    e.SuppressKeyPress = true;
+                    FocusPlayerAndRun("v.pause();");
+                    break;
+
+                case Keys.F12:
+                    e.SuppressKeyPress = true;
+                    FocusPlayerAndRun("v.play().catch(function () {});");
                     break;
 
                 case Keys.P when e.Control:
@@ -190,6 +239,35 @@ namespace Wrok
                     Text = Properties.Resources.VideoViewerTitle + (TopMost ? "   📌" : string.Empty);
                     break;
             }
+        }
+
+        /// <summary>
+        /// Setzt den Fokus auf den Videoframe und führt danach ein Kommando auf dem
+        /// Video-Element aus. Ohne Fokus auf dem Frame erreicht JavaScript die Tasten nicht.
+        /// </summary>
+        private void FocusPlayerAndRun(string js)
+        {
+            try
+            {
+                _web.Focus();
+                RunOnPlayer(js);
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [VideoViewerForm] Steuerung fehlgeschlagen: {ex}");
+            }
+        }
+
+        /// <summary>Pausiert bzw. startet das Video, ohne den Fokus zu verschieben.</summary>
+        public void SetPlayback(bool play)
+        {
+            RunOnPlayer(play ? "v.play().catch(function () {});" : "v.pause();");
+        }
+
+        private void RunOnPlayer(string js)
+        {
+            _ = _web.CoreWebView2?.ExecuteScriptAsync(
+                "(function () { var v = document.getElementById('v'); if (v) { " + js + " } })();");
         }
 
         private void TryApplyDarkTitleBar()

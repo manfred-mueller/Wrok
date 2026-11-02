@@ -13,8 +13,10 @@ namespace Wrok
 
         private const int HOTKEY_ID       = 0x9000;
         private const int HOTKEY_ID_IMAGE = 0x9001;   // Strg+Ö
+        private const int HOTKEY_ID_KILL  = 0x9002;   // Strg+Umschalt+Leertaste (Panikschalter)
         private const int WM_HOTKEY    = 0x0312;
         private const uint MOD_CONTROL = 0x0002;
+        private const uint MOD_SHIFT   = 0x0004;
 
         // F1–F10 (ohne Modifier) feuern per lokaler Tastenbehandlung (siehe
         // MainForm.Macros.HandleFKeyOverride) die Makros des aktiven Profils,

@@ -222,6 +222,10 @@ namespace Wrok
             ok = RegisterHotKey(this.Handle, HOTKEY_ID_IMAGE, MOD_CONTROL, (uint)Keys.Oem3);
             if (!ok) Trace.WriteLine($"RegisterHotKey fehlgeschlagen id={HOTKEY_ID_IMAGE} (Strg+Ö) err={Marshal.GetLastWin32Error()}");
 
+            // Panikschalter: Strg+Umschalt+Leertaste beendet Wrok sofort.
+            ok = RegisterHotKey(this.Handle, HOTKEY_ID_KILL, MOD_CONTROL | MOD_SHIFT, (uint)Keys.Space);
+            if (!ok) Trace.WriteLine($"RegisterHotKey fehlgeschlagen id={HOTKEY_ID_KILL} (Panikschalter) err={Marshal.GetLastWin32Error()}");
+
             _theme?.Refresh();
             EnsureTrayIconVisible();
         }
@@ -231,6 +235,7 @@ namespace Wrok
             _rateLimitManager?.StopAutoRefresh();
             try { UnregisterHotKey(this.Handle, HOTKEY_ID); } catch { }
             try { UnregisterHotKey(this.Handle, HOTKEY_ID_IMAGE); } catch { }
+            try { UnregisterHotKey(this.Handle, HOTKEY_ID_KILL); } catch { }
 
             _webViewManager?.DisposeInputSimulator();
             _theme?.StopListening();   // wird in OnHandleCreated wieder angemeldet

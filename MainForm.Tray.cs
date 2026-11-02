@@ -31,6 +31,9 @@ namespace Wrok
             InitializeMacrosMenu();
             if (macrosMenu != null) trayMenu.Items.Add(macrosMenu);
 
+            InitializeVideosMenu();
+            if (videosMenu != null) trayMenu.Items.Add(videosMenu);
+
             trayMenu.Items.Add(new ToolStripSeparator());
 
             // ---------- Einstellungen ----------
@@ -57,12 +60,6 @@ namespace Wrok
             }
             appMenu.DropDownItems.Add(inactivityMenu);
 
-            var macroIoMenu = new ToolStripMenuItem(Properties.Resources.MacrosImportExport);
-            macroIoMenu.DropDownItems.Add(Properties.Resources.MacrosExportActive, null, (s, e) => ExportMacros(allProfiles: false));
-            macroIoMenu.DropDownItems.Add(Properties.Resources.MacrosExportAll,    null, (s, e) => ExportMacros(allProfiles: true));
-            macroIoMenu.DropDownItems.Add(new ToolStripSeparator());
-            macroIoMenu.DropDownItems.Add(Properties.Resources.MacrosImport,       null, (s, e) => ImportMacros());
-            appMenu.DropDownItems.Add(macroIoMenu);
 
             // F1-F10 direkt als Makro-Hotkeys, Strg+F5 = Reload, Strg+Umschalt+F1-3
             // wechselt das Profil - siehe MainForm.HandleFKeyOverride. Default aus.
@@ -81,8 +78,7 @@ namespace Wrok
                 bool desired = !fKeyOverrideItem.Checked;
                 Properties.Settings.Default.FKeyMacroOverrideEnabled = desired;
                 Properties.Settings.Default.Save();
-                if (_webView?.CoreWebView2 != null)
-                    _webView.CoreWebView2.Settings.AreBrowserAcceleratorKeysEnabled = !desired;
+                UpdateBrowserAccelerators();
                 _ = _webViewManager?.ExecuteScriptAsync(
                     $"if (window.__wrokSetFKeyEnabled) window.__wrokSetFKeyEnabled({(desired ? "true" : "false")});");
                 fKeyOverrideItem.Checked = desired;

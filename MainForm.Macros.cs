@@ -168,6 +168,14 @@ namespace Wrok
                 macrosMenu.DropDownItems.Add(macroItem);
             }
 
+            macrosMenu.DropDownItems.Add(new ToolStripSeparator());
+            var macroIoMenu = new ToolStripMenuItem(Properties.Resources.MacrosImportExport);
+            macroIoMenu.DropDownItems.Add(Properties.Resources.MacrosExportActive, null, (s, e) => ExportMacros(allProfiles: false));
+            macroIoMenu.DropDownItems.Add(Properties.Resources.MacrosExportAll,    null, (s, e) => ExportMacros(allProfiles: true));
+            macroIoMenu.DropDownItems.Add(new ToolStripSeparator());
+            macroIoMenu.DropDownItems.Add(Properties.Resources.MacrosImport,       null, (s, e) => ImportMacros());
+            macrosMenu.DropDownItems.Add(macroIoMenu);
+
         }
 
         private void EditMacroAndSave(int index)
@@ -406,6 +414,11 @@ namespace Wrok
                                 }
                                 catch (Exception ex) { Trace.WriteLine(String.Format(Wrok.Properties.Resources.HotkeyToggleFailed, ex)); }
                             }));
+                        }
+                        else if (id == HOTKEY_ID_KILL)
+                        {
+                            // Panikschalter: sofort beenden, ohne Nachfrage und ohne Aufräumen.
+                            Environment.Exit(0);
                         }
                         else if (id == HOTKEY_ID_IMAGE)
                         {

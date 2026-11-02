@@ -40,18 +40,33 @@
     // und einfacher als e.key-String-Vergleiche mit Layout-Sonderfaellen).
     var F_KEYCODES = { 112: 1, 113: 2, 114: 3, 115: 4, 116: 5, 117: 6, 118: 7, 119: 8, 120: 9, 121: 10, 122: 11, 123: 12 };
 
+    // Strg+F11 = Vollbild, Strg+F12 = DevTools. Unabhaengig von der Makro-
+    // Checkbox. Ohne Strg bleiben F11/F12 unangetastet (Video-Viewer: Pause/Fortsetzen).
+    // Strg+1 bis Strg+9 = Video-Slot abspielen (Host: PlayVideoSlot).
     window.addEventListener('keydown', function (e) {
-        if (!window.__wrokFKeyEnabled) return;
-        var n = F_KEYCODES[e.keyCode];
-        if (!n) return;
-        if (e.altKey) return; // Alt+F4 & Co. nie anfassen.
+        if (!e.ctrlKey || e.altKey || e.shiftKey) return;
+        if (e.keyCode < 49 || e.keyCode > 57) return;
+        e.preventDefault();
+        e.stopPropagation();
+        try { window.chrome.webview.postMessage('videoSlot:' + (e.keyCode - 48)); } catch (ex) { }
+    }, true);
 
-        if (n === 11) {
-            // Fullscreen - manuell, da Chromiums native Behandlung bei
-            // deaktivierten Accelerator-Keys wegfaellt. Bleibt unabhaengig vom
-            // Makro-Override immer die native F11-Funktion.
-            e.preventDefault();
-            e.stopPropagation();
+    // F11 = Video pausieren, F12 = Video fortsetzen (ohne Strg). Der Host
+    // entscheidet, ob gerade ein Video-Viewer offen ist.
+    window.addEventListener('keydown', function (e) {
+        if (e.ctrlKey || e.altKey) return;
+        if (e.keyCode !== 122 && e.keyCode !== 123) return;
+        e.preventDefault();
+        e.stopPropagation();
+        try { window.chrome.webview.postMessage(e.keyCode === 122 ? 'mediaPause' : 'mediaPlay'); } catch (ex) { }
+    }, true);
+
+    window.addEventListener('keydown', function (e) {
+        if (!e.ctrlKey || e.altKey) return;
+        if (e.keyCode !== 122 && e.keyCode !== 123) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.keyCode === 122) {
             try {
                 if (document.fullscreenElement || document.webkitFullscreenElement) {
                     (document.exitFullscreen || document.webkitExitFullscreen).call(document);
@@ -60,16 +75,18 @@
                     (el.requestFullscreen || el.webkitRequestFullscreen).call(el);
                 }
             } catch (ex) { }
-            return;
-        }
-        if (n === 12) {
-            // DevTools - JS kann das Fenster nicht selbst oeffnen, daher an den
-            // Host melden (siehe WebViewManager.WebMessageReceived).
-            e.preventDefault();
-            e.stopPropagation();
+        } else {
+            // DevTools - JS kann das Fenster nicht selbst oeffnen, daher an den Host melden.
             try { window.chrome.webview.postMessage('openDevTools'); } catch (ex) { }
-            return;
         }
+    }, true);
+
+    window.addEventListener('keydown', function (e) {
+        if (!window.__wrokFKeyEnabled) return;
+        var n = F_KEYCODES[e.keyCode];
+        if (!n) return;
+        if (e.altKey) return; // Alt+F4 & Co. nie anfassen.
+        if (n === 11 || n === 12) return; // F11/F12 ohne Strg: keine Makros.
 
         // F1-F10 (+ Strg/Umschalt-Kombinationen): Entscheidungslogik (Makro
         // ausloesen, Profil wechseln, Reload) bleibt zentral in C#

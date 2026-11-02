@@ -137,6 +137,24 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Ctrl+Space could not be registered - another running program is already using it. Restart Wrok, or free the shortcut in the other program. ähnelt.
+        /// </summary>
+        public static string BossKeyRegistrationFailedBalloonText {
+            get {
+                return ResourceManager.GetString("BossKeyRegistrationFailedBalloonText", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Boss key unavailable ähnelt.
+        /// </summary>
+        public static string BossKeyRegistrationFailedBalloonTitle {
+            get {
+                return ResourceManager.GetString("BossKeyRegistrationFailedBalloonTitle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die Cache cleared ähnelt.
         /// </summary>
         public static string CacheCleared {
@@ -518,29 +536,47 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Files – Wrok ähnelt.
+        /// </summary>
+        public static string FilesViewerTitle {
+            get {
+                return ResourceManager.GetString("FilesViewerTitle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die F{0} ähnelt.
+        /// </summary>
+        public static string FKeyMacroHotkeyLabel {
+            get {
+                return ResourceManager.GetString("FKeyMacroHotkeyLabel", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die F1-F10 fire the active profile&apos;s macros, Ctrl+F5 reloads, Ctrl+Shift+F1-F3 switches the profile. F11/F12 stay unchanged (fullscreen/DevTools). Only active while Wrok has keyboard focus. ähnelt.
+        /// </summary>
+        public static string FKeyOverrideHint {
+            get {
+                return ResourceManager.GetString("FKeyOverrideHint", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die F-keys for macros (F1-F10) ähnelt.
+        /// </summary>
+        public static string FKeyOverrideMenuItem {
+            get {
+                return ResourceManager.GetString("FKeyOverrideMenuItem", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die Hotkey toggle failed: {0} ähnelt.
         /// </summary>
         public static string HotkeyToggleFailed {
             get {
                 return ResourceManager.GetString("HotkeyToggleFailed", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Boss key unavailable ähnelt.
-        /// </summary>
-        public static string BossKeyRegistrationFailedBalloonTitle {
-            get {
-                return ResourceManager.GetString("BossKeyRegistrationFailedBalloonTitle", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Ctrl+Space could not be registered ähnelt.
-        /// </summary>
-        public static string BossKeyRegistrationFailedBalloonText {
-            get {
-                return ResourceManager.GetString("BossKeyRegistrationFailedBalloonText", resourceCulture);
             }
         }
         
@@ -788,10 +824,10 @@ namespace Wrok.Properties {
         ///- Edit: right-click a macro in the tray menu.
         ///- Send via menu: left-click inserts the text and sends it (text + Enter).
         ///- Send without Enter: left-click + Shift (or Alt) sends the text WITHOUT a trailing Enter.
-        ///- Hotkeys: Ctrl+1 .. Ctrl+0 send the ten macros of the ACTIVE profile. Enter follows by default,
-        ///  as with left-click; hold Shift or Alt while pressing to suppress it.
-        ///- Numpad mode (optional): additionally, the first five macros of EVERY profile are reachable on the
-        ///  numeric keypad wi [Rest der Zeichenfolge wurde abgeschnitten]&quot;; ähnelt.
+        ///- Hotkeys: enable the &quot;F-keys for macros (F1-F10)&quot; checkbox under Settings -&gt; App (off by
+        ///  default). F1 through F10 then instantly fire the ten macros of the active profile, with no extra
+        ///  step. Ctrl+F5 reloads the page. Ctrl+Shift+F1/F2/F3 switches the active profile, confirmed by a
+        ///  short [Rest der Zeichenfolge wurde abgeschnitten]&quot;; ähnelt.
         /// </summary>
         public static string MacroHelp {
             get {
@@ -835,7 +871,7 @@ namespace Wrok.Properties {
             }
         }
         
-/// <summary>
+        /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die Profile {0} ähnelt.
         /// </summary>
         public static string MacroProfileDefault {
@@ -942,6 +978,15 @@ namespace Wrok.Properties {
         public static string MacroVariablesHint {
             get {
                 return ResourceManager.GetString("MacroVariablesHint", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Manage files… ähnelt.
+        /// </summary>
+        public static string ManageFilesMenuItem {
+            get {
+                return ResourceManager.GetString("ManageFilesMenuItem", resourceCulture);
             }
         }
         
@@ -1084,15 +1129,6 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Manage files… ähnelt.
-        /// </summary>
-        public static string ManageFilesMenuItem {
-            get {
-                return ResourceManager.GetString("ManageFilesMenuItem", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die Parsing clickScript result failed: {0} ähnelt.
         /// </summary>
         public static string ParsingClickScriptResultFailed0 {
@@ -1144,6 +1180,24 @@ namespace Wrok.Properties {
         public static string ProfileMenuMacroLabel {
             get {
                 return ResourceManager.GetString("ProfileMenuMacroLabel", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Active profile: {0} ähnelt.
+        /// </summary>
+        public static string ProfileSwitchedBalloonText {
+            get {
+                return ResourceManager.GetString("ProfileSwitchedBalloonText", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Macro profile switched ähnelt.
+        /// </summary>
+        public static string ProfileSwitchedBalloonTitle {
+            get {
+                return ResourceManager.GetString("ProfileSwitchedBalloonTitle", resourceCulture);
             }
         }
         
@@ -1509,7 +1563,18 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Wrok {0} is available. Click here to open the release page. ähnelt.
+        ///   Sucht eine lokalisierte Zeichenfolge, die Wrok cannot display this file format ({0}).
+        ///
+        ///Supported: images (JPG, PNG, BMP, GIF, TIFF, ICO) and videos (MP4, M4V, WebM, MOV, OGV). ähnelt.
+        /// </summary>
+        public static string UnsupportedMediaFormat {
+            get {
+                return ResourceManager.GetString("UnsupportedMediaFormat", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Wrok {0} is available. Click here to install it. ähnelt.
         /// </summary>
         public static string UpdateAvailableBalloon {
             get {
@@ -1518,7 +1583,7 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Update available: {0} ähnelt.
+        ///   Sucht eine lokalisierte Zeichenfolge, die Install update {0} ähnelt.
         /// </summary>
         public static string UpdateAvailableMenuItem {
             get {
@@ -1545,20 +1610,20 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Download and install Wrok {0} now? The app will restart automatically once the update is installed. ähnelt.
-        /// </summary>
-        public static string UpdateInstallConfirm {
-            get {
-                return ResourceManager.GetString("UpdateInstallConfirm", resourceCulture);
-            }
-        }
-        
-        /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die Downloading update… ähnelt.
         /// </summary>
         public static string UpdateDownloading {
             get {
                 return ResourceManager.GetString("UpdateDownloading", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Download and install Wrok {0} now? The app will restart automatically once the update is installed. ähnelt.
+        /// </summary>
+        public static string UpdateInstallConfirm {
+            get {
+                return ResourceManager.GetString("UpdateInstallConfirm", resourceCulture);
             }
         }
         
@@ -1581,11 +1646,47 @@ namespace Wrok.Properties {
         }
         
         /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Wrok cannot display this file format ({0}). ähnelt.
+        ///   Sucht eine lokalisierte Zeichenfolge, die Video-Slot {0} ähnelt.
         /// </summary>
-        public static string UnsupportedMediaFormat {
+        public static string VideoSlotEditTitle {
             get {
-                return ResourceManager.GetString("UnsupportedMediaFormat", resourceCulture);
+                return ResourceManager.GetString("VideoSlotEditTitle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die (leer) ähnelt.
+        /// </summary>
+        public static string VideoSlotEmpty {
+            get {
+                return ResourceManager.GetString("VideoSlotEmpty", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die {0}: {1} ähnelt.
+        /// </summary>
+        public static string VideoSlotMenuItem {
+            get {
+                return ResourceManager.GetString("VideoSlotMenuItem", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Strg+{0}: abspielen · Rechtsklick: bearbeiten ähnelt.
+        /// </summary>
+        public static string VideoSlotTooltip {
+            get {
+                return ResourceManager.GetString("VideoSlotTooltip", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die Videos ähnelt.
+        /// </summary>
+        public static string VideosMenu {
+            get {
+                return ResourceManager.GetString("VideosMenu", resourceCulture);
             }
         }
         
@@ -1595,15 +1696,6 @@ namespace Wrok.Properties {
         public static string VideoViewerTitle {
             get {
                 return ResourceManager.GetString("VideoViewerTitle", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Files – Wrok ähnelt.
-        /// </summary>
-        public static string FilesViewerTitle {
-            get {
-                return ResourceManager.GetString("FilesViewerTitle", resourceCulture);
             }
         }
         
@@ -1653,50 +1745,77 @@ namespace Wrok.Properties {
                 return ResourceManager.GetString("WrokClickToOpen", resourceCulture);
             }
         }
-        
         /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die F-Tasten fuer Makros (F1-F10) aehnelt.
+        ///   Sucht eine lokalisierte Zeichenfolge, die VideosExport ähnelt.
         /// </summary>
-        public static string FKeyOverrideMenuItem {
+        public static string VideosExport {
             get {
-                return ResourceManager.GetString("FKeyOverrideMenuItem", resourceCulture);
+                return ResourceManager.GetString("VideosExport", resourceCulture);
             }
         }
-        
+
         /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die F1-F10 feuern die Makros des aktiven Profils aehnelt.
+        ///   Sucht eine lokalisierte Zeichenfolge, die VideosImport ähnelt.
         /// </summary>
-        public static string FKeyOverrideHint {
+        public static string VideosImport {
             get {
-                return ResourceManager.GetString("FKeyOverrideHint", resourceCulture);
+                return ResourceManager.GetString("VideosImport", resourceCulture);
             }
         }
-        
+
         /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die F{0} aehnelt.
+        ///   Sucht eine lokalisierte Zeichenfolge, die VideosFileFilter ähnelt.
         /// </summary>
-        public static string FKeyMacroHotkeyLabel {
+        public static string VideosFileFilter {
             get {
-                return ResourceManager.GetString("FKeyMacroHotkeyLabel", resourceCulture);
+                return ResourceManager.GetString("VideosFileFilter", resourceCulture);
             }
         }
-        
+
         /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Makro-Profil gewechselt aehnelt.
+        ///   Sucht eine lokalisierte Zeichenfolge, die VideosExportFailed ähnelt.
         /// </summary>
-        public static string ProfileSwitchedBalloonTitle {
+        public static string VideosExportFailed {
             get {
-                return ResourceManager.GetString("ProfileSwitchedBalloonTitle", resourceCulture);
+                return ResourceManager.GetString("VideosExportFailed", resourceCulture);
             }
         }
-        
+
         /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die Aktives Profil: {0} aehnelt.
+        ///   Sucht eine lokalisierte Zeichenfolge, die VideosImportConfirm ähnelt.
         /// </summary>
-        public static string ProfileSwitchedBalloonText {
+        public static string VideosImportConfirm {
             get {
-                return ResourceManager.GetString("ProfileSwitchedBalloonText", resourceCulture);
+                return ResourceManager.GetString("VideosImportConfirm", resourceCulture);
             }
         }
+
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die VideosImportInvalid ähnelt.
+        /// </summary>
+        public static string VideosImportInvalid {
+            get {
+                return ResourceManager.GetString("VideosImportInvalid", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die VideosImportDone ähnelt.
+        /// </summary>
+        public static string VideosImportDone {
+            get {
+                return ResourceManager.GetString("VideosImportDone", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die VideosImportExport ähnelt.
+        /// </summary>
+        public static string VideosImportExport {
+            get {
+                return ResourceManager.GetString("VideosImportExport", resourceCulture);
+            }
+        }
+
     }
 }

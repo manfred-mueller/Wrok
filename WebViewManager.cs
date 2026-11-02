@@ -29,7 +29,7 @@ namespace Wrok
 
         // Versionsnummer des JS-Helpers – erhöhen, sobald __wrokSend oder
         // __wrokEnsureFocus geändert wird.
-        private const int WrokHelperVersion = 9;
+        private const int WrokHelperVersion = 12;
 
         // ------------------------------------------------------------------
         // Felder
@@ -91,13 +91,17 @@ namespace Wrok
                 // Proxy wirkt nur als Browser-Argument beim Erzeugen der Umgebung –
                 // Chromium liest --proxy-server nicht zur Laufzeit neu. Eine Änderung
                 // greift daher erst nach einem Neustart von Wrok (siehe MainForm.ShowProxyDialog).
-                var options = new CoreWebView2EnvironmentOptions();
+                // Autoplay ohne Nutzergeste: Videos im Viewer starten mit Ton.
+                var options = new CoreWebView2EnvironmentOptions
+                {
+                    AdditionalBrowserArguments = "--autoplay-policy=no-user-gesture-required"
+                };
                 if (Properties.Settings.Default.ProxyEnabled &&
                     !string.IsNullOrWhiteSpace(Properties.Settings.Default.ProxyServer))
                 {
                     string bypassList = Properties.Settings.Default.ProxyBypassList;
-                    options.AdditionalBrowserArguments =
-                        $"--proxy-server=\"{Properties.Settings.Default.ProxyServer}\"" +
+                    options.AdditionalBrowserArguments +=
+                        $" --proxy-server=\"{Properties.Settings.Default.ProxyServer}\"" +
                         (string.IsNullOrWhiteSpace(bypassList) ? "" : $" --proxy-bypass-list=\"{bypassList}\"");
                 }
 
@@ -333,6 +337,15 @@ namespace Wrok
                     try { _webView.CoreWebView2?.OpenDevToolsWindow(); }
                     catch (Exception ex) { Log(ex, "OpenDevToolsWindow fehlgeschlagen"); }
                 }
+                else if (msg != null && msg.StartsWith("videoSlot:", StringComparison.Ordinal))
+                {
+                    if (int.TryParse(msg["videoSlot:".Length..], out int slotNo))
+                        _owner.PlayVideoSlot(slotNo - 1);
+                }
+                else if (msg == "mediaPause")
+                    _owner.ControlVideoPlayback(false);
+                else if (msg == "mediaPlay")
+                    _owner.ControlVideoPlayback(true);
                 else if (msg != null && msg.StartsWith("fkey:", StringComparison.Ordinal))
                     HandleFKeyMessage(msg["fkey:".Length..]);
             };

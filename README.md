@@ -19,9 +19,11 @@ winget install --id NASS.Wrok
 
 Er arbeitet komplett ohne API-Zugriff und bietet folgende Funktionen:
 
-* Bis zu zehn frei belegbare Makros je Profil, erreichbar über **Strg+F1**/**F2**/**F3** (öffnet ein Auswahl-Popup mit den Makrotiteln, Ziffer wählt aus)
+* Bis zu zehn frei belegbare Makros je Profil, erreichbar über **F1** bis **F10** (im Tray-Menü einschaltbar)
 * Makro-Variablen: `{input}`, `{date}`, `{time}`, `{day}`, `{username}`, `{clipboard}`
 * Boss-Taste **Strg + Leertaste** (sofortiges Minimieren/Wiederherstellen)
+* Panikschalter **Strg + Umschalt + Leertaste** beendet Wrok sofort, ohne Nachfrage
+* Videos-Menü mit neun Video-Slots, abrufbar per **Strg+1** bis **Strg+9**
 * Medienansicht für Bilder und Videos, links auf voller Bildschirmhöhe – Videos im Endlos-Loop
 * Automatische Fensterminimierung nach einstellbarem Inaktivitäts-Zeitraum
 * Speichern von Fenstergröße, -position und Maximierungsstatus
@@ -41,13 +43,15 @@ Alle in dieser Software verwendeten Markennamen und Bezeichnungen sind eingetrag
 
 Das Menü ist in zwei Untermenüs gegliedert:
 
-* **Einstellungen → App** — Inaktivität, Makro-Import/-Export, Mit Windows starten, Passwort speichern, Proxy, Nach Updates suchen
+* **Einstellungen → App** — Inaktivität, Mit Windows starten, Passwort speichern, Proxy, Nach Updates suchen
+* **Makros → Makros Import/Export** — Makro-Profile exportieren und importieren
+* **Videos** — Video-Slots bearbeiten, abspielen und exportieren oder importieren
 * **Einstellungen → Grok** — öffnet Groks eigene Einstellungsseite
 * **Werkzeuge** — Rate Limits, Bild/Video öffnen, Daten löschen
 
 ### Makro-Profile
 
-Drei benennbare Sätze zu je zehn Makros, etwa für verschiedene Figuren oder Szenarien. `Strg+F1`, `Strg+F2` und `Strg+F3` sprechen fest Profil 1, 2 bzw. 3 an – unabhängig davon, welches Profil im Tray-Menü gerade zum Bearbeiten angezeigt wird ("aktives" Profil).
+Drei benennbare Sätze zu je zehn Makros, etwa für verschiedene Figuren oder Szenarien. `Strg+Umschalt+F1` bis `Strg+Umschalt+F3` wechseln direkt zu Profil 1 bis 3. Das „aktive“ Profil ist das, das im Tray-Menü gerade ausgewählt ist.
 
 Der erste Eintrag im Makro-Menü trägt den Namen des aktiven Profils und klappt zu den übrigen auf.
 
@@ -61,7 +65,7 @@ Der erste Eintrag im Makro-Menü trägt den Namen des aktiven Profils und klappt
 * **Bearbeiten:** Rechtsklick auf ein Makro im Tray-Menü.
 * **Über das Menü senden:** Linksklick fügt den Text ein und sendet ihn (Text + Enter).
 * **Ohne Enter senden:** Linksklick + Umschalt (oder Alt) fügt den Text ein, sendet aber **kein** Enter.
-* **Hotkeys:** `Strg+F1`, `Strg+F2`, `Strg+F3` öffnen je ein Auswahl-Popup mit den zehn Makrotiteln des jeweiligen Profils (fest zugeordnet, unabhängig vom im Tray angezeigten Profil). Eine Ziffer (1-9, 0 für das zehnte) sendet das Makro; Escape oder Klick daneben bricht ab. Standardmäßig folgt Enter wie beim Linksklick; Umschalt oder Alt beim Drücken der Ziffer unterdrückt es.
+* **Hotkeys:** `F1` bis `F10` senden die zehn Makros des aktiven Profils direkt. Die Funktion ist standardmäßig aus und lässt sich im Tray-Menü unter „F-Tasten für Makros (F1-F10)“ einschalten. Dann sind die Browser-Tastenkürzel im Hauptfenster deaktiviert. `Strg+F5` lädt die Seite neu.
 
 #### Makro-Variablen
 
@@ -89,7 +93,7 @@ Bilder und Videos aus Grok lassen sich in einem eigenen Fenster öffnen, das lin
 * **Per Tastenkombination:** Rechtsklick auf das Medium → *Bildadresse kopieren*, dann `Strg+Ö`.
 * **Lokale Dateien:** Bild oder Video im Explorer kopieren (`Strg+C` oder *Als Pfad kopieren*), dann `Strg+Ö`. Unterstützt werden JPG, PNG, BMP, GIF, TIFF und ICO sowie MP4, M4V, WebM, MOV und OGV. Auch lokal geöffnete Medien gelten danach als „zuletzt geöffnet“.
 * **Zuletzt geöffnetes erneut anzeigen:** `Strg+Ö` drücken, wenn nichts Brauchbares in der Zwischenablage steht, oder *Werkzeuge → Letztes Bild öffnen*. Bilder werden lokal unter `%LOCALAPPDATA%\\Wrok\\images` zwischengespeichert und öffnen daher ohne Netzwerk und ohne gültige Sitzung.
-* **Videos** laufen stumm im Endlos-Loop; über die Bedienelemente lässt sich der Ton zuschalten.
+* **Videos** laufen im Endlos-Loop mit Ton. `F11` pausiert, `F12` setzt fort, auch wenn das Hauptfenster den Fokus hat. Solange ein Video offen ist, sind im Hauptfenster die Browser-Tastenkürzel deaktiviert (z. B. Zoom mit Strg+Plus).
 
 Tastenkürzel im Medienfenster:
 
@@ -102,6 +106,14 @@ Tastenkürzel im Medienfenster:
 |`Strg+P`|Anheften (immer im Vordergrund)|
 
 Ziehen mit der linken Maustaste verschiebt ein Bild.
+
+### Videos-Menü
+
+Neun Slots nehmen jeweils einen Namen und eine Adresse auf. Die Adresse kann ein Link oder eine lokale Videodatei sein.
+
+* **Abspielen:** Linksklick auf einen Slot im Menü *Videos* oder `Strg+1` bis `Strg+9`. Das gilt auch aus dem Video-Fenster heraus.
+* **Bearbeiten:** Rechtsklick auf einen Slot. Eine leere Adresse leert den Slot.
+* **Import/Export:** *Videos → Videos Import/Export*. Die Datei ist von den Makros getrennt. Beim Import werden alle neun Slots ersetzt.
 
 ### Boss-Taste
 
@@ -130,7 +142,9 @@ Wrok sieht beim Start (höchstens einmal täglich) nach, ob auf GitHub eine neue
 ### Fehlerbehebung und Tipps
 
 * Wird Text nicht abgeschickt: sicherstellen, dass die Seite vollständig geladen und das Eingabefeld sichtbar ist.
-* **DevTools öffnen:** `F12` öffnet die WebView2-Entwicklerwerkzeuge zur Prüfung von DOM und Konsole.
+* **DevTools öffnen:** `Strg+F12` öffnet die WebView2-Entwicklerwerkzeuge zur Prüfung von DOM und Konsole.
+* **Vollbild:** `Strg+F11` schaltet das Vollbild um.
+* **Videos-Menü:** Neun Video-Slots (Menü *Videos*) lassen sich per `Strg+1` bis `Strg+9` abspielen. Linksklick spielt, Rechtsklick bearbeitet.
 * **Seite zoomen:** `Strg` + `+`/`-`/`0` oder `Strg` + Mausrad. Die Zoomstufe wird gemerkt.
 * **Protokoll:** Meldungen und Fehler stehen in `%LOCALAPPDATA%\\Wrok\\logs\\app.log`.
 
@@ -147,9 +161,11 @@ Wrok sieht beim Start (höchstens einmal täglich) nach, ob auf GitHub eine neue
 
 It works entirely without API access and offers the following features:
 
-* Up to ten freely assignable macros per profile, reachable via **Ctrl+F1**/**F2**/**F3** (opens a picker popup listing the macro titles, a digit selects one)
+* Up to ten freely assignable macros per profile, reachable via **F1** to **F10** (can be switched on in the tray menu)
+* Video slot menu with nine slots, playable via **Ctrl+1** to **Ctrl+9**
 * Macro variables: `{input}`, `{date}`, `{time}`, `{day}`, `{username}`, `{clipboard}`
 * Boss key **Ctrl + Spacebar** (instant minimize/restore)
+* Panic switch **Ctrl + Shift + Spacebar** quits Wrok immediately, without a prompt
 * Media viewer for images and videos, left-aligned at full screen height – videos loop endlessly
 * Automatic window minimization after configurable inactivity period
 * Saving of window size, position and maximized state
@@ -177,7 +193,7 @@ The tray menu is grouped into two submenus:
 
 ### Macro profiles
 
-Three named sets of ten macros each, for different characters or scenarios. `Ctrl+F1`, `Ctrl+F2` and `Ctrl+F3` always address profile 1, 2 and 3 respectively - independent of which profile the tray menu currently shows for editing (the "active" profile).
+Three named sets of ten macros each, for different characters or scenarios. `Ctrl+Shift+F1` to `Ctrl+Shift+F3` switch directly to profile 1 to 3. The "active" profile is the one currently selected in the tray menu.
 
 The first entry of the macro menu carries the active profile's name and expands to the others.
 
@@ -191,7 +207,7 @@ The first entry of the macro menu carries the active profile's name and expands 
 * **Edit:** Right-click a macro in the tray menu.
 * **Send via menu:** Left-click a macro to insert its text and send it (Send + Enter).
 * **Send without Enter:** Left-click + Shift (or Alt) inserts the text but does NOT send Enter.
-* **Hotkeys:** `Ctrl+F1`, `Ctrl+F2`, `Ctrl+F3` each open a picker popup listing the ten macro titles of that profile (fixed, independent of the profile shown in the tray). A digit (1-9, 0 for the tenth) sends that macro; Escape or clicking elsewhere cancels. By default the macro is followed by Enter (same as left-click); hold Shift or Alt while pressing the digit to suppress it.
+* **Hotkeys:** `F1` to `F10` send the ten macros of the active profile directly. This is off by default and can be switched on in the tray menu under "F-Tasten für Makros (F1-F10)". While it is on, the browser shortcuts in the main window are disabled. `Ctrl+F5` reloads the page.
 
 #### Macro variables
 
@@ -219,7 +235,7 @@ Images and videos from Grok can be opened in a separate window that is placed on
 * **Open by click:** Click an image or video in Grok.
 * **Open by hotkey:** Right-click the media in Grok → *Copy image/video address*, then press `Ctrl+Ö`.
 * **Reopen the last item:** Press `Ctrl+Ö` with nothing usable in the clipboard, or use *Werkzeuge → Letztes Bild öffnen*. Images are cached locally under `%LOCALAPPDATA%\\Wrok\\images`, so they reopen without network or session.
-* **Videos** play muted in an endless loop; use the player controls to unmute.
+* **Videos** play with sound in an endless loop. `F11` pauses, `F12` resumes, even while the main window has focus. While a video is open, the browser shortcuts in the main window (e.g. Ctrl+Plus zoom) are disabled.
 
 Keyboard shortcuts inside the viewer:
 
@@ -232,6 +248,14 @@ Keyboard shortcuts inside the viewer:
 |`Ctrl+P`|Pin (always on top)|
 
 Drag with the left mouse button to pan an image.
+
+### Videos menu
+
+Nine slots each hold a name and an address. The address can be a link or a local video file.
+
+* **Play:** Left-click a slot in the *Videos* menu or press `Ctrl+1` to `Ctrl+9`. This also works from the video window.
+* **Edit:** Right-click a slot. An empty address clears the slot.
+* **Import/Export:** *Videos → Videos Import/Export*. The file is separate from the macros. Importing replaces all nine slots.
 
 ### Boss key
 
@@ -257,7 +281,9 @@ At startup (at most once a day) Wrok checks GitHub for a newer version and then 
 ### Troubleshooting \& Tips
 
 * If text is not sent: ensure the page is fully loaded and the editor is visible.
-* **Open DevTools:** `F12` opens the WebView2 developer tools to inspect the DOM and console.
+* **Open DevTools:** `Ctrl+F12` opens the WebView2 developer tools to inspect the DOM and console.
+* **Fullscreen:** `Ctrl+F11` toggles fullscreen.
+* **Videos menu:** Nine video slots (menu *Videos*) play with `Ctrl+1` to `Ctrl+9`. Left-click plays, right-click edits.
 * **Zoom the page:** `Ctrl` + `+`/`-`/`0` or `Ctrl` + mouse wheel. The zoom level is remembered.
 * **Logs:** Runtime messages and logs are written to `%LOCALAPPDATA%\\Wrok\\logs\\app.log`.
 

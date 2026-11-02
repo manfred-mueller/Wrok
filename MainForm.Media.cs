@@ -128,6 +128,8 @@ namespace Wrok
 
             var viewer = new VideoViewerForm(url, _webViewManager.CoreEnvironment);
             RegisterMediaViewer(viewer);
+            viewer.VideoSlotRequested += slot =>
+                BeginInvoke((System.Windows.Forms.MethodInvoker)(() => PlayVideoSlot(slot - 1)));
 
             // Vorläufig hochkant anordnen; sobald die Metadaten da sind, korrigieren.
             ArrangeSideBySide(viewer, (int)(WorkArea.Height * 9.0 / 16.0));
@@ -167,10 +169,32 @@ namespace Wrok
         private void RegisterMediaViewer(Form viewer)
         {
             _mediaViewer = viewer;
+            UpdateBrowserAccelerators();
             viewer.FormClosed += (_, _) =>
             {
                 if (ReferenceEquals(_mediaViewer, viewer)) _mediaViewer = null;
+                UpdateBrowserAccelerators();
             };
+        }
+
+        /// <summary>
+        /// Browser-Tastenkürzel im Hauptfenster sind nur dann aktiv, wenn weder der
+        /// F-Tasten-Makromodus noch ein offenes Video läuft. Solange ein Video offen
+        /// ist, erreichen F11/F12 den Seitencode und steuern das Video.
+        /// </summary>
+        internal void UpdateBrowserAccelerators()
+        {
+            if (_webView?.CoreWebView2 == null) return;
+            bool videoOpen = _mediaViewer is VideoViewerForm { IsDisposed: false };
+            _webView.CoreWebView2.Settings.AreBrowserAcceleratorKeysEnabled =
+                !(Properties.Settings.Default.FKeyMacroOverrideEnabled || videoOpen);
+        }
+
+        /// <summary>Pausiert bzw. startet das Video im offenen Viewer, ohne den Fokus zu verschieben.</summary>
+        internal void ControlVideoPlayback(bool play)
+        {
+            if (_mediaViewer is VideoViewerForm { IsDisposed: false } video)
+                video.SetPlayback(play);
         }
 
         private void ArrangeSideBySide(Form viewer, int desiredWidth)
