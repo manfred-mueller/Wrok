@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.6.5] - 2026-11-04
 
 ### Features
 - **Videos-Menü heißt jetzt Medien.** Das Menü enthält Bilder und Videos. Die Datei `videos.json` und bestehende Slots bleiben unverändert.
