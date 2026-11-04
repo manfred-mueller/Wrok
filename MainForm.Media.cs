@@ -99,60 +99,124 @@ namespace Wrok
         // ------------------------------------------------------------------
 
         /// <summary>
-        /// Zeigt ein Bild im Viewer-Fenster und ordnet es links auf voller
-        /// Bildschirmhöhe an; Wrok füllt den Rest rechts daneben. Es gibt immer
-        /// höchstens ein Medienfenster – ein neues Medium ersetzt das bisherige.
-        /// Wrok bleibt nach dem Schließen in der Anordnung stehen: Medien haben
-        /// meist dieselbe Größe, das nächste öffnet dadurch ohne Sprung.
+        /// Zeigt ein Bild im Medienfenster, links auf voller Bildschirmhöhe. Es gibt immer
+        /// nur ein Medienfenster: Ein neues Bild ersetzt den Inhalt des bestehenden Fensters.
         /// </summary>
         internal void ShowImageViewer(Bitmap bmp, string sourceUrl)
         {
-            CloseCurrentMedia();
-
-            var viewer = new ImageViewerForm(bmp, sourceUrl);
-            RegisterMediaViewer(viewer);
-
-            ArrangeSideBySide(viewer, viewer.WidthForHeight(WorkArea.Height));
-            viewer.Show();
+            try
+            {
+                string path = SaveViewImage(bmp);
+                var viewer  = EnsureMediaViewer();
+                viewer.ShowImage(path, new Size(bmp.Width, bmp.Height));
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Bild konnte nicht angezeigt werden");
+            }
+            finally
+            {
+                bmp.Dispose();
+            }
         }
 
         /// <summary>
-        /// Zeigt ein Video im Endlos-Loop. Die echten Abmessungen sind erst nach
-        /// dem Laden der Metadaten bekannt – das Fenster wird dann nachjustiert.
+        /// Zeigt ein Video im Medienfenster. Die echten Abmessungen sind erst nach dem
+        /// Laden der Metadaten bekannt – das Fenster wird dann nachjustiert.
         /// </summary>
         internal void ShowVideoViewer(string url)
         {
             if (_webViewManager == null) return;
 
-            CloseCurrentMedia();
+            var viewer = EnsureMediaViewer();
 
-            var viewer = new VideoViewerForm(url, _webViewManager.CoreEnvironment);
-            RegisterMediaViewer(viewer);
-            viewer.VideoSlotRequested += slot =>
-                BeginInvoke((System.Windows.Forms.MethodInvoker)(() => PlayVideoSlot(slot - 1)));
-
-            // Vorläufig hochkant anordnen; sobald die Metadaten da sind, korrigieren.
-            ArrangeSideBySide(viewer, (int)(WorkArea.Height * 9.0 / 16.0));
-
-            viewer.VideoSizeKnown += size =>
-            {
-                if (viewer.IsDisposed) return;
-                try
-                {
-                    viewer.BeginInvoke((MethodInvoker)(() =>
-                    {
-                        if (!viewer.IsDisposed)
-                            ArrangeSideBySide(viewer, viewer.WidthForHeight(WorkArea.Height, size));
-                    }));
-                }
-                catch (Exception ex) { Log(ex, "Video-Anordnung nach Metadaten fehlgeschlagen"); }
-            };
-
-            viewer.Show();
+            // Ein Bild (z. B. aus einem Video-Slot) wird im selben Fenster als Bild gezeigt.
+            // Die Größe kennt das Fenster erst nach dem Laden.
+            if (IsImageLocation(url))
+                viewer.ShowImage(url, Size.Empty);
+            else
+                viewer.ShowVideo(url);
 
             Properties.Settings.Default.LastImageUrl  = url;
             Properties.Settings.Default.LastImagePath = string.Empty;   // Video: nur URL
             Properties.Settings.Default.Save();
+        }
+
+        /// <summary>
+        /// Erkennt anhand der Endung, ob eine Adresse oder ein lokaler Pfad ein Bild ist.
+        /// Unbekannte Endungen gelten als Video, wie bisher.
+        /// </summary>
+        private static bool IsImageLocation(string target)
+        {
+            try
+            {
+                string path = target.StartsWith("http", StringComparison.OrdinalIgnoreCase)
+                    ? new Uri(target).AbsolutePath
+                    : target;
+                return LocalImageExtensions.Contains(Path.GetExtension(path));
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Liefert das offene Medienfenster oder öffnet ein neues. Vorhandene Fenster
+        /// behalten ihre Position und Größe; der Inhalt wechselt erst bei ShowImage/ShowVideo.
+        /// </summary>
+        private VideoViewerForm EnsureMediaViewer()
+        {
+            if (_mediaViewer is VideoViewerForm { IsDisposed: false } existing)
+            {
+                if (!existing.Visible) existing.Show();
+                return existing;
+            }
+
+            var viewer = new VideoViewerForm(_webViewManager?.CoreEnvironment);
+            RegisterMediaViewer(viewer);
+
+            viewer.VideoSlotRequested += slot =>
+                BeginInvoke((System.Windows.Forms.MethodInvoker)(() => PlayVideoSlot(slot - 1)));
+
+            viewer.VideoSizeKnown += size =>
+            {
+                if (viewer.IsDisposed) return;
+                try { ArrangeSideBySide(viewer, viewer.WidthForHeight(WorkArea.Height, size)); }
+                catch (Exception ex) { Log(ex, "Medien-Anordnung nach Metadaten fehlgeschlagen"); }
+            };
+
+            // Vorläufig hochkant anordnen; sobald die Abmessungen da sind, korrigieren.
+            ArrangeSideBySide(viewer, (int)(WorkArea.Height * 9.0 / 16.0));
+            viewer.Show();
+
+            // Das neue Fenster bekommt beim Öffnen den Fokus. Das Hauptfenster holt ihn
+            // zurück, damit F11/F12 und Strg+1 bis Strg+9 dort wie gewohnt wirken.
+            if (Visible && WindowState != FormWindowState.Minimized)
+                Activate();
+
+            return viewer;
+        }
+
+        /// <summary>
+        /// Speichert das Bild als PNG im lokalen Viewer-Ordner. Ältere Dateien dieses
+        /// Ordners werden entfernt, damit er nicht wächst.
+        /// </summary>
+        private static string SaveViewImage(Bitmap bmp)
+        {
+            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                                   "Wrok", "view");
+            Directory.CreateDirectory(dir);
+
+            var path = Path.Combine(dir, $"view-{DateTime.Now:yyyyMMddHHmmssfff}.png");
+            bmp.Save(path, System.Drawing.Imaging.ImageFormat.Png);
+
+            foreach (var old in Directory.GetFiles(dir, "view-*.png"))
+            {
+                if (string.Equals(old, path, StringComparison.OrdinalIgnoreCase)) continue;
+                try { File.Delete(old); } catch { /* wird beim nächsten Mal erneut versucht */ }
+            }
+            return path;
         }
 
         private Rectangle WorkArea => Screen.FromControl(this).WorkingArea;
@@ -185,16 +249,18 @@ namespace Wrok
         internal void UpdateBrowserAccelerators()
         {
             if (_webView?.CoreWebView2 == null) return;
-            bool videoOpen = _mediaViewer is VideoViewerForm { IsDisposed: false };
+            bool videoOpen = _mediaViewer is VideoViewerForm { IsDisposed: false } video && video.IsVideo;
             _webView.CoreWebView2.Settings.AreBrowserAcceleratorKeysEnabled =
                 !(Properties.Settings.Default.FKeyMacroOverrideEnabled || videoOpen);
         }
 
         /// <summary>Pausiert bzw. startet das Video im offenen Viewer, ohne den Fokus zu verschieben.</summary>
-        internal void ControlVideoPlayback(bool play)
+        internal void ControlVideoPlayback(bool? play)
         {
-            if (_mediaViewer is VideoViewerForm { IsDisposed: false } video)
-                video.SetPlayback(play);
+            if (_mediaViewer is not VideoViewerForm { IsDisposed: false } video) return;
+
+            if (play is bool start) video.SetPlayback(start);
+            else video.TogglePlayback();
         }
 
         private void ArrangeSideBySide(Form viewer, int desiredWidth)

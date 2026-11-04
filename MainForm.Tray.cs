@@ -164,10 +164,12 @@ namespace Wrok
             toolsMenu.DropDownItems.Add(_rateLimitMenu);
 
             toolsMenu.DropDownItems.Add(new ToolStripSeparator());
-            toolsMenu.DropDownItems.Add(Properties.Resources.OpenImageFromClipboard, null,
-                async (s, e) => await OpenImageFromClipboardAsync());
-            toolsMenu.DropDownItems.Add(Properties.Resources.OpenLastImage, null,
-                (s, e) => OpenLastImage());
+            // Gelöschte Chats: Grok-Seite im Hauptfenster laden, Fenster bei Bedarf nach vorn holen.
+            toolsMenu.DropDownItems.Add(Properties.Resources.RestoreDeletedChats, null, (s, e) =>
+            {
+                Reactivate();
+                _ = _webViewManager?.NavigateAsync("https://grok.com/deleted-conversations");
+            });
 
             // Groks eigene Dateiverwaltung (grok.com/files) - Uploads und von
             // Grok/Imagine erzeugte Dateien ansehen, herunterladen, löschen.

@@ -51,14 +51,14 @@
         try { window.chrome.webview.postMessage('videoSlot:' + (e.keyCode - 48)); } catch (ex) { }
     }, true);
 
-    // F11 = Video pausieren, F12 = Video fortsetzen (ohne Strg). Der Host
+    // F11 = Video umschalten (Pause/Wiedergabe), ohne Strg. Der Host
     // entscheidet, ob gerade ein Video-Viewer offen ist.
     window.addEventListener('keydown', function (e) {
         if (e.ctrlKey || e.altKey) return;
-        if (e.keyCode !== 122 && e.keyCode !== 123) return;
+        if (e.keyCode !== 122) return;
         e.preventDefault();
         e.stopPropagation();
-        try { window.chrome.webview.postMessage(e.keyCode === 122 ? 'mediaPause' : 'mediaPlay'); } catch (ex) { }
+        try { window.chrome.webview.postMessage('mediaToggle'); } catch (ex) { }
     }, true);
 
     window.addEventListener('keydown', function (e) {

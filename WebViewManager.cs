@@ -29,7 +29,7 @@ namespace Wrok
 
         // Versionsnummer des JS-Helpers – erhöhen, sobald __wrokSend oder
         // __wrokEnsureFocus geändert wird.
-        private const int WrokHelperVersion = 12;
+        private const int WrokHelperVersion = 14;
 
         // ------------------------------------------------------------------
         // Felder
@@ -342,6 +342,8 @@ namespace Wrok
                     if (int.TryParse(msg["videoSlot:".Length..], out int slotNo))
                         _owner.PlayVideoSlot(slotNo - 1);
                 }
+                else if (msg == "mediaToggle")
+                    _owner.ControlVideoPlayback(null);
                 else if (msg == "mediaPause")
                     _owner.ControlVideoPlayback(false);
                 else if (msg == "mediaPlay")

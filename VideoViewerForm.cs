@@ -2,22 +2,30 @@ using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
+using System.Text.Json;
 
 namespace Wrok
 {
     /// <summary>
-    /// Zeigt ein Video im Endlos-Loop in einem eigenständigen Fenster.
+    /// Medienfenster für Videos und Bilder. Ein Fenster zeigt immer ein Medium; ein neues
+    /// Medium ersetzt den Inhalt, ohne das Fenster zu schließen.
     ///
-    /// Umgesetzt mit einem zweiten WebView2, das dieselbe CoreWebView2Environment
-    /// (und damit denselben User-Data-Ordner und dieselbe Login-Session) nutzt wie
-    /// das Hauptfenster. Dadurch kann die Grok-URL direkt gestreamt werden – kein
-    /// Download, kein Base64-Transport wie beim Bild-Viewer.
+    /// Umgesetzt mit einem WebView2, das dieselbe CoreWebView2Environment nutzt wie das
+    /// Hauptfenster (gleiche Session/Cookies). Videos werden direkt gestreamt, Bilder
+    /// liegen als PNG im lokalen Ordner und werden über einen virtuellen Host geladen.
     ///
-    /// Tastenkürzel:
+    /// Tastenkürzel (Video und Bild):
     ///   Esc      schließen
     ///   Strg+P   anheften (immer im Vordergrund)
-    ///   F11      pausieren
-    ///   F12      fortsetzen
+    ///   Strg+1-9 Video-Slot abspielen
+    /// Video:
+    ///   F11      Pause / Wiedergabe umschalten
+    /// Bild:
+    ///   + / -    zoomen
+    ///   0        100 %
+    ///   Strg+F   einpassen
+    ///   Ziehen   verschiebt das Bild
     /// </summary>
     internal sealed class VideoViewerForm : Form
     {
@@ -29,30 +37,142 @@ namespace Wrok
         // Ursprung grok.com zu geben, damit die Session-Cookies greifen.
         private const string PlayerUrl = "https://grok.com/__wrok_player";
 
-        // Virtueller Host für lokale Videodateien: WebView2 darf aus einer
-        // https-Seite nicht auf file:// zugreifen, deshalb wird der Ordner der
-        // Datei per SetVirtualHostNameToFolderMapping unter diesem Namen
-        // eingeblendet (inkl. Range-Requests, d. h. Spulen funktioniert).
+        // Virtueller Host für lokale Dateien (Video und Bild). WebView2 darf aus einer
+        // https-Seite nicht auf file:// zugreifen, deshalb wird der Ordner der Datei
+        // unter diesem Namen eingeblendet (inkl. Range-Requests, Spulen funktioniert).
         private const string LocalMediaHost = "wrok-media.local";
 
+        private const string VideoPageTemplate = @"<!doctype html>
+<html><head><meta charset='utf-8'>
+<style>
+  html, body { margin:0; height:100%; background:#1c1c1c; overflow:hidden; }
+  video { width:100%; height:100%; object-fit:contain; display:block; background:#1c1c1c; }
+</style></head>
+<body>
+<video id='v' loop autoplay playsinline controls></video>
+<script>
+(function () {
+  var v = document.getElementById('v');
+  var noop = function () {};
+  function post(m) { try { window.chrome.webview.postMessage(m); } catch (e) {} }
+  v.src = __SRC__;
+  v.addEventListener('loadedmetadata', function () {
+    post('videoSize:' + v.videoWidth + 'x' + v.videoHeight);
+  });
+  // Start mit Ton. Verweigert der Browser das, startet das Video stumm.
+  var p = v.play();
+  if (p && p.catch) p.catch(function () { v.muted = true; v.play().catch(noop); });
+  window.wrokToggle = function () { if (v.paused) { v.play().catch(noop); } else { v.pause(); } };
+  window.wrokSet = function (play) { if (play) { v.play().catch(noop); } else { v.pause(); } };
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { e.preventDefault(); post('close'); return; }
+    if (e.ctrlKey && !e.altKey && !e.shiftKey && (e.key === 'p' || e.key === 'P')) { e.preventDefault(); post('pin'); return; }
+    if (e.key === 'F11') { e.preventDefault(); window.wrokToggle(); return; }
+    if (e.ctrlKey && !e.altKey && !e.shiftKey && e.keyCode >= 49 && e.keyCode <= 57) {
+      e.preventDefault();
+      post('videoSlot:' + (e.keyCode - 48));
+    }
+  });
+})();
+</script>
+</body></html>";
+
+        private const string ImagePageTemplate = @"<!doctype html>
+<html><head><meta charset='utf-8'>
+<style>
+  html, body { margin:0; height:100%; background:#1c1c1c; overflow:hidden; }
+  #wrap { position:fixed; left:0; top:0; right:0; bottom:0; overflow:hidden; cursor:grab; }
+  #img { position:absolute; left:0; top:0; transform-origin:0 0; max-width:none; user-select:none; -webkit-user-drag:none; }
+</style></head>
+<body>
+<div id='wrap'><img id='img' alt=''></div>
+<script>
+(function () {
+  var wrap = document.getElementById('wrap');
+  var img = document.getElementById('img');
+  var s = 1, tx = 0, ty = 0, fit = true, nw = 0, nh = 0, drag = null;
+  var MIN = 0.05, MAX = 16, STEP = 1.15;
+  function post(m) { try { window.chrome.webview.postMessage(m); } catch (e) {} }
+  function apply() { img.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + s + ')'; }
+  function fitView() {
+    if (!nw) return;
+    fit = true;
+    s = Math.min(wrap.clientWidth / nw, wrap.clientHeight / nh);
+    tx = (wrap.clientWidth - nw * s) / 2;
+    ty = (wrap.clientHeight - nh * s) / 2;
+    apply();
+  }
+  function zoomAt(ns, cx, cy) {
+    if (!nw) return;
+    ns = Math.max(MIN, Math.min(MAX, ns));
+    tx = cx - (cx - tx) * (ns / s);
+    ty = cy - (cy - ty) * (ns / s);
+    s = ns; fit = false; apply();
+  }
+  function centre() { return [wrap.clientWidth / 2, wrap.clientHeight / 2]; }
+  window.wrokZoomIn = function () { var c = centre(); zoomAt(s * STEP, c[0], c[1]); };
+  window.wrokZoomOut = function () { var c = centre(); zoomAt(s / STEP, c[0], c[1]); };
+  window.wrokZoomReset = function () { var c = centre(); zoomAt(1, c[0], c[1]); };
+  window.wrokFit = fitView;
+  img.addEventListener('load', function () {
+    nw = img.naturalWidth; nh = img.naturalHeight;
+    img.style.width = nw + 'px'; img.style.height = nh + 'px';
+    post('videoSize:' + nw + 'x' + nh);
+    fitView();
+  });
+  window.addEventListener('resize', function () { if (fit) fitView(); });
+  wrap.addEventListener('mousedown', function (e) {
+    if (e.button !== 0) return;
+    drag = { x: e.clientX, y: e.clientY, tx: tx, ty: ty };
+    wrap.style.cursor = 'grabbing';
+  });
+  window.addEventListener('mousemove', function (e) {
+    if (!drag) return;
+    tx = drag.tx + (e.clientX - drag.x);
+    ty = drag.ty + (e.clientY - drag.y);
+    fit = false; apply();
+  });
+  window.addEventListener('mouseup', function () { drag = null; wrap.style.cursor = 'grab'; });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { e.preventDefault(); post('close'); return; }
+    if (e.ctrlKey && !e.altKey && !e.shiftKey && (e.key === 'p' || e.key === 'P')) { e.preventDefault(); post('pin'); return; }
+    if (e.ctrlKey && (e.key === 'f' || e.key === 'F')) { e.preventDefault(); fitView(); return; }
+    if (e.ctrlKey || e.altKey) return;
+    if (e.key === '+' || e.key === '=' || e.key === 'Add') { e.preventDefault(); window.wrokZoomIn(); }
+    else if (e.key === '-' || e.key === 'Subtract') { e.preventDefault(); window.wrokZoomOut(); }
+    else if (e.key === '0') { e.preventDefault(); window.wrokZoomReset(); }
+  });
+  img.src = __SRC__;
+})();
+</script>
+</body></html>";
+
+        private enum MediaKind { None, Video, Image }
+
         private readonly WebView2 _web;
-        private readonly string   _url;
-        private          string   _playUrl;   // _url oder die virtuelle Adresse einer lokalen Datei
         private readonly CoreWebView2Environment? _env;
 
+        private bool _coreReady;
+        private MediaKind _kind = MediaKind.None;
+        private string _target = string.Empty;    // URL oder lokaler Pfad, wie übergeben
+        private string _mediaUrl = string.Empty;  // Adresse, die die Seite tatsächlich lädt
+        private Size _imageSize = Size.Empty;
+        private int _navCounter;
+
         /// <summary>
-        /// Wird gemeldet, sobald die echten Videoabmessungen bekannt sind.
+        /// Wird gemeldet, sobald die echten Abmessungen des Mediums bekannt sind.
         /// Vorher lässt sich das Seitenverhältnis nicht kennen.
         /// </summary>
         public event Action<Size>? VideoSizeKnown;
 
-        /// <summary>Wird gemeldet, wenn Strg+1 bis Strg+9 im Viewer gedrückt wird (1 bis 9).</summary>
+        /// <summary>Wird gemeldet, wenn Strg+1 bis Strg+9 im Fenster gedrückt wird (1 bis 9).</summary>
         public event Action<int>? VideoSlotRequested;
 
-        public VideoViewerForm(string url, CoreWebView2Environment? env)
+        public bool IsVideo => _kind == MediaKind.Video;
+        private bool IsImage => _kind == MediaKind.Image;
+
+        public VideoViewerForm(CoreWebView2Environment? env)
         {
-            _url = url ?? throw new ArgumentNullException(nameof(url));
-            _playUrl = _url;
             _env = env;
 
             Text            = Properties.Resources.VideoViewerTitle;
@@ -73,6 +193,25 @@ namespace Wrok
             _ = InitializeAsync();
         }
 
+        /// <summary>Zeigt ein Video (URL oder lokaler Pfad) im Fenster.</summary>
+        public void ShowVideo(string url)
+        {
+            _kind   = MediaKind.Video;
+            _target = url ?? throw new ArgumentNullException(nameof(url));
+            UpdateTitle();
+            if (_coreReady) Navigate();
+        }
+
+        /// <summary>Zeigt ein Bild (lokale PNG-Datei) im Fenster.</summary>
+        public void ShowImage(string localPath, Size size)
+        {
+            _kind      = MediaKind.Image;
+            _target    = localPath ?? throw new ArgumentNullException(nameof(localPath));
+            _imageSize = size;
+            UpdateTitle();
+            if (_coreReady) Navigate();
+        }
+
         private async Task InitializeAsync()
         {
             try
@@ -86,72 +225,21 @@ namespace Wrok
                 core.Settings.AreDefaultContextMenusEnabled = true;
                 core.Settings.IsStatusBarEnabled            = false;
 
-                // Browser-Accelerators aus, damit F11/F12 die Player-Seite erreichen
-                // (Pause/Fortsetzen) statt Chromiums Vollbild bzw. DevTools auszulösen.
+                // Browser-Accelerators aus, damit F11 und Strg+F die Seite erreichen,
+                // statt Chromiums Vollbild bzw. Suche auszulösen.
                 core.Settings.AreBrowserAcceleratorKeysEnabled = false;
 
-                // Lokale Datei? Dann ihren Ordner über einen virtuellen Host freigeben.
-                if (!_url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
-                    !_url.StartsWith("https://", StringComparison.OrdinalIgnoreCase) &&
-                    File.Exists(_url))
-                {
-                    var dir = Path.GetDirectoryName(Path.GetFullPath(_url));
-                    if (!string.IsNullOrEmpty(dir))
-                    {
-                        core.SetVirtualHostNameToFolderMapping(
-                            LocalMediaHost, dir, CoreWebView2HostResourceAccessKind.Allow);
-                        _playUrl = $"https://{LocalMediaHost}/{Uri.EscapeDataString(Path.GetFileName(_url))}";
-                    }
-                }
-
-                core.WebMessageReceived += (s, args) =>
-                {
-                    var msg = args.TryGetWebMessageAsString();
-                    if (msg != null && msg.StartsWith("videoSlot:", StringComparison.Ordinal))
-                    {
-                        if (int.TryParse(msg["videoSlot:".Length..], out int slotNo))
-                            VideoSlotRequested?.Invoke(slotNo);
-                        return;
-                    }
-                    if (msg == null || !msg.StartsWith("videoSize:", StringComparison.Ordinal)) return;
-
-                    var parts = msg["videoSize:".Length..].Split('x');
-                    if (parts.Length == 2 &&
-                        int.TryParse(parts[0], out int vw) &&
-                        int.TryParse(parts[1], out int vh) &&
-                        vw > 0 && vh > 0)
-                    {
-                        VideoSizeKnown?.Invoke(new Size(vw, vh));
-                    }
-                };
+                core.WebMessageReceived += OnWebMessage;
 
                 // Die Player-Seite wird unter einer grok.com-URL ausgeliefert, statt
                 // sie per NavigateToString zu laden. Sonst hätte das Dokument einen
                 // undurchsichtigen Ursprung, und SameSite-geschützte Session-Cookies
-                // würden beim Laden des Videos nicht mitgeschickt.
+                // würden beim Laden nicht mitgeschickt.
                 core.AddWebResourceRequestedFilter(PlayerUrl + "*", CoreWebView2WebResourceContext.All);
-                core.WebResourceRequested += (s, args) =>
-                {
-                    try
-                    {
-                        if (!args.Request.Uri.StartsWith(PlayerUrl, StringComparison.OrdinalIgnoreCase)) return;
-                        if (_env == null) return;
+                core.WebResourceRequested += OnPlayerRequested;
 
-                        var html  = BuildPlayerHtml(_playUrl);
-                        var bytes = System.Text.Encoding.UTF8.GetBytes(html);
-                        var ms    = new MemoryStream(bytes);
-
-                        args.Response = _env.CreateWebResourceResponse(
-                            ms, 200, "OK",
-                            "Content-Type: text/html; charset=utf-8\r\nCache-Control: no-store");
-                    }
-                    catch (Exception ex)
-                    {
-                        Trace.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [VideoViewerForm] Player-Seite konnte nicht ausgeliefert werden: {ex}");
-                    }
-                };
-
-                core.Navigate(PlayerUrl);
+                _coreReady = true;
+                if (_kind != MediaKind.None) Navigate();
             }
             catch (Exception ex)
             {
@@ -159,52 +247,106 @@ namespace Wrok
             }
         }
 
-        /// <summary>
-        /// Minimale Player-Seite: Endlos-Loop, startet mit Ton (Browser-Flag
-        /// --autoplay-policy, Fallback stumm), mit Bedienelementen.
-        /// </summary>
-        private static string BuildPlayerHtml(string url)
+        private void OnWebMessage(object? sender, CoreWebView2WebMessageReceivedEventArgs args)
         {
-            string safeUrl = System.Text.Json.JsonSerializer.Serialize(url);
+            var msg = args.TryGetWebMessageAsString();
+            if (string.IsNullOrEmpty(msg)) return;
 
-            return $@"<!doctype html>
-<html><head><meta charset=""utf-8"">
-<style>
-  html, body {{ margin:0; height:100%; background:#1c1c1c; overflow:hidden; }}
-  video {{ width:100%; height:100%; object-fit:contain; display:block; background:#1c1c1c; }}
-</style></head>
-<body>
-<video id=""v"" loop autoplay playsinline controls></video>
-<script>
-  (function () {{
-    var v = document.getElementById('v');
-    v.src = {safeUrl};
-    v.addEventListener('loadedmetadata', function () {{
-      try {{
-        window.chrome.webview.postMessage('videoSize:' + v.videoWidth + 'x' + v.videoHeight);
-      }} catch (e) {{}}
-    }});
-    // Start mit Ton. Verweigert der Browser das, startet das Video stumm.
-    var p = v.play();
-    if (p && p.catch) p.catch(function () {{
-      v.muted = true;
-      v.play();
-    }});
-    // F11 pausiert, F12 setzt fort.
-    document.addEventListener('keydown', function (e) {{
-      if (e.key === 'F11') {{ e.preventDefault(); v.pause(); }}
-      else if (e.key === 'F12') {{ e.preventDefault(); v.play().catch(function () {{}}); }}
-    }});
-    // Strg+1 bis Strg+9: Video-Slot im Hauptfenster abspielen lassen.
-    document.addEventListener('keydown', function (e) {{
-      if (e.ctrlKey && !e.altKey && !e.shiftKey && e.keyCode >= 49 && e.keyCode <= 57) {{
-        e.preventDefault();
-        try {{ window.chrome.webview.postMessage('videoSlot:' + (e.keyCode - 48)); }} catch (err) {{}}
-      }}
-    }});
-  }})();
-</script>
-</body></html>";
+            if (msg == "close")
+            {
+                Close();
+                return;
+            }
+
+            if (msg == "pin")
+            {
+                TogglePin();
+                return;
+            }
+
+            if (msg.StartsWith("videoSlot:", StringComparison.Ordinal))
+            {
+                if (int.TryParse(msg["videoSlot:".Length..], out int slotNo))
+                    VideoSlotRequested?.Invoke(slotNo);
+                return;
+            }
+
+            if (msg.StartsWith("videoSize:", StringComparison.Ordinal))
+            {
+                var parts = msg["videoSize:".Length..].Split('x');
+                if (parts.Length == 2 &&
+                    int.TryParse(parts[0], out int w) &&
+                    int.TryParse(parts[1], out int h) &&
+                    w > 0 && h > 0)
+                {
+                    if (IsImage)
+                    {
+                        _imageSize = new Size(w, h);
+                        UpdateTitle();
+                    }
+                    VideoSizeKnown?.Invoke(new Size(w, h));
+                }
+            }
+        }
+
+        private void OnPlayerRequested(object? sender, CoreWebView2WebResourceRequestedEventArgs args)
+        {
+            try
+            {
+                if (!args.Request.Uri.StartsWith(PlayerUrl, StringComparison.OrdinalIgnoreCase)) return;
+                if (_env == null) return;
+
+                var bytes = Encoding.UTF8.GetBytes(BuildPageHtml());
+                args.Response = _env.CreateWebResourceResponse(
+                    new MemoryStream(bytes), 200, "OK",
+                    "Content-Type: text/html; charset=utf-8\r\nCache-Control: no-store");
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [VideoViewerForm] Player-Seite konnte nicht ausgeliefert werden: {ex}");
+            }
+        }
+
+        /// <summary>
+        /// Lädt das aktuelle Medium. Jede Navigation bekommt eine eigene Abfrage-Nummer,
+        /// damit WebView2 die Seite nicht aus dem Cache holt, wenn das Medium wechselt.
+        /// </summary>
+        private void Navigate()
+        {
+            var core = _web.CoreWebView2;
+            if (core == null || _kind == MediaKind.None) return;
+
+            _mediaUrl = ResolveMediaUrl(core, _target);
+            core.Navigate(PlayerUrl + "?n=" + (++_navCounter).ToString());
+        }
+
+        /// <summary>
+        /// Liefert die Adresse für das Medium. Lokale Dateien bekommen ihren Ordner als
+        /// virtuellen Host; andere Adressen bleiben unverändert.
+        /// </summary>
+        private static string ResolveMediaUrl(CoreWebView2 core, string target)
+        {
+            if (target.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                target.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                return target;
+
+            if (!File.Exists(target)) return target;
+
+            var full = Path.GetFullPath(target);
+            var dir  = Path.GetDirectoryName(full);
+            if (!string.IsNullOrEmpty(dir))
+            {
+                core.SetVirtualHostNameToFolderMapping(
+                    LocalMediaHost, dir, CoreWebView2HostResourceAccessKind.Allow);
+            }
+            return $"https://{LocalMediaHost}/{Uri.EscapeDataString(Path.GetFileName(full))}";
+        }
+
+        private string BuildPageHtml()
+        {
+            string src      = JsonSerializer.Serialize(_mediaUrl);
+            string template = IsImage ? ImagePageTemplate : VideoPageTemplate;
+            return template.Replace("__SRC__", src);
         }
 
         private void OnKeyDown(object? sender, KeyEventArgs e)
@@ -222,35 +364,75 @@ namespace Wrok
                     Close();
                     break;
 
-                // Hat das Formular statt des Videoframes den Fokus, sieht es F11/F12.
-                // Dann den Frame fokussieren und dort pausieren bzw. starten.
-                case Keys.F11:
-                    e.SuppressKeyPress = true;
-                    FocusPlayerAndRun("v.pause();");
-                    break;
-
-                case Keys.F12:
-                    e.SuppressKeyPress = true;
-                    FocusPlayerAndRun("v.play().catch(function () {});");
-                    break;
-
                 case Keys.P when e.Control:
-                    TopMost = !TopMost;
-                    Text = Properties.Resources.VideoViewerTitle + (TopMost ? "   📌" : string.Empty);
+                    TogglePin();
+                    break;
+
+                // Hat das Formular statt der Seite den Fokus, sieht es die Tasten.
+                // Dann den Frame fokussieren und dort ausführen.
+                case Keys.F11 when IsVideo:
+                    e.SuppressKeyPress = true;
+                    FocusAndRun("if (window.wrokToggle) { window.wrokToggle(); }");
+                    break;
+
+                case Keys.Oemplus when IsImage:
+                case Keys.Add when IsImage:
+                    e.SuppressKeyPress = true;
+                    FocusAndRun("if (window.wrokZoomIn) { window.wrokZoomIn(); }");
+                    break;
+
+                case Keys.OemMinus when IsImage:
+                case Keys.Subtract when IsImage:
+                    e.SuppressKeyPress = true;
+                    FocusAndRun("if (window.wrokZoomOut) { window.wrokZoomOut(); }");
+                    break;
+
+                case Keys.D0 when IsImage && !e.Control:
+                case Keys.NumPad0 when IsImage:
+                    e.SuppressKeyPress = true;
+                    FocusAndRun("if (window.wrokZoomReset) { window.wrokZoomReset(); }");
+                    break;
+
+                case Keys.F when e.Control && IsImage:
+                    e.SuppressKeyPress = true;
+                    FocusAndRun("if (window.wrokFit) { window.wrokFit(); }");
                     break;
             }
         }
 
-        /// <summary>
-        /// Setzt den Fokus auf den Videoframe und führt danach ein Kommando auf dem
-        /// Video-Element aus. Ohne Fokus auf dem Frame erreicht JavaScript die Tasten nicht.
-        /// </summary>
-        private void FocusPlayerAndRun(string js)
+        private void TogglePin()
+        {
+            TopMost = !TopMost;
+            UpdateTitle();
+        }
+
+        private void UpdateTitle()
+        {
+            string baseTitle = IsImage && !_imageSize.IsEmpty
+                ? string.Format(Properties.Resources.ImageViewerTitle, _imageSize.Width, _imageSize.Height)
+                : Properties.Resources.VideoViewerTitle;
+            Text = baseTitle + (TopMost ? "   📌" : string.Empty);
+        }
+
+        /// <summary>Pausiert bzw. startet das Video, ohne den Fokus zu verschieben.</summary>
+        public void SetPlayback(bool play)
+        {
+            RunScript("if (window.wrokSet) { window.wrokSet(" + (play ? "true" : "false") + "); }");
+        }
+
+        /// <summary>Wechselt zwischen Pause und Wiedergabe, je nach aktuellem Zustand.</summary>
+        public void TogglePlayback()
+        {
+            RunScript("if (window.wrokToggle) { window.wrokToggle(); }");
+        }
+
+        /// <summary>Setzt den Fokus auf die Seite und führt danach das Skript aus.</summary>
+        private void FocusAndRun(string js)
         {
             try
             {
                 _web.Focus();
-                RunOnPlayer(js);
+                RunScript(js);
             }
             catch (Exception ex)
             {
@@ -258,16 +440,16 @@ namespace Wrok
             }
         }
 
-        /// <summary>Pausiert bzw. startet das Video, ohne den Fokus zu verschieben.</summary>
-        public void SetPlayback(bool play)
+        private void RunScript(string js)
         {
-            RunOnPlayer(play ? "v.play().catch(function () {});" : "v.pause();");
-        }
-
-        private void RunOnPlayer(string js)
-        {
-            _ = _web.CoreWebView2?.ExecuteScriptAsync(
-                "(function () { var v = document.getElementById('v'); if (v) { " + js + " } })();");
+            try
+            {
+                _ = _web.CoreWebView2?.ExecuteScriptAsync(js);
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [VideoViewerForm] Skript fehlgeschlagen: {ex}");
+            }
         }
 
         private void TryApplyDarkTitleBar()
@@ -283,17 +465,17 @@ namespace Wrok
 
         /// <summary>
         /// Gesamtbreite (inkl. Rahmen), die das Fenster bei der angegebenen
-        /// Gesamthöhe braucht, damit das Video seitenverhältnisgerecht hineinpasst.
+        /// Gesamthöhe braucht, damit das Medium seitenverhältnisgerecht hineinpasst.
         /// </summary>
-        public int WidthForHeight(int totalHeight, Size videoSize)
+        public int WidthForHeight(int totalHeight, Size mediaSize)
         {
-            if (videoSize.Width <= 0 || videoSize.Height <= 0) return Width;
+            if (mediaSize.Width <= 0 || mediaSize.Height <= 0) return Width;
 
             int extraH = Height - ClientSize.Height;
             int extraW = Width  - ClientSize.Width;
 
             int clientH = Math.Max(1, totalHeight - extraH);
-            int clientW = (int)Math.Round(videoSize.Width * (clientH / (double)videoSize.Height));
+            int clientW = (int)Math.Round(mediaSize.Width * (clientH / (double)mediaSize.Height));
 
             return clientW + extraW;
         }

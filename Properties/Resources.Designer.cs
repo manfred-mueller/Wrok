@@ -1817,5 +1817,14 @@ namespace Wrok.Properties {
             }
         }
 
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die RestoreDeletedChats ähnelt.
+        /// </summary>
+        public static string RestoreDeletedChats {
+            get {
+                return ResourceManager.GetString("RestoreDeletedChats", resourceCulture);
+            }
+        }
+
     }
 }

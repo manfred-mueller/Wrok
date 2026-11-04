@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Features
+- **Videos-Menü heißt jetzt Medien.** Das Menü enthält Bilder und Videos. Die Datei `videos.json` und bestehende Slots bleiben unverändert.
+- **Medien-Slots können auch Bilder.** Ein Slot mit einer Bilddatei oder einem Bild-Link öffnet das Bild im Medienfenster statt als Video.
+- **Bilder und Videos in einem Medienfenster.** Ein neues Bild ersetzt den Inhalt des bestehenden Fensters, statt ein eigenes Fenster zu öffnen. Der Bild-Viewer ist im Medienfenster aufgegangen; Zoomen mit `+` / `-` und `0`, Einpassen mit `Strg+F`, Verschieben mit der Maus. Speichern entfällt, weil das Bild bereits lokal im Cache liegt. Anheften mit `Strg+P` funktioniert jetzt auch, wenn der Fokus im Medium liegt.
+- **Werkzeuge → Gelöschte Chats wiederherstellen** lädt https://grok.com/deleted-conversations im Hauptfenster. Dafür entfallen die Menüpunkte *Bild aus Zwischenablage öffnen* und *Letztes Bild öffnen*. Strg+Ö funktioniert unverändert.
+
 ## [1.6.4] - 2026-11-02
 
 ### Features

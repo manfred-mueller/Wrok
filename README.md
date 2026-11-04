@@ -23,7 +23,7 @@ Er arbeitet komplett ohne API-Zugriff und bietet folgende Funktionen:
 * Makro-Variablen: `{input}`, `{date}`, `{time}`, `{day}`, `{username}`, `{clipboard}`
 * Boss-Taste **Strg + Leertaste** (sofortiges Minimieren/Wiederherstellen)
 * Panikschalter **Strg + Umschalt + Leertaste** beendet Wrok sofort, ohne Nachfrage
-* Videos-Menü mit neun Video-Slots, abrufbar per **Strg+1** bis **Strg+9**
+* Medien-Menü mit neun Medien-Slots, abrufbar per **Strg+1** bis **Strg+9**
 * Medienansicht für Bilder und Videos, links auf voller Bildschirmhöhe – Videos im Endlos-Loop
 * Automatische Fensterminimierung nach einstellbarem Inaktivitäts-Zeitraum
 * Speichern von Fenstergröße, -position und Maximierungsstatus
@@ -45,9 +45,9 @@ Das Menü ist in zwei Untermenüs gegliedert:
 
 * **Einstellungen → App** — Inaktivität, Mit Windows starten, Passwort speichern, Proxy, Nach Updates suchen
 * **Makros → Makros Import/Export** — Makro-Profile exportieren und importieren
-* **Videos** — Video-Slots bearbeiten, abspielen und exportieren oder importieren
+* **Medien** — Medien-Slots bearbeiten, abspielen und exportieren oder importieren
 * **Einstellungen → Grok** — öffnet Groks eigene Einstellungsseite
-* **Werkzeuge** — Rate Limits, Bild/Video öffnen, Daten löschen
+* **Werkzeuge** — Rate Limits, Gelöschte Chats wiederherstellen, Daten löschen
 
 ### Makro-Profile
 
@@ -92,28 +92,29 @@ Bilder und Videos aus Grok lassen sich in einem eigenen Fenster öffnen, das lin
 * **Per Klick öffnen:** Bild oder Video in Grok anklicken.
 * **Per Tastenkombination:** Rechtsklick auf das Medium → *Bildadresse kopieren*, dann `Strg+Ö`.
 * **Lokale Dateien:** Bild oder Video im Explorer kopieren (`Strg+C` oder *Als Pfad kopieren*), dann `Strg+Ö`. Unterstützt werden JPG, PNG, BMP, GIF, TIFF und ICO sowie MP4, M4V, WebM, MOV und OGV. Auch lokal geöffnete Medien gelten danach als „zuletzt geöffnet“.
-* **Zuletzt geöffnetes erneut anzeigen:** `Strg+Ö` drücken, wenn nichts Brauchbares in der Zwischenablage steht, oder *Werkzeuge → Letztes Bild öffnen*. Bilder werden lokal unter `%LOCALAPPDATA%\\Wrok\\images` zwischengespeichert und öffnen daher ohne Netzwerk und ohne gültige Sitzung.
-* **Videos** laufen im Endlos-Loop mit Ton. `F11` pausiert, `F12` setzt fort, auch wenn das Hauptfenster den Fokus hat. Solange ein Video offen ist, sind im Hauptfenster die Browser-Tastenkürzel deaktiviert (z. B. Zoom mit Strg+Plus).
+* **Zuletzt geöffnetes erneut anzeigen:** `Strg+Ö` drücken, wenn nichts Brauchbares in der Zwischenablage steht. Bilder werden lokal unter `%LOCALAPPDATA%\\Wrok\\images` zwischengespeichert und öffnen daher ohne Netzwerk und ohne gültige Sitzung.
+* **Videos** laufen im Endlos-Loop mit Ton. `F11` wechselt zwischen Pause und Wiedergabe, auch wenn das Hauptfenster den Fokus hat. Solange ein Video offen ist, sind im Hauptfenster die Browser-Tastenkürzel deaktiviert (z. B. Zoom mit Strg+Plus).
 
 Tastenkürzel im Medienfenster:
 
 |Taste|Wirkung|
 |-|-|
 |`Esc`|Schließen|
-|`+` / `-` / Mausrad|Zoomen (Bilder)|
+|`+` / `-`|Zoomen (Bilder)|
+|`0`|100 % (Bilder)|
 |`Strg+F`|Einpassen (Bilder)|
-|`Strg+S`|Bild speichern|
+|`F11`|Pause / Wiedergabe (Videos)|
 |`Strg+P`|Anheften (immer im Vordergrund)|
 
 Ziehen mit der linken Maustaste verschiebt ein Bild.
 
-### Videos-Menü
+### Medien-Menü
 
-Neun Slots nehmen jeweils einen Namen und eine Adresse auf. Die Adresse kann ein Link oder eine lokale Videodatei sein.
+Neun Slots nehmen jeweils einen Namen und eine Adresse auf. Die Adresse kann ein Link oder eine lokale Datei sein, Video oder Bild.
 
-* **Abspielen:** Linksklick auf einen Slot im Menü *Videos* oder `Strg+1` bis `Strg+9`. Das gilt auch aus dem Video-Fenster heraus.
+* **Abspielen:** Linksklick auf einen Slot im Menü *Medien* oder `Strg+1` bis `Strg+9`. Das gilt auch aus dem Video-Fenster heraus.
 * **Bearbeiten:** Rechtsklick auf einen Slot. Eine leere Adresse leert den Slot.
-* **Import/Export:** *Videos → Videos Import/Export*. Die Datei ist von den Makros getrennt. Beim Import werden alle neun Slots ersetzt.
+* **Import/Export:** *Medien → Medien Import/Export*. Die Datei ist von den Makros getrennt. Beim Import werden alle neun Slots ersetzt.
 
 ### Boss-Taste
 
@@ -144,7 +145,7 @@ Wrok sieht beim Start (höchstens einmal täglich) nach, ob auf GitHub eine neue
 * Wird Text nicht abgeschickt: sicherstellen, dass die Seite vollständig geladen und das Eingabefeld sichtbar ist.
 * **DevTools öffnen:** `Strg+F12` öffnet die WebView2-Entwicklerwerkzeuge zur Prüfung von DOM und Konsole.
 * **Vollbild:** `Strg+F11` schaltet das Vollbild um.
-* **Videos-Menü:** Neun Video-Slots (Menü *Videos*) lassen sich per `Strg+1` bis `Strg+9` abspielen. Linksklick spielt, Rechtsklick bearbeitet.
+* **Medien-Menü:** Neun Medien-Slots (Menü *Medien*) lassen sich per `Strg+1` bis `Strg+9` abspielen. Linksklick spielt, Rechtsklick bearbeitet.
 * **Seite zoomen:** `Strg` + `+`/`-`/`0` oder `Strg` + Mausrad. Die Zoomstufe wird gemerkt.
 * **Protokoll:** Meldungen und Fehler stehen in `%LOCALAPPDATA%\\Wrok\\logs\\app.log`.
 
@@ -162,7 +163,7 @@ Wrok sieht beim Start (höchstens einmal täglich) nach, ob auf GitHub eine neue
 It works entirely without API access and offers the following features:
 
 * Up to ten freely assignable macros per profile, reachable via **F1** to **F10** (can be switched on in the tray menu)
-* Video slot menu with nine slots, playable via **Ctrl+1** to **Ctrl+9**
+* Media menu with nine slots, playable via **Ctrl+1** to **Ctrl+9**
 * Macro variables: `{input}`, `{date}`, `{time}`, `{day}`, `{username}`, `{clipboard}`
 * Boss key **Ctrl + Spacebar** (instant minimize/restore)
 * Panic switch **Ctrl + Shift + Spacebar** quits Wrok immediately, without a prompt
@@ -189,7 +190,7 @@ The tray menu is grouped into two submenus:
 
 * **Einstellungen → App** — inactivity timeout, macro import/export, start with Windows, password saving, proxy, check for updates
 * **Einstellungen → Grok** — opens Grok's own settings page
-* **Werkzeuge** — rate limits, open image/video, delete data
+* **Werkzeuge** — rate limits, restore deleted chats, delete data
 
 ### Macro profiles
 
@@ -230,32 +231,33 @@ Example: `Hallo Schlingeline, es ist jetzt {time} und {input: Text}`
 
 ### Media viewer
 
-Images and videos from Grok can be opened in a separate window that is placed on the left at full screen height, while Wrok fills the remaining space. There is always at most one media window — a new item replaces the previous one.
+Images and videos from Grok can be opened in a separate window that is placed on the left at full screen height, while Wrok fills the remaining space. There is always at most one media window — a new image or video replaces the content of the existing window.
 
 * **Open by click:** Click an image or video in Grok.
 * **Open by hotkey:** Right-click the media in Grok → *Copy image/video address*, then press `Ctrl+Ö`.
-* **Reopen the last item:** Press `Ctrl+Ö` with nothing usable in the clipboard, or use *Werkzeuge → Letztes Bild öffnen*. Images are cached locally under `%LOCALAPPDATA%\\Wrok\\images`, so they reopen without network or session.
-* **Videos** play with sound in an endless loop. `F11` pauses, `F12` resumes, even while the main window has focus. While a video is open, the browser shortcuts in the main window (e.g. Ctrl+Plus zoom) are disabled.
+* **Reopen the last item:** Press `Ctrl+Ö` with nothing usable in the clipboard. Images are cached locally under `%LOCALAPPDATA%\\Wrok\\images`, so they reopen without network or session.
+* **Videos** play with sound in an endless loop. `F11` toggles pause and play, even while the main window has focus. While a video is open, the browser shortcuts in the main window (e.g. Ctrl+Plus zoom) are disabled.
 
 Keyboard shortcuts inside the viewer:
 
 |Key|Action|
 |-|-|
 |`Esc`|Close|
-|`+` / `-` / mouse wheel|Zoom (images)|
+|`+` / `-`|Zoom (images)|
+|`0`|100 % (images)|
 |`Ctrl+F`|Fit to window (images)|
-|`Ctrl+S`|Save image|
+|`F11`|Pause / play (videos)|
 |`Ctrl+P`|Pin (always on top)|
 
 Drag with the left mouse button to pan an image.
 
-### Videos menu
+### Media menu
 
-Nine slots each hold a name and an address. The address can be a link or a local video file.
+Nine slots each hold a name and an address. The address can be a link or a local file, video or image.
 
-* **Play:** Left-click a slot in the *Videos* menu or press `Ctrl+1` to `Ctrl+9`. This also works from the video window.
+* **Play:** Left-click a slot in the *Media* menu or press `Ctrl+1` to `Ctrl+9`. This also works from the video window.
 * **Edit:** Right-click a slot. An empty address clears the slot.
-* **Import/Export:** *Videos → Videos Import/Export*. The file is separate from the macros. Importing replaces all nine slots.
+* **Import/Export:** *Medien → Medien Import/Export*. The file is separate from the macros. Importing replaces all nine slots.
 
 ### Boss key
 
@@ -283,7 +285,7 @@ At startup (at most once a day) Wrok checks GitHub for a newer version and then 
 * If text is not sent: ensure the page is fully loaded and the editor is visible.
 * **Open DevTools:** `Ctrl+F12` opens the WebView2 developer tools to inspect the DOM and console.
 * **Fullscreen:** `Ctrl+F11` toggles fullscreen.
-* **Videos menu:** Nine video slots (menu *Videos*) play with `Ctrl+1` to `Ctrl+9`. Left-click plays, right-click edits.
+* **Media menu:** Nine media slots (menu *Media*) play with `Ctrl+1` to `Ctrl+9`. Left-click plays, right-click edits.
 * **Zoom the page:** `Ctrl` + `+`/`-`/`0` or `Ctrl` + mouse wheel. The zoom level is remembered.
 * **Logs:** Runtime messages and logs are written to `%LOCALAPPDATA%\\Wrok\\logs\\app.log`.
 
