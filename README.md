@@ -93,7 +93,7 @@ Bilder und Videos aus Grok lassen sich in einem eigenen Fenster öffnen, das lin
 * **Per Tastenkombination:** Rechtsklick auf das Medium → *Bildadresse kopieren*, dann `Strg+Ö`.
 * **Lokale Dateien:** Bild oder Video im Explorer kopieren (`Strg+C` oder *Als Pfad kopieren*), dann `Strg+Ö`. Unterstützt werden JPG, PNG, BMP, GIF, TIFF und ICO sowie MP4, M4V, WebM, MOV und OGV. Auch lokal geöffnete Medien gelten danach als „zuletzt geöffnet“.
 * **Zuletzt geöffnetes erneut anzeigen:** `Strg+Ö` drücken, wenn nichts Brauchbares in der Zwischenablage steht. Bilder werden lokal unter `%LOCALAPPDATA%\\Wrok\\images` zwischengespeichert und öffnen daher ohne Netzwerk und ohne gültige Sitzung.
-* **Videos** laufen im Endlos-Loop mit Ton. `F11` wechselt zwischen Pause und Wiedergabe, auch wenn das Hauptfenster den Fokus hat. Solange ein Video offen ist, sind im Hauptfenster die Browser-Tastenkürzel deaktiviert (z. B. Zoom mit Strg+Plus).
+* **Videos** laufen im Endlos-Loop mit Ton. `F11` wechselt zwischen Pause und Wiedergabe, auch wenn das Hauptfenster den Fokus hat. Haltepunkte in eckigen Klammern hinter der Adresse (siehe Medien-Menü) halten das Video an den angegebenen Zeiten an. Solange ein Video offen ist, sind im Hauptfenster die Browser-Tastenkürzel deaktiviert (z. B. Zoom mit Strg+Plus).
 
 Tastenkürzel im Medienfenster:
 
@@ -146,6 +146,7 @@ Wrok sieht beim Start (höchstens einmal täglich) nach, ob auf GitHub eine neue
 * **DevTools öffnen:** `Strg+F12` öffnet die WebView2-Entwicklerwerkzeuge zur Prüfung von DOM und Konsole.
 * **Vollbild:** `Strg+F11` schaltet das Vollbild um.
 * **Medien-Menü:** Neun Medien-Slots (Menü *Medien*) lassen sich per `Strg+1` bis `Strg+9` abspielen. Linksklick spielt, Rechtsklick bearbeitet.
+* **Haltepunkte:** Hinter einer Video-Adresse steht eine Liste in eckigen Klammern, z. B. `https://… [5, 35, 1:41]`. Das Video hält bei jeder Zeit an, `F11` setzt bis zum nächsten Punkt fort. Zeiten in Sekunden oder als `m:ss`.
 * **Seite zoomen:** `Strg` + `+`/`-`/`0` oder `Strg` + Mausrad. Die Zoomstufe wird gemerkt.
 * **Protokoll:** Meldungen und Fehler stehen in `%LOCALAPPDATA%\\Wrok\\logs\\app.log`.
 
@@ -164,6 +165,7 @@ It works entirely without API access and offers the following features:
 
 * Up to ten freely assignable macros per profile, reachable via **F1** to **F10** (can be switched on in the tray menu)
 * Media menu with nine slots, playable via **Ctrl+1** to **Ctrl+9**
+* Video stop points: add a list such as `[5, 35, 1:41]` after the video address; playback pauses at each time, **F11** continues to the next one
 * Macro variables: `{input}`, `{date}`, `{time}`, `{day}`, `{username}`, `{clipboard}`
 * Boss key **Ctrl + Spacebar** (instant minimize/restore)
 * Panic switch **Ctrl + Shift + Spacebar** quits Wrok immediately, without a prompt
@@ -236,7 +238,7 @@ Images and videos from Grok can be opened in a separate window that is placed on
 * **Open by click:** Click an image or video in Grok.
 * **Open by hotkey:** Right-click the media in Grok → *Copy image/video address*, then press `Ctrl+Ö`.
 * **Reopen the last item:** Press `Ctrl+Ö` with nothing usable in the clipboard. Images are cached locally under `%LOCALAPPDATA%\\Wrok\\images`, so they reopen without network or session.
-* **Videos** play with sound in an endless loop. `F11` toggles pause and play, even while the main window has focus. While a video is open, the browser shortcuts in the main window (e.g. Ctrl+Plus zoom) are disabled.
+* **Videos** play with sound in an endless loop. `F11` toggles pause and play, even while the main window has focus. Stop points in square brackets after the address (see the media menu) pause the video at the given times. While a video is open, the browser shortcuts in the main window (e.g. Ctrl+Plus zoom) are disabled.
 
 Keyboard shortcuts inside the viewer:
 
@@ -286,6 +288,7 @@ At startup (at most once a day) Wrok checks GitHub for a newer version and then 
 * **Open DevTools:** `Ctrl+F12` opens the WebView2 developer tools to inspect the DOM and console.
 * **Fullscreen:** `Ctrl+F11` toggles fullscreen.
 * **Media menu:** Nine media slots (menu *Media*) play with `Ctrl+1` to `Ctrl+9`. Left-click plays, right-click edits.
+* **Stop points:** Add a list in square brackets after a video address, e.g. `https://… [5, 35, 1:41]`. Playback pauses at each time; `F11` continues to the next one. Times in seconds or as `m:ss`.
 * **Zoom the page:** `Ctrl` + `+`/`-`/`0` or `Ctrl` + mouse wheel. The zoom level is remembered.
 * **Logs:** Runtime messages and logs are written to `%LOCALAPPDATA%\\Wrok\\logs\\app.log`.
 

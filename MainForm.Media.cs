@@ -131,9 +131,11 @@ namespace Wrok
             var viewer = EnsureMediaViewer();
 
             // Ein Bild (z. B. aus einem Video-Slot) wird im selben Fenster als Bild gezeigt.
-            // Die Größe kennt das Fenster erst nach dem Laden.
-            if (IsImageLocation(url))
-                viewer.ShowImage(url, Size.Empty);
+            // Die Größe kennt das Fenster erst nach dem Laden. Haltepunkte-Anhang abtrennen,
+            // damit die Endung geprüft werden kann; ShowVideo wertet ihn selbst aus.
+            string bare = VideoViewerForm.SplitStops(url, out _);
+            if (IsImageLocation(bare))
+                viewer.ShowImage(bare, Size.Empty);
             else
                 viewer.ShowVideo(url);
 

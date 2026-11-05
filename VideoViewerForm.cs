@@ -1,9 +1,11 @@
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
 using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace Wrok
 {
@@ -56,6 +58,36 @@ namespace Wrok
   var noop = function () {};
   function post(m) { try { window.chrome.webview.postMessage(m); } catch (e) {} }
   v.src = __SRC__;
+  // Haltepunkte (Sekunden, aufsteigend). Erreicht die Wiedergabe einen Punkt, wird pausiert.
+  // Weiter geht es mit F11 bis zum nächsten Punkt.
+  var stops = __STOPS__.slice().sort(function (a, b) { return a - b; });
+  var next = 0, running = false, lastT = 0;
+  function rearm() {
+    next = 0;
+    while (next < stops.length && stops[next] <= v.currentTime + 0.001) next++;
+    lastT = v.currentTime;
+  }
+  function check() {
+    // Schleife oder Sprung zurück an den Anfang: Haltepunkte wieder scharf schalten.
+    if (v.currentTime < lastT - 0.5) rearm();
+    lastT = v.currentTime;
+    if (next < stops.length && !v.paused && v.currentTime >= stops[next]) {
+      next++;
+      v.pause();
+    }
+  }
+  // requestAnimationFrame pausiert bei minimiertem Fenster, timeupdate läuft weiter.
+  function loop() {
+    if (v.paused || v.ended) { running = false; return; }
+    check();
+    requestAnimationFrame(loop);
+  }
+  v.addEventListener('play', function () {
+    if (!running) { running = true; requestAnimationFrame(loop); }
+  });
+  v.addEventListener('timeupdate', check);
+  v.addEventListener('seeked', rearm);
+  rearm();
   v.addEventListener('loadedmetadata', function () {
     post('videoSize:' + v.videoWidth + 'x' + v.videoHeight);
   });
@@ -156,6 +188,7 @@ namespace Wrok
         private MediaKind _kind = MediaKind.None;
         private string _target = string.Empty;    // URL oder lokaler Pfad, wie übergeben
         private string _mediaUrl = string.Empty;  // Adresse, die die Seite tatsächlich lädt
+        private double[] _stops = Array.Empty<double>();  // Haltepunkte in Sekunden (nur Video)
         private Size _imageSize = Size.Empty;
         private int _navCounter;
 
@@ -196,8 +229,9 @@ namespace Wrok
         /// <summary>Zeigt ein Video (URL oder lokaler Pfad) im Fenster.</summary>
         public void ShowVideo(string url)
         {
+            if (url == null) throw new ArgumentNullException(nameof(url));
             _kind   = MediaKind.Video;
-            _target = url ?? throw new ArgumentNullException(nameof(url));
+            _target = SplitStops(url, out _stops);
             UpdateTitle();
             if (_coreReady) Navigate();
         }
@@ -207,6 +241,7 @@ namespace Wrok
         {
             _kind      = MediaKind.Image;
             _target    = localPath ?? throw new ArgumentNullException(nameof(localPath));
+            _stops     = Array.Empty<double>();
             _imageSize = size;
             UpdateTitle();
             if (_coreReady) Navigate();
@@ -345,8 +380,47 @@ namespace Wrok
         private string BuildPageHtml()
         {
             string src      = JsonSerializer.Serialize(_mediaUrl);
+            string stops    = JsonSerializer.Serialize(_stops);
             string template = IsImage ? ImagePageTemplate : VideoPageTemplate;
-            return template.Replace("__SRC__", src);
+            return template.Replace("__SRC__", src).Replace("__STOPS__", stops);
+        }
+
+        /// <summary>
+        /// Trennt eine Haltepunkt-Liste am Ende einer Video-Adresse ab, z. B.
+        /// "https://example.com/v.mp4 [5, 35, 1:41]". Ohne Klammerliste bleibt die Adresse
+        /// unverändert. Zeiten in Sekunden oder als m:ss, sortiert und ohne Dubletten.
+        /// </summary>
+        internal static string SplitStops(string input, out double[] stops)
+        {
+            stops = Array.Empty<double>();
+            if (string.IsNullOrEmpty(input)) return input ?? string.Empty;
+
+            var m = Regex.Match(input, @"^(.*\S)\s+\[([^\[\]]*)\]\s*$", RegexOptions.Singleline);
+            if (!m.Success) return input;
+
+            var list = new List<double>();
+            foreach (var raw in m.Groups[2].Value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                if (TryParseStop(raw, out double t) && t >= 0) list.Add(t);
+            }
+            stops = list.Distinct().OrderBy(x => x).ToArray();
+            return m.Groups[1].Value;
+        }
+
+        private static bool TryParseStop(string raw, out double seconds)
+        {
+            seconds = 0;
+            int colon = raw.IndexOf(':');
+            if (colon < 0)
+                return double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out seconds);
+
+            if (double.TryParse(raw[..colon], NumberStyles.Float, CultureInfo.InvariantCulture, out double min) &&
+                double.TryParse(raw[(colon + 1)..], NumberStyles.Float, CultureInfo.InvariantCulture, out double sec))
+            {
+                seconds = min * 60 + sec;
+                return true;
+            }
+            return false;
         }
 
         private void OnKeyDown(object? sender, KeyEventArgs e)
