@@ -1,5 +1,14 @@
 # Changelog
 
+## [Unreleased]
+
+### Änderungen
+- **Haupt- und Medienfenster kommen gemeinsam nach vorn.** Wird eines der beiden Fenster aktiviert (Klick, Alt+Tab, Taskleiste), kommt das andere mit nach vorn, ohne ihm den Fokus zu nehmen. Ein angeheftetes Medienfenster bleibt unverändert oben.
+- **Das Medienfenster lässt sich nicht mehr minimieren.** Es ist entweder offen oder mit X geschlossen. Zum schnellen Ausblenden dient die Boss-Taste.
+
+### Fixes
+- **Videos liefen nach der Boss-Taste hörbar weiter.** Beim Ausblenden pausiert ein laufendes Video jetzt und setzt beim Wiederherstellen an derselben Stelle fort. Ein vorher pausiertes Video bleibt pausiert.
+
 ## [1.7.1] - 2026-11-17
 
 ### Änderungen

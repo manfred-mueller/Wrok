@@ -178,6 +178,9 @@ namespace Wrok
             var viewer = new VideoViewerForm(_webViewManager?.CoreEnvironment);
             RegisterMediaViewer(viewer);
 
+            // Klick ins Medienfenster holt das Hauptfenster mit nach vorn.
+            viewer.Activated += (_, _) => OnMediaViewerActivated(viewer);
+
             viewer.VideoSlotRequested += slot =>
                 BeginInvoke((System.Windows.Forms.MethodInvoker)(() => PlayVideoSlot(slot - 1)));
 

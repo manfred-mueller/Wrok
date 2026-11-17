@@ -133,6 +133,8 @@ namespace Wrok
                 {
                     _mediaViewerWasPinned = viewer.TopMost;
                     viewer.TopMost = false;
+                    // Laufendes Video anhalten - sonst bliebe der Ton zu hoeren.
+                    if (viewer is VideoViewerForm video) video.PauseForHide();
                     // Hide() nimmt das Fenster zugleich aus Taskleiste und Alt+Tab.
                     // ShowInTaskbar wird bewusst nicht angefasst: Das erzwingt eine
                     // Neuerzeugung des Fensterhandles und wuerde beim Video-Betrachter
@@ -152,9 +154,61 @@ namespace Wrok
                 {
                     viewer.Show();
                     viewer.TopMost = _mediaViewerWasPinned;
+                    // Nur fortsetzen, wenn es vor dem Ausblenden lief.
+                    if (viewer is VideoViewerForm video) video.ResumeAfterHide();
                 }
             }
             catch (Exception ex) { Log(ex, "Medienfenster wiederherstellen fehlgeschlagen"); }
+        }
+
+        // ------------------------------------------------------------------
+        // Haupt- und Medienfenster gemeinsam nach vorn
+        // ------------------------------------------------------------------
+
+        private const uint SWP_NOSIZE     = 0x0001;
+        private const uint SWP_NOMOVE     = 0x0002;
+        private const uint SWP_NOACTIVATE = 0x0010;
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter,
+            int x, int y, int cx, int cy, uint flags);
+
+        /// <summary>
+        /// Legt <paramref name="window"/> in der Z-Reihenfolge direkt hinter
+        /// <paramref name="front"/>, ohne es zu aktivieren. So kommen beide Fenster
+        /// gemeinsam nach vorn, der Fokus bleibt aber beim angeklickten Fenster
+        /// (Tastenkuerzel landen dort, kein Hin- und Herspringen).
+        /// </summary>
+        private static void PlaceBehind(Form window, Form front)
+        {
+            // Ein angeheftetes (TopMost) Fenster liegt ohnehin oben. Hinter ein
+            // normales Fenster gelegt, verloere es sogar seinen TopMost-Status.
+            if (window.TopMost) return;
+            if (!window.IsHandleCreated || !front.IsHandleCreated) return;
+            if (!window.Visible || window.WindowState == FormWindowState.Minimized) return;
+
+            try
+            {
+                SetWindowPos(window.Handle, front.Handle, 0, 0, 0, 0,
+                             SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+            }
+            catch (Exception ex) { Log(ex, "Fensterreihenfolge setzen fehlgeschlagen"); }
+        }
+
+        /// <summary>Hauptfenster aktiviert → offenes Medienfenster mit nach vorn holen.</summary>
+        protected override void OnActivated(EventArgs e)
+        {
+            base.OnActivated(e);
+            if (_mediaViewer is { IsDisposed: false } viewer)
+                PlaceBehind(viewer, this);
+        }
+
+        /// <summary>Medienfenster aktiviert → Hauptfenster mit nach vorn holen.</summary>
+        private void OnMediaViewerActivated(Form viewer)
+        {
+            // Liegt Wrok im Tray (Boss-Taste), bleibt es dort - PlaceBehind prueft
+            // Sichtbarkeit und Minimierung.
+            if (!viewer.IsDisposed) PlaceBehind(this, viewer);
         }
 
         // ------------------------------------------------------------------

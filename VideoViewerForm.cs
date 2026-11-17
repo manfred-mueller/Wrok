@@ -96,6 +96,11 @@ namespace Wrok
   if (p && p.catch) p.catch(function () { v.muted = true; v.play().catch(noop); });
   window.wrokToggle = function () { if (v.paused) { v.play().catch(noop); } else { v.pause(); } };
   window.wrokSet = function (play) { if (play) { v.play().catch(noop); } else { v.pause(); } };
+  // Boss-Taste: beim Ausblenden pausieren und merken, ob das Video lief - nur dann
+  // geht es beim Wiederherstellen weiter. Ein vorher pausiertes Video bleibt pausiert.
+  var pausedByHide = false;
+  window.wrokHidePause = function () { if (!v.paused) { pausedByHide = true; v.pause(); } };
+  window.wrokHideResume = function () { if (pausedByHide) { pausedByHide = false; v.play().catch(noop); } };
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') { e.preventDefault(); post('close'); return; }
     if (e.ctrlKey && !e.altKey && !e.shiftKey && (e.key === 'p' || e.key === 'P')) { e.preventDefault(); post('pin'); return; }
@@ -210,6 +215,10 @@ namespace Wrok
 
             Text            = Properties.Resources.VideoViewerTitle;
             FormBorderStyle = FormBorderStyle.Sizable;
+            // Kein Minimieren: Das Fenster ist entweder offen oder geschlossen.
+            // Ausblenden uebernimmt die Boss-Taste; so kann das Hauptfenster das
+            // Medienfenster beim Fokuswechsel immer bedenkenlos mit nach vorn holen.
+            MinimizeBox     = false;
             StartPosition   = FormStartPosition.CenterScreen;
             BackColor       = Color.FromArgb(28, 28, 28);
             ShowInTaskbar   = true;
@@ -492,6 +501,21 @@ namespace Wrok
         public void SetPlayback(bool play)
         {
             RunScript("if (window.wrokSet) { window.wrokSet(" + (play ? "true" : "false") + "); }");
+        }
+
+        /// <summary>
+        /// Pausiert ein laufendes Video vor dem Ausblenden (Boss-Taste) und merkt sich
+        /// das in der Seite. Ohne das liefe das Video unsichtbar mit Ton weiter.
+        /// </summary>
+        public void PauseForHide()
+        {
+            if (IsVideo) RunScript("if (window.wrokHidePause) { window.wrokHidePause(); }");
+        }
+
+        /// <summary>Setzt ein durch <see cref="PauseForHide"/> pausiertes Video fort.</summary>
+        public void ResumeAfterHide()
+        {
+            if (IsVideo) RunScript("if (window.wrokHideResume) { window.wrokHideResume(); }");
         }
 
         /// <summary>Wechselt zwischen Pause und Wiedergabe, je nach aktuellem Zustand.</summary>
