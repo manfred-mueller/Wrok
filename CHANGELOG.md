@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [1.7.1] - 2026-11-17
 
 ### Änderungen
 - **Bilder und Videos öffnen sich nicht mehr per Klick.** Ein Klick auf ein Bild oder Video im Chat öffnete zusätzlich das Medienfenster, auch wenn man nur Groks eigene Vorschau öffnen oder schließen wollte. Medien öffnet man jetzt über Strg+Ö oder die Medien-Slots (Strg+1 bis Strg+9).
