@@ -29,7 +29,7 @@ namespace Wrok
 
         // Versionsnummer des JS-Helpers – erhöhen, sobald __wrokSend oder
         // __wrokEnsureFocus geändert wird.
-        private const int WrokHelperVersion = 14;
+        private const int WrokHelperVersion = 15;
 
         // ------------------------------------------------------------------
         // Felder
@@ -314,18 +314,6 @@ namespace Wrok
                 var msg = args.TryGetWebMessageAsString();
                 if (msg == "resetActivity")
                     _onActivityReset();
-                else if (msg != null && msg.StartsWith("openImage:", StringComparison.Ordinal))
-                {
-                    var imgUrl = msg["openImage:".Length..];
-                    Trace.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [WebViewManager] openImage empfangen: {imgUrl}");
-                    _ = ShowImageViewerAsync(imgUrl);
-                }
-                else if (msg != null && msg.StartsWith("openVideo:", StringComparison.Ordinal))
-                {
-                    var vidUrl = msg["openVideo:".Length..];
-                    Trace.WriteLine($"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [WebViewManager] openVideo empfangen: {vidUrl}");
-                    _owner.ShowVideoViewer(vidUrl);
-                }
                 else if (msg != null && msg.StartsWith(ResultPrefix, StringComparison.Ordinal))
                     HandleBridgeResult(msg[ResultPrefix.Length..]);
                 else if (msg == "openDevTools")
@@ -842,10 +830,9 @@ namespace Wrok
         // ------------------------------------------------------------------
         /// <summary>
         /// Lädt das Bild über die eingeloggte WebView-Session und zeigt es im
-        /// eigenständigen Viewer-Fenster an. Wird sowohl vom Bildklick als auch
-        /// vom Tray-Eintrag „Bild aus Zwischenablage öffnen" genutzt.
+        /// eigenständigen Viewer-Fenster an. Wird von Strg+Ö (Bild aus der Zwischenablage) genutzt.
         /// Gibt false zurück, wenn das Bild nicht geladen werden konnte – der
-        /// Aufrufer kann das dem Nutzer melden (beim Bildklick bewusst ignoriert).
+        /// Aufrufer kann das dem Nutzer melden.
         /// </summary>
         public async Task<bool> ShowImageViewerAsync(string imageUrl)
         {
@@ -891,13 +878,14 @@ namespace Wrok
                 if (_owner.IsHandleCreated && !_owner.IsDisposed)
                     _owner.BeginInvoke((System.Windows.Forms.MethodInvoker)(() =>
                     {
+                        // Als „letztes Bild" ablegen – die Daten liegen ohnehin schon
+                        // dekodiert vor, kostet also keinen zweiten Download.
+                        // WICHTIG: VOR ShowImageViewer, denn das gibt bmp frei.
+                        SaveAsLastImage(bmp, fullUrl);
+
                         // Bewusst OHNE Owner-Fenster (siehe ShowImageViewer): sonst läge
                         // das Fenster in Windows immer über dem Hauptfenster.
                         _owner.ShowImageViewer(bmp, fullUrl);
-
-                        // Als „letztes Bild" ablegen – die Daten liegen ohnehin schon
-                        // dekodiert vor, kostet also keinen zweiten Download.
-                        SaveAsLastImage(bmp, fullUrl);
                     }));
                 else
                 {

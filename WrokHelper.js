@@ -2,7 +2,7 @@
     // Nur im Top-Frame aktiv. Der Helper wird ohne Frame-Filter per
     // AddScriptToExecuteOnDocumentCreatedAsync in JEDES Dokument injiziert
     // (siehe WebViewManager.OnCoreWebView2InitializationCompleted) - ohne diesen
-    // Guard wuerden F-Tasten-Override und Bild-/Video-Klick-Erkennung auch in
+    // Guard wuerde der F-Tasten-Override auch in
     // eingebetteten iframes greifen (z. B. ein kuenftiges Zahlungs- oder
     // OAuth-iframe von grok.com). Der Host (WebViewManager.ExecuteScriptAsync,
     // CoreWebView2.ExecuteScriptAsync) spricht ohnehin immer den Top-Frame an,
@@ -283,103 +283,6 @@
             return false;
         }
     };
-    // -----------------------------------------------------------------------
-    // Bild-Klick → openImage-Nachricht an Host
-    // -----------------------------------------------------------------------
-
-    (function () {
-        // Icons und Avatare ignorieren – nur echte Inhaltsbilder öffnen.
-        var MIN_SIZE = 64;
-
-        // Kein Inhaltsbild: Cookie-Banner-Logos, Profilbilder, Avatare, Emoji-Sprites.
-        var IGNORE_URL = /cookielaw\.org|onetrust|profile-picture|\/avatars?\/|\/emoji\//i;
-
-        function isContentUrl(url) {
-            return !!url && url.indexOf('data:') !== 0 && !IGNORE_URL.test(url);
-        }
-
-        // Interaktive Elemente von der (unspezifischeren) CSS-Hintergrundbild-Erkennung
-        // ausschliessen - ein Button/Link/Formularelement, das nur dekorativ per
-        // background-image gestaltet ist (statt eines <img>), soll beim Klick seine
-        // eigentliche Funktion ausloesen und nicht faelschlich den Bildbetrachter
-        // oeffnen. Gilt bewusst NICHT fuer <img>/<video> selbst - ein Bild innerhalb
-        // eines Links/Buttons soll weiterhin normal oeffnen.
-        var INTERACTIVE_SEL = 'button, [role="button"], a, input, select, textarea, ' +
-            '[contenteditable="true"], [role="link"], [role="menuitem"], [role="tab"], ' +
-            '[role="checkbox"], [role="radio"], [role="switch"]';
-
-        function isInteractive(node) {
-            try { return typeof node.matches === 'function' && node.matches(INTERACTIVE_SEL); }
-            catch (e) { return false; }
-        }
-
-        // Liefert { url, kind } eines Elements – kind ist 'image' oder 'video'.
-        // Kein URL-Pattern-Matching auf Dateiendungen, da Grok CDN-Pfade ohne
-        // Endung verwendet (z. B. .../projects/<id>/<id>/asset).
-        function mediaOf(node) {
-            if (!node || node.nodeType !== 1) return null;
-            try {
-                if (node.tagName === 'VIDEO') {
-                    var vurl = node.currentSrc || node.src || node.getAttribute('src') || '';
-                    if (!vurl) {
-                        var src = node.querySelector('source');
-                        if (src) vurl = src.src || src.getAttribute('src') || '';
-                    }
-                    return isContentUrl(vurl) ? { url: vurl, kind: 'video' } : null;
-                }
-                if (node.tagName === 'IMG') {
-                    var w = node.naturalWidth || node.width || 0;
-                    var h = node.naturalHeight || node.height || 0;
-                    if (w && h && (w < MIN_SIZE || h < MIN_SIZE)) return null;
-                    var url = node.currentSrc || node.src || node.getAttribute('src') || '';
-                    return isContentUrl(url) ? { url: url, kind: 'image' } : null;
-                }
-                if (isInteractive(node)) return null;
-
-                var r = node.getBoundingClientRect();
-                if (r.width < MIN_SIZE || r.height < MIN_SIZE) return null;
-                var bg = window.getComputedStyle(node).backgroundImage;
-                if (bg && bg !== 'none') {
-                    var m = /url\(["']?([^"')]+)["']?\)/.exec(bg);
-                    if (m && isContentUrl(m[1])) return { url: m[1], kind: 'image' };
-                }
-            } catch (e) { }
-            return null;
-        }
-
-        function findMedia(e) {
-            // 1) Vom Klickziel nach oben durch die Elternkette.
-            var node = e.target;
-            for (var i = 0; i < 6 && node && node !== document.documentElement; i++) {
-                var hit = mediaOf(node);
-                if (hit) return hit;
-                node = node.parentElement;
-            }
-            // 2) Fallback: alle Elemente unter dem Mauszeiger. Nötig, weil Grok ein
-            //    transparentes Overlay über die Medien legt – dann ist e.target das
-            //    Overlay und das <img>/<video> liegt DARUNTER, nicht in der Elternkette.
-            try {
-                var stack = document.elementsFromPoint(e.clientX, e.clientY) || [];
-                for (var j = 0; j < stack.length; j++) {
-                    var hit2 = mediaOf(stack[j]);
-                    if (hit2) return hit2;
-                }
-            } catch (ex) { }
-            return null;
-        }
-
-        document.addEventListener('click', function (e) {
-            try {
-                var hit = findMedia(e);
-                if (!hit) return;
-                // Kein preventDefault/stopPropagation — Grok soll sein Overlay
-                // weiterhin normal öffnen und schließen können.
-                window.chrome.webview.postMessage(
-                    (hit.kind === 'video' ? 'openVideo:' : 'openImage:') + hit.url);
-            } catch (ex) {}
-        }, true);
-    })();
-
     // -----------------------------------------------------------------------
     // Async-Brücke zum Host
     //

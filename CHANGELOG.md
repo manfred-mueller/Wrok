@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased]
+
+### Änderungen
+- **Bilder und Videos öffnen sich nicht mehr per Klick.** Ein Klick auf ein Bild oder Video im Chat öffnete zusätzlich das Medienfenster, auch wenn man nur Groks eigene Vorschau öffnen oder schließen wollte. Medien öffnet man jetzt über Strg+Ö oder die Medien-Slots (Strg+1 bis Strg+9).
+
+### Fixes
+- **„Letztes Bild" wurde nicht gespeichert.** Nach dem Öffnen eines Bildes (Strg+Ö mit Link oder lokaler Datei) wurde das Bild freigegeben, bevor es als letztes Bild abgelegt war. Strg+Ö ohne Zwischenablage zeigte deshalb ein älteres oder gar kein Bild.
+
 ## [1.7.0] - 2026-11-05
 
 ### Features

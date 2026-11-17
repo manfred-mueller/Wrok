@@ -447,8 +447,9 @@ namespace Wrok
                 using (var decoded = new Bitmap(fs))
                     bmp = new Bitmap(decoded);
 
-                ShowImageViewer(bmp, path);
+                // VOR ShowImageViewer speichern, denn das gibt bmp frei.
                 WebViewManager.SaveAsLastImage(bmp, path);
+                ShowImageViewer(bmp, path);
             }
             catch (Exception ex)
             {
