@@ -90,6 +90,12 @@ $setup = "bin\x64\Release\Wrok-Setup-$version.exe"
 Write-Host "Version: $version" -ForegroundColor Cyan
 Write-Host "Tag:     $tag"     -ForegroundColor Cyan
 
+# --- 1a. Git-Reste aufraeumen ----------------------------------------------
+# Liegengebliebene Lock- und temporaere Objektdateien unter .git (z. B. nach
+# einem abgebrochenen Git-Lauf) lassen das folgende "git status"/"git fetch"
+# sonst mit "File exists" scheitern. Details siehe Clear-GitLeftovers.ps1.
+& (Join-Path $PSScriptRoot 'Clear-GitLeftovers.ps1')
+
 # --- 1b. Arbeitsverzeichnis pruefen -----------------------------------------
 # "gh release create" setzt den Tag auf den Stand, der SERVERSEITIG im
 # Standard-Branch liegt. Nicht committete oder nicht gepushte Aenderungen
