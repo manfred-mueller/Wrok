@@ -108,7 +108,7 @@ namespace Wrok
         ///
         /// <see cref="CoreWebView2Profile.ClearBrowsingDataAsync()"/> raeumt nur den
         /// Browser auf. Das zuletzt geoeffnete Bild liegt aber als PNG unter
-        /// %LOCALAPPDATA%\Wrok\images, und seine Quell-URL steht im Klartext in den
+        /// %LOCALAPPDATA%\Wrok\media\view, und seine Quell-URL steht im Klartext in den
         /// Einstellungen – beides ueberlebte das Loeschen bisher unbemerkt.
         /// </summary>
         private void ClearWrokPrivateData(bool includeMacros)

@@ -92,7 +92,7 @@ Bilder und Videos aus Grok lassen sich in einem eigenen Fenster öffnen, das lin
 * **Per Klick öffnen:** Bild oder Video in Grok anklicken.
 * **Per Tastenkombination:** Rechtsklick auf das Medium → *Bildadresse kopieren*, dann `Strg+Ö`.
 * **Lokale Dateien:** Bild oder Video im Explorer kopieren (`Strg+C` oder *Als Pfad kopieren*), dann `Strg+Ö`. Unterstützt werden JPG, PNG, BMP, GIF, TIFF und ICO sowie MP4, M4V, WebM, MOV und OGV. Auch lokal geöffnete Medien gelten danach als „zuletzt geöffnet“.
-* **Zuletzt geöffnetes erneut anzeigen:** `Strg+Ö` drücken, wenn nichts Brauchbares in der Zwischenablage steht. Bilder werden lokal unter `%LOCALAPPDATA%\\Wrok\\images` zwischengespeichert und öffnen daher ohne Netzwerk und ohne gültige Sitzung.
+* **Zuletzt geöffnetes erneut anzeigen:** `Strg+Ö` drücken, wenn nichts Brauchbares in der Zwischenablage steht. Bilder werden lokal unter `%LOCALAPPDATA%\\Wrok\\media\\view` zwischengespeichert und öffnen daher ohne Netzwerk und ohne gültige Sitzung.
 * **Videos** laufen im Endlos-Loop mit Ton. `F11` wechselt zwischen Pause und Wiedergabe, auch wenn das Hauptfenster den Fokus hat. Haltepunkte in eckigen Klammern hinter der Adresse (siehe Medien-Menü) halten das Video an den angegebenen Zeiten an. Solange ein Video offen ist, sind im Hauptfenster die Browser-Tastenkürzel deaktiviert (z. B. Zoom mit Strg+Plus).
 
 Tastenkürzel im Medienfenster:
@@ -104,17 +104,30 @@ Tastenkürzel im Medienfenster:
 |`0`|100 % (Bilder)|
 |`Strg+F`|Einpassen (Bilder)|
 |`F11`|Pause / Wiedergabe (Videos)|
+|`Strg+Plus` / `Strg+Minus`|Geschwindigkeit in 0,25er-Stufen, 0,25× bis 1,75× (Videos, auch im Hauptfenster)|
+|`Strg+0`|Geschwindigkeit 1× (Videos, auch im Hauptfenster)|
 |`Strg+P`|Anheften (immer im Vordergrund)|
 
 Ziehen mit der linken Maustaste verschiebt ein Bild.
 
 ### Medien-Menü
 
-Neun Slots nehmen jeweils einen Namen und eine Adresse auf. Die Adresse kann ein Link oder eine lokale Datei sein, Video oder Bild.
+Neun Slots nehmen jeweils einen Namen und eine Adresse auf. Die Adresse kann ein Link oder eine lokale Datei sein, Video oder Bild. Lokale Dateien müssen im geschützten Medienordner liegen (siehe *Medienschutz*); liegt eine Datei woanders, bietet Wrok an, sie dorthin zu kopieren.
 
 * **Abspielen:** Linksklick auf einen Slot im Menü *Medien* oder `Strg+1` bis `Strg+9`. Das gilt auch aus dem Video-Fenster heraus.
 * **Bearbeiten:** Rechtsklick auf einen Slot. Eine leere Adresse leert den Slot.
 * **Import/Export:** *Medien → Medien Import/Export*. Die Datei ist von den Makros getrennt. Beim Import werden alle neun Slots ersetzt.
+
+### Medienschutz
+
+Bilder und Videos liegen gemeinsam in `%LOCALAPPDATA%\\Wrok\\media`. *Werkzeuge → Medienordner öffnen* öffnet ihn, *Werkzeuge → Medien exportieren…* kopiert alle Medien unverschlüsselt in einen frei wählbaren Ordner (z. B. für eine Datensicherung).
+
+Unter *Einstellungen → Medienschutz*:
+
+* **Medienordner sperren, solange Wrok minimiert ist** (Standard: an) — Schutz gegen Neugierige. Solange Wrok minimiert ist oder nicht läuft, lässt sich der Ordner im Explorer nicht öffnen. Das ist keine Verschlüsselung.
+* **Medienordner verschlüsseln (EFS)** — Windows-Dateiverschlüsselung, an das Windows-Konto gebunden. Schützt gegen andere Konten und ausgebaute Festplatten, nicht aber gegen jemanden an der entsperrten Sitzung. Nicht verfügbar unter Windows Home.
+* **Browserdaten verschlüsseln (EFS)** — verschlüsselt den Browser-Zwischenspeicher, in dem Grok-Medien landen. Wirkt ab dem nächsten Start.
+* **EFS-Schlüssel sichern…** — startet den Windows-Assistenten. Ohne Sicherung sind verschlüsselte Dateien z. B. nach einer Windows-Neuinstallation verloren.
 
 ### Boss-Taste
 
@@ -146,7 +159,7 @@ Wrok sieht beim Start (höchstens einmal täglich) nach, ob auf GitHub eine neue
 * **DevTools öffnen:** `Strg+F12` öffnet die WebView2-Entwicklerwerkzeuge zur Prüfung von DOM und Konsole.
 * **Vollbild:** `Strg+F11` schaltet das Vollbild um.
 * **Medien-Menü:** Neun Medien-Slots (Menü *Medien*) lassen sich per `Strg+1` bis `Strg+9` abspielen. Linksklick spielt, Rechtsklick bearbeitet.
-* **Haltepunkte:** Hinter einer Video-Adresse steht eine Liste in eckigen Klammern, z. B. `https://… [5, 35, 1:41]`. Das Video hält bei jeder Zeit an, `F11` setzt bis zum nächsten Punkt fort. Zeiten in Sekunden oder als `m:ss`.
+* **Haltepunkte:** Hinter einer Video-Adresse steht eine Liste in eckigen Klammern, z. B. `https://… [5, 35, 1:41]`. Das Video hält bei jeder Zeit an, `F11` setzt bis zum nächsten Punkt fort. Zeiten in Sekunden oder als `m:ss`. Ein Eintrag mit `x` legt die Startgeschwindigkeit fest, z. B. `[0.5x, 5, 35]` (0,25 bis 1,75 in 0,25er-Stufen, Dezimalpunkt statt Komma).
 * **Seite zoomen:** `Strg` + `+`/`-`/`0` oder `Strg` + Mausrad. Die Zoomstufe wird gemerkt.
 * **Protokoll:** Meldungen und Fehler stehen in `%LOCALAPPDATA%\\Wrok\\logs\\app.log`.
 
@@ -237,7 +250,7 @@ Images and videos from Grok can be opened in a separate window that is placed on
 
 * **Open by click:** Click an image or video in Grok.
 * **Open by hotkey:** Right-click the media in Grok → *Copy image/video address*, then press `Ctrl+Ö`.
-* **Reopen the last item:** Press `Ctrl+Ö` with nothing usable in the clipboard. Images are cached locally under `%LOCALAPPDATA%\\Wrok\\images`, so they reopen without network or session.
+* **Reopen the last item:** Press `Ctrl+Ö` with nothing usable in the clipboard. Images are cached locally under `%LOCALAPPDATA%\\Wrok\\media\\view`, so they reopen without network or session.
 * **Videos** play with sound in an endless loop. `F11` toggles pause and play, even while the main window has focus. Stop points in square brackets after the address (see the media menu) pause the video at the given times. While a video is open, the browser shortcuts in the main window (e.g. Ctrl+Plus zoom) are disabled.
 
 Keyboard shortcuts inside the viewer:
@@ -249,17 +262,30 @@ Keyboard shortcuts inside the viewer:
 |`0`|100 % (images)|
 |`Ctrl+F`|Fit to window (images)|
 |`F11`|Pause / play (videos)|
+|`Ctrl+Plus` / `Ctrl+Minus`|Speed in steps of 0.25, 0.25× to 1.75× (videos, also in the main window)|
+|`Ctrl+0`|Speed 1× (videos, also in the main window)|
 |`Ctrl+P`|Pin (always on top)|
 
 Drag with the left mouse button to pan an image.
 
 ### Media menu
 
-Nine slots each hold a name and an address. The address can be a link or a local file, video or image.
+Nine slots each hold a name and an address. The address can be a link or a local file, video or image. Local files must be in the protected media folder (see *Media protection*); if a file is elsewhere, Wrok offers to copy it there.
 
 * **Play:** Left-click a slot in the *Media* menu or press `Ctrl+1` to `Ctrl+9`. This also works from the video window.
 * **Edit:** Right-click a slot. An empty address clears the slot.
 * **Import/Export:** *Medien → Medien Import/Export*. The file is separate from the macros. Importing replaces all nine slots.
+
+### Media protection
+
+Images and videos are kept together in `%LOCALAPPDATA%\\Wrok\\media`. *Werkzeuge → Medienordner öffnen* opens it, *Werkzeuge → Medien exportieren…* copies all media unencrypted to a folder of your choice (e.g. for a backup).
+
+Under *Einstellungen → Medienschutz*:
+
+* **Lock media folder while Wrok is minimized** (default: on) — protection against curious eyes. While Wrok is minimized or not running, the folder cannot be opened in Explorer. This is not encryption.
+* **Encrypt media folder (EFS)** — Windows file encryption, tied to your Windows account. Protects against other accounts and removed drives, but not against someone at your unlocked session. Not available on Windows Home.
+* **Encrypt browser data (EFS)** — encrypts the browser cache where Grok media ends up. Takes effect on the next start.
+* **Back up EFS key…** — starts the Windows wizard. Without a backup, encrypted files are lost e.g. after reinstalling Windows.
 
 ### Boss key
 
@@ -288,7 +314,7 @@ At startup (at most once a day) Wrok checks GitHub for a newer version and then 
 * **Open DevTools:** `Ctrl+F12` opens the WebView2 developer tools to inspect the DOM and console.
 * **Fullscreen:** `Ctrl+F11` toggles fullscreen.
 * **Media menu:** Nine media slots (menu *Media*) play with `Ctrl+1` to `Ctrl+9`. Left-click plays, right-click edits.
-* **Stop points:** Add a list in square brackets after a video address, e.g. `https://… [5, 35, 1:41]`. Playback pauses at each time; `F11` continues to the next one. Times in seconds or as `m:ss`.
+* **Stop points:** Add a list in square brackets after a video address, e.g. `https://… [5, 35, 1:41]`. Playback pauses at each time; `F11` continues to the next one. Times in seconds or as `m:ss`. An entry ending in `x` sets the starting speed, e.g. `[0.5x, 5, 35]` (0.25 to 1.75 in steps of 0.25).
 * **Zoom the page:** `Ctrl` + `+`/`-`/`0` or `Ctrl` + mouse wheel. The zoom level is remembered.
 * **Logs:** Runtime messages and logs are written to `%LOCALAPPDATA%\\Wrok\\logs\\app.log`.
 

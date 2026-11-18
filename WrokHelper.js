@@ -61,6 +61,20 @@
         try { window.chrome.webview.postMessage('mediaToggle'); } catch (ex) { }
     }, true);
 
+    // Strg+Plus / Strg+Minus / Strg+0 = Video-Geschwindigkeit. Solange ein Video
+    // offen ist, hat der Host die Browser-Tastenkuerzel (Zoom) abgeschaltet; ohne
+    // Video ignoriert er die Meldung, und Chromium zoomt wie gewohnt. Deshalb hier
+    // weder preventDefault noch stopPropagation.
+    window.addEventListener('keydown', function (e) {
+        if (!e.ctrlKey || e.altKey) return;
+        var k = e.keyCode, dir = null;
+        if (e.key === '+' || k === 107 || k === 187) dir = 1;
+        else if (e.key === '-' || k === 109 || k === 189) dir = -1;
+        else if (e.key === '0' || k === 48 || k === 96) dir = 0;
+        if (dir === null) return;
+        try { window.chrome.webview.postMessage('mediaSpeed:' + dir); } catch (ex) { }
+    }, true);
+
     window.addEventListener('keydown', function (e) {
         if (!e.ctrlKey || e.altKey) return;
         if (e.keyCode !== 122 && e.keyCode !== 123) return;

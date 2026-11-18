@@ -1,8 +1,16 @@
 # Changelog
 
-## [Unreleased]
+## [1.8.0] - 2026-11-18
+
+### Features
+- **Geschützter Medienordner.** Bilder und Videos liegen gemeinsam in `%LOCALAPPDATA%\Wrok\media`. Solange Wrok minimiert ist oder nicht läuft, lässt sich der Ordner im Explorer nicht öffnen; beim Wiederherstellen ist er sofort wieder frei. Abschaltbar unter *Einstellungen → Medienschutz*.
+- **Wiedergabegeschwindigkeit für Videos.** Strg+Plus und Strg+Minus ändern die Geschwindigkeit in 0,25er-Stufen zwischen 0,25× und 1,75×, Strg+0 setzt auf 1× zurück. Das wirkt im Video-Fenster und im Hauptfenster, solange ein Video offen ist. Die neue Geschwindigkeit wird kurz im Video eingeblendet und steht im Fenstertitel, solange sie nicht 1× ist. Ein Medien-Slot kann die Startgeschwindigkeit wie die Haltepunkte in der Klammerliste mitbringen, z. B. `[0.5x, 5, 1:41]`.
+- **Verschlüsselung per EFS.** Unter *Einstellungen → Medienschutz* lassen sich der Medienordner und die Browserdaten (dort landen Grok-Bilder und -Videos als Zwischenspeicher) mit der Windows-Dateiverschlüsselung schützen. Der Schlüssel hängt am Windows-Konto; Wrok bietet direkt an, ihn zu sichern. Nicht verfügbar unter Windows Home.
+- **Medienordner öffnen und Medien exportieren.** Im Menü *Werkzeuge* öffnet ein Eintrag den Medienordner, ein weiterer kopiert alle Medien unverschlüsselt in einen frei wählbaren Ordner, etwa für eine Datensicherung.
 
 ### Änderungen
+- **Medien-Slots nehmen nur noch Dateien aus dem Medienordner an.** Liegt eine Datei woanders, bietet Wrok an, eine Kopie im Medienordner abzulegen, und stellt den Slot darauf um. Das gilt auch für bestehende und importierte Slots beim ersten Abspielen. Links bleiben erlaubt, Strg+Ö öffnet weiterhin Dateien von überall.
+- **Zwischengespeicherte Bilder liegen jetzt im Medienordner.** Das letzte Bild und die Anzeigedateien des Medienfensters ziehen von `images` und `view` nach `media\view` um; die alten Ordner werden entfernt.
 - **Haupt- und Medienfenster kommen gemeinsam nach vorn.** Wird eines der beiden Fenster aktiviert (Klick, Alt+Tab, Taskleiste), kommt das andere mit nach vorn, ohne ihm den Fokus zu nehmen. Ein angeheftetes Medienfenster bleibt unverändert oben.
 - **Das Medienfenster lässt sich nicht mehr minimieren.** Es ist entweder offen oder mit X geschlossen. Zum schnellen Ausblenden dient die Boss-Taste.
 

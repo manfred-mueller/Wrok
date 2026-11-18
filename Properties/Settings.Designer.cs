@@ -333,5 +333,41 @@ namespace Wrok.Properties {
                 this["FKeyMacroOverrideEnabled"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool MediaLockEnabled {
+            get {
+                return ((bool)(this["MediaLockEnabled"]));
+            }
+            set {
+                this["MediaLockEnabled"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool MediaEfsEnabled {
+            get {
+                return ((bool)(this["MediaEfsEnabled"]));
+            }
+            set {
+                this["MediaEfsEnabled"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool WebViewDataEfsEnabled {
+            get {
+                return ((bool)(this["WebViewDataEfsEnabled"]));
+            }
+            set {
+                this["WebViewDataEfsEnabled"] = value;
+            }
+        }
     }
 }

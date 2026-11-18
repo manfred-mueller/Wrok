@@ -221,7 +221,17 @@ namespace Wrok
             string url = slots[index].Url;
             if (string.IsNullOrWhiteSpace(url)) return;
 
-            ShowVideoViewer(url);
+            // Ältere oder importierte Slots können noch auf Dateien außerhalb des
+            // Medienordners zeigen: einmalig hineinkopieren und den Slot umstellen.
+            var checkedUrl = EnsureSlotInMediaFolder(url);
+            if (checkedUrl == null) return;
+            if (checkedUrl != url)
+            {
+                VideoSlotStore.Set(index, slots[index] with { Url = checkedUrl });
+                RefreshVideosMenu();
+            }
+
+            ShowVideoViewer(checkedUrl);
         }
 
         private void EditVideoSlot(int index)
@@ -235,6 +245,12 @@ namespace Wrok
                 if (!Dialogs.ShowEditMacro(this, string.Format(Properties.Resources.VideoSlotEditTitle, index + 1), ref name, ref url)) return;
 
                 url = url.Trim().Trim('"');
+
+                // Slots nehmen nur Dateien aus dem Medienordner (oder Links) an.
+                var checkedUrl = EnsureSlotInMediaFolder(url);
+                if (checkedUrl == null) return;
+                url = checkedUrl;
+
                 VideoSlotStore.Set(index, new VideoSlot(name.Trim(), url));
                 RefreshVideosMenu();
             }

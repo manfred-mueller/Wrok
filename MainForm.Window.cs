@@ -91,6 +91,7 @@ namespace Wrok
             this.BringToFront();
             this.Activate();
             RestoreMediaViewer();
+            UpdateMediaLock();
             _inactivity?.Reset("Fenster reaktiviert");
 
             try
@@ -111,6 +112,7 @@ namespace Wrok
             this.WindowState   = FormWindowState.Minimized;
             this.Opacity       = 0;
             this.ShowInTaskbar = false;
+            UpdateMediaLock();
         }
 
         /// <summary>

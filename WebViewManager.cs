@@ -336,6 +336,11 @@ namespace Wrok
                     _owner.ControlVideoPlayback(false);
                 else if (msg == "mediaPlay")
                     _owner.ControlVideoPlayback(true);
+                else if (msg != null && msg.StartsWith("mediaSpeed:", StringComparison.Ordinal))
+                {
+                    if (int.TryParse(msg["mediaSpeed:".Length..], out int dir))
+                        _owner.ControlVideoSpeed(dir);
+                }
                 else if (msg != null && msg.StartsWith("fkey:", StringComparison.Ordinal))
                     HandleFKeyMessage(msg["fkey:".Length..]);
             };
@@ -911,10 +916,8 @@ namespace Wrok
         {
             try
             {
-                var dir = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "Wrok", "images");
-                Directory.CreateDirectory(dir);
+                // Im Zwischenordner des geschützten Medienordners (siehe MediaProtection).
+                var dir = MediaProtection.EnsureViewDir();
 
                 var path = Path.Combine(dir, "last-image.png");
                 var tmp  = path + ".tmp";

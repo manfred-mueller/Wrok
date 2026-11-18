@@ -138,6 +138,9 @@ namespace Wrok
 
             settingsMenu.DropDownItems.Add(appMenu);
 
+            //   Einstellungen → Medienschutz (Sperre, EFS)
+            settingsMenu.DropDownItems.Add(BuildMediaProtectionMenu());
+
             //   Einstellungen → Grok (öffnet Groks eigene Einstellungsseite)
             foreach (var page in menuPages)
             {
@@ -176,6 +179,10 @@ namespace Wrok
             // Eigenes Fenster statt Navigation im Hauptfenster, siehe FilesViewerForm.
             toolsMenu.DropDownItems.Add(Properties.Resources.ManageFilesMenuItem, null,
                 (s, e) => ShowFilesViewer());
+
+            toolsMenu.DropDownItems.Add(new ToolStripSeparator());
+            toolsMenu.DropDownItems.Add(Properties.Resources.OpenMediaFolderMenuItem, null, (s, e) => OpenMediaFolder());
+            toolsMenu.DropDownItems.Add(Properties.Resources.ExportMediaMenuItem, null, (s, e) => ExportMedia());
 
             toolsMenu.DropDownItems.Add(new ToolStripSeparator());
             toolsMenu.DropDownItems.Add(Properties.Resources.ClearCache, null,

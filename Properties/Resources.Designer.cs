@@ -1826,5 +1826,194 @@ namespace Wrok.Properties {
             }
         }
 
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die MediaProtectionMenu ähnelt.
+        /// </summary>
+        public static string MediaProtectionMenu {
+            get {
+                return ResourceManager.GetString("MediaProtectionMenu", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die MediaLockMenuItem ähnelt.
+        /// </summary>
+        public static string MediaLockMenuItem {
+            get {
+                return ResourceManager.GetString("MediaLockMenuItem", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die MediaLockHint ähnelt.
+        /// </summary>
+        public static string MediaLockHint {
+            get {
+                return ResourceManager.GetString("MediaLockHint", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die MediaEfsMenuItem ähnelt.
+        /// </summary>
+        public static string MediaEfsMenuItem {
+            get {
+                return ResourceManager.GetString("MediaEfsMenuItem", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die WebViewEfsMenuItem ähnelt.
+        /// </summary>
+        public static string WebViewEfsMenuItem {
+            get {
+                return ResourceManager.GetString("WebViewEfsMenuItem", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die WebViewEfsHint ähnelt.
+        /// </summary>
+        public static string WebViewEfsHint {
+            get {
+                return ResourceManager.GetString("WebViewEfsHint", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die WebViewEfsRestartInfo ähnelt.
+        /// </summary>
+        public static string WebViewEfsRestartInfo {
+            get {
+                return ResourceManager.GetString("WebViewEfsRestartInfo", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die EfsBackupMenuItem ähnelt.
+        /// </summary>
+        public static string EfsBackupMenuItem {
+            get {
+                return ResourceManager.GetString("EfsBackupMenuItem", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die EfsBackupPrompt ähnelt.
+        /// </summary>
+        public static string EfsBackupPrompt {
+            get {
+                return ResourceManager.GetString("EfsBackupPrompt", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die EfsBackupFailed ähnelt.
+        /// </summary>
+        public static string EfsBackupFailed {
+            get {
+                return ResourceManager.GetString("EfsBackupFailed", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die EfsUnavailable ähnelt.
+        /// </summary>
+        public static string EfsUnavailable {
+            get {
+                return ResourceManager.GetString("EfsUnavailable", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die EfsEncryptDone ähnelt.
+        /// </summary>
+        public static string EfsEncryptDone {
+            get {
+                return ResourceManager.GetString("EfsEncryptDone", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die EfsDecryptDone ähnelt.
+        /// </summary>
+        public static string EfsDecryptDone {
+            get {
+                return ResourceManager.GetString("EfsDecryptDone", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die EfsPartial ähnelt.
+        /// </summary>
+        public static string EfsPartial {
+            get {
+                return ResourceManager.GetString("EfsPartial", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die OpenMediaFolderMenuItem ähnelt.
+        /// </summary>
+        public static string OpenMediaFolderMenuItem {
+            get {
+                return ResourceManager.GetString("OpenMediaFolderMenuItem", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die ExportMediaMenuItem ähnelt.
+        /// </summary>
+        public static string ExportMediaMenuItem {
+            get {
+                return ResourceManager.GetString("ExportMediaMenuItem", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die ExportMediaDescription ähnelt.
+        /// </summary>
+        public static string ExportMediaDescription {
+            get {
+                return ResourceManager.GetString("ExportMediaDescription", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die ExportMediaDone ähnelt.
+        /// </summary>
+        public static string ExportMediaDone {
+            get {
+                return ResourceManager.GetString("ExportMediaDone", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die ExportMediaPartial ähnelt.
+        /// </summary>
+        public static string ExportMediaPartial {
+            get {
+                return ResourceManager.GetString("ExportMediaPartial", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die MediaCopyIntoProtectedPrompt ähnelt.
+        /// </summary>
+        public static string MediaCopyIntoProtectedPrompt {
+            get {
+                return ResourceManager.GetString("MediaCopyIntoProtectedPrompt", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die MediaCopyFailed ähnelt.
+        /// </summary>
+        public static string MediaCopyFailed {
+            get {
+                return ResourceManager.GetString("MediaCopyFailed", resourceCulture);
+            }
+        }
+
     }
 }

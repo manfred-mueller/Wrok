@@ -793,4 +793,76 @@ Supported: images (JPG, PNG, BMP, GIF, TIFF, ICO) and videos (MP4, M4V, WebM, MO
   <data name="RestoreDeletedChats" xml:space="preserve">
     <value>Restore deleted chats</value>
   </data>
+  <data name="MediaProtectionMenu" xml:space="preserve">
+    <value>Media protection</value>
+  </data>
+  <data name="MediaLockMenuItem" xml:space="preserve">
+    <value>Lock media folder while Wrok is minimized</value>
+  </data>
+  <data name="MediaLockHint" xml:space="preserve">
+    <value>Prevents the media folder from being opened in Explorer while Wrok is minimized or not running. Protects against curious eyes; this is not encryption.</value>
+  </data>
+  <data name="MediaEfsMenuItem" xml:space="preserve">
+    <value>Encrypt media folder (EFS)</value>
+  </data>
+  <data name="WebViewEfsMenuItem" xml:space="preserve">
+    <value>Encrypt browser data (EFS)</value>
+  </data>
+  <data name="WebViewEfsHint" xml:space="preserve">
+    <value>Encrypts the browser cache where Grok images and videos end up. Takes effect the next time Wrok starts.</value>
+  </data>
+  <data name="WebViewEfsRestartInfo" xml:space="preserve">
+    <value>The change takes effect the next time Wrok starts.</value>
+  </data>
+  <data name="EfsBackupMenuItem" xml:space="preserve">
+    <value>Back up EFS key…</value>
+  </data>
+  <data name="EfsBackupPrompt" xml:space="preserve">
+    <value>Encrypted files are lost without the EFS key, for example after reinstalling Windows or when an administrator resets your password.
+
+Back up the key now?</value>
+  </data>
+  <data name="EfsBackupFailed" xml:space="preserve">
+    <value>The Windows wizard for backing up the EFS key could not be started.</value>
+  </data>
+  <data name="EfsUnavailable" xml:space="preserve">
+    <value>EFS is not available on this system (e.g. on Windows Home or on a drive without NTFS).
+
+{0}</value>
+  </data>
+  <data name="EfsEncryptDone" xml:space="preserve">
+    <value>Encryption finished: {0} items.</value>
+  </data>
+  <data name="EfsDecryptDone" xml:space="preserve">
+    <value>Decryption finished: {0} items.</value>
+  </data>
+  <data name="EfsPartial" xml:space="preserve">
+    <value>{0} items processed, {1} failed (e.g. because they are currently open). See the log for details.</value>
+  </data>
+  <data name="OpenMediaFolderMenuItem" xml:space="preserve">
+    <value>Open media folder</value>
+  </data>
+  <data name="ExportMediaMenuItem" xml:space="preserve">
+    <value>Export media…</value>
+  </data>
+  <data name="ExportMediaDescription" xml:space="preserve">
+    <value>Choose a target folder for unencrypted copies of the media</value>
+  </data>
+  <data name="ExportMediaDone" xml:space="preserve">
+    <value>{0} files exported.</value>
+  </data>
+  <data name="ExportMediaPartial" xml:space="preserve">
+    <value>{0} files exported, {1} failed. See the log for details.</value>
+  </data>
+  <data name="MediaCopyIntoProtectedPrompt" xml:space="preserve">
+    <value>The file is outside the protected media folder:
+{0}
+
+Media slots only accept files from the media folder. Place a copy there now?</value>
+  </data>
+  <data name="MediaCopyFailed" xml:space="preserve">
+    <value>The file could not be copied to the media folder.
+
+{0}</value>
+  </data>
 </root>

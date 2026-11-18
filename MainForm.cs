@@ -111,6 +111,7 @@ namespace Wrok
             InitializeTrayIcon();
             _theme.Refresh();
             LoadWindowSettings();
+            InitializeMediaProtection();
             _inactivity.LoadSettings();
 
             _webViewInitTask = InitializeWebViewAsync();
@@ -153,6 +154,10 @@ namespace Wrok
 
         private async Task InitializeWebViewAsync()
         {
+            // EFS fuer die Browserdaten muss vor dem Start von WebView2 laufen.
+            try { await ApplyWebViewDataEfsAtStartupAsync(); }
+            catch (Exception ex) { Log(ex, "EFS Browserdaten beim Start fehlgeschlagen"); }
+
             _webView = new WebView2 { Dock = DockStyle.Fill };
             this.Controls.Add(_webView);
 
@@ -196,6 +201,7 @@ namespace Wrok
             this.ShowInTaskbar = true;
             this.BringToFront();
             this.Activate();
+            UpdateMediaLock();
             _inactivity?.Reset("Fenster wieder angezeigt");
         }
 
@@ -212,6 +218,27 @@ namespace Wrok
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
             Keys keyCode = keyData & Keys.KeyCode;
+
+            // Strg+Plus/Minus/0 = Video-Geschwindigkeit, nur solange ein Video offen ist
+            // (sonst bleibt es beim normalen Zoom). Den Weg über die Grok-Seite nimmt
+            // WrokHelper.js (mediaSpeed).
+            if ((keyData & Keys.Modifiers & ~Keys.Shift) == Keys.Control &&
+                _mediaViewer is VideoViewerForm { IsDisposed: false, IsVideo: true })
+            {
+                int? dir = keyCode switch
+                {
+                    Keys.Oemplus or Keys.Add       => 1,
+                    Keys.OemMinus or Keys.Subtract => -1,
+                    Keys.D0 or Keys.NumPad0        => 0,
+                    _                              => null
+                };
+                if (dir is int d)
+                {
+                    ControlVideoSpeed(d);
+                    return true;
+                }
+            }
+
             if (keyCode >= Keys.F1 && keyCode <= Keys.F12)
             {
                 bool ctrl  = (keyData & Keys.Control) == Keys.Control;

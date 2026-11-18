@@ -204,14 +204,13 @@ namespace Wrok
         }
 
         /// <summary>
-        /// Speichert das Bild als PNG im lokalen Viewer-Ordner. Ältere Dateien dieses
-        /// Ordners werden entfernt, damit er nicht wächst.
+        /// Speichert das Bild als PNG im Zwischenordner des Medienordners
+        /// (%LOCALAPPDATA%\Wrok\media\view). Ältere Anzeigedateien werden entfernt,
+        /// damit er nicht wächst.
         /// </summary>
         private static string SaveViewImage(Bitmap bmp)
         {
-            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                                   "Wrok", "view");
-            Directory.CreateDirectory(dir);
+            var dir = MediaProtection.EnsureViewDir();
 
             var path = Path.Combine(dir, $"view-{DateTime.Now:yyyyMMddHHmmssfff}.png");
             bmp.Save(path, System.Drawing.Imaging.ImageFormat.Png);
@@ -266,6 +265,16 @@ namespace Wrok
 
             if (play is bool start) video.SetPlayback(start);
             else video.TogglePlayback();
+        }
+
+        /// <summary>
+        /// Ändert die Geschwindigkeit des offenen Videos (Strg+Plus/Minus/0 im
+        /// Hauptfenster). Ohne offenes Video passiert nichts.
+        /// </summary>
+        internal void ControlVideoSpeed(int direction)
+        {
+            if (_mediaViewer is VideoViewerForm { IsDisposed: false, IsVideo: true } video)
+                video.StepSpeed(direction);
         }
 
         private void ArrangeSideBySide(Form viewer, int desiredWidth)

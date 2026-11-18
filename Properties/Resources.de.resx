@@ -795,4 +795,76 @@ Unterstützt: Bilder (JPG, PNG, BMP, GIF, TIFF, ICO) und Videos (MP4, M4V, WebM,
   <data name="RestoreDeletedChats" xml:space="preserve">
     <value>Gelöschte Chats wiederherstellen</value>
   </data>
+  <data name="MediaProtectionMenu" xml:space="preserve">
+    <value>Medienschutz</value>
+  </data>
+  <data name="MediaLockMenuItem" xml:space="preserve">
+    <value>Medienordner sperren, solange Wrok minimiert ist</value>
+  </data>
+  <data name="MediaLockHint" xml:space="preserve">
+    <value>Verhindert, dass der Medienordner im Explorer geöffnet werden kann, solange Wrok minimiert ist oder nicht läuft. Schutz gegen Neugierige, keine Verschlüsselung.</value>
+  </data>
+  <data name="MediaEfsMenuItem" xml:space="preserve">
+    <value>Medienordner verschlüsseln (EFS)</value>
+  </data>
+  <data name="WebViewEfsMenuItem" xml:space="preserve">
+    <value>Browserdaten verschlüsseln (EFS)</value>
+  </data>
+  <data name="WebViewEfsHint" xml:space="preserve">
+    <value>Verschlüsselt den Browser-Zwischenspeicher, in dem Grok-Bilder und -Videos landen. Wird beim nächsten Start von Wrok angewendet.</value>
+  </data>
+  <data name="WebViewEfsRestartInfo" xml:space="preserve">
+    <value>Die Änderung wird beim nächsten Start von Wrok angewendet.</value>
+  </data>
+  <data name="EfsBackupMenuItem" xml:space="preserve">
+    <value>EFS-Schlüssel sichern…</value>
+  </data>
+  <data name="EfsBackupPrompt" xml:space="preserve">
+    <value>Verschlüsselte Dateien sind ohne den EFS-Schlüssel verloren, z. B. nach einer Windows-Neuinstallation oder wenn ein Administrator das Kennwort zurücksetzt.
+
+Schlüssel jetzt sichern?</value>
+  </data>
+  <data name="EfsBackupFailed" xml:space="preserve">
+    <value>Der Windows-Assistent zum Sichern des EFS-Schlüssels konnte nicht gestartet werden.</value>
+  </data>
+  <data name="EfsUnavailable" xml:space="preserve">
+    <value>EFS ist auf diesem System nicht verfügbar (z. B. unter Windows Home oder auf einem Laufwerk ohne NTFS).
+
+{0}</value>
+  </data>
+  <data name="EfsEncryptDone" xml:space="preserve">
+    <value>Verschlüsselung abgeschlossen: {0} Elemente.</value>
+  </data>
+  <data name="EfsDecryptDone" xml:space="preserve">
+    <value>Entschlüsselung abgeschlossen: {0} Elemente.</value>
+  </data>
+  <data name="EfsPartial" xml:space="preserve">
+    <value>{0} Elemente verarbeitet, {1} fehlgeschlagen (z. B. weil sie gerade geöffnet sind). Details stehen im Log.</value>
+  </data>
+  <data name="OpenMediaFolderMenuItem" xml:space="preserve">
+    <value>Medienordner öffnen</value>
+  </data>
+  <data name="ExportMediaMenuItem" xml:space="preserve">
+    <value>Medien exportieren…</value>
+  </data>
+  <data name="ExportMediaDescription" xml:space="preserve">
+    <value>Zielordner für die unverschlüsselten Kopien der Medien wählen</value>
+  </data>
+  <data name="ExportMediaDone" xml:space="preserve">
+    <value>{0} Dateien exportiert.</value>
+  </data>
+  <data name="ExportMediaPartial" xml:space="preserve">
+    <value>{0} Dateien exportiert, {1} fehlgeschlagen. Details stehen im Log.</value>
+  </data>
+  <data name="MediaCopyIntoProtectedPrompt" xml:space="preserve">
+    <value>Die Datei liegt außerhalb des geschützten Medienordners:
+{0}
+
+Medien-Slots akzeptieren nur Dateien aus dem Medienordner. Jetzt eine Kopie dort ablegen?</value>
+  </data>
+  <data name="MediaCopyFailed" xml:space="preserve">
+    <value>Die Datei konnte nicht in den Medienordner kopiert werden.
+
+{0}</value>
+  </data>
 </root>

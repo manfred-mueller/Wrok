@@ -23,6 +23,9 @@ namespace Wrok
     ///   Strg+1-9 Video-Slot abspielen
     /// Video:
     ///   F11      Pause / Wiedergabe umschalten
+    ///   Strg+Plus / Strg+Minus  Geschwindigkeit in 0,25er-Stufen (0,25× bis 1,75×)
+    ///   Strg+0   Geschwindigkeit 1×
+    ///   (alle drei wirken auch im Hauptfenster, solange ein Video offen ist)
     /// Bild:
     ///   + / -    zoomen
     ///   0        100 %
@@ -49,14 +52,40 @@ namespace Wrok
 <style>
   html, body { margin:0; height:100%; background:#1c1c1c; overflow:hidden; }
   video { width:100%; height:100%; object-fit:contain; display:block; background:#1c1c1c; }
+  #osd { position:fixed; left:50%; top:40%; transform:translate(-50%,-50%); padding:10px 22px;
+         border-radius:10px; background:rgba(0,0,0,.6); color:#fff; font:600 34px 'Segoe UI', sans-serif;
+         opacity:0; transition:opacity .25s; pointer-events:none; user-select:none; }
+  #osd.show { opacity:1; transition:none; }
 </style></head>
 <body>
 <video id='v' loop autoplay playsinline controls></video>
+<div id='osd'></div>
 <script>
 (function () {
   var v = document.getElementById('v');
   var noop = function () {};
   function post(m) { try { window.chrome.webview.postMessage(m); } catch (e) {} }
+  // Geschwindigkeit: Startwert aus dem Slot ([0.5x]), danach per Strg+Plus/Minus in
+  // 0,25er-Stufen, Strg+0 = 1x. defaultPlaybackRate mitsetzen - beim Laden der Quelle
+  // setzt der Browser sonst zurück. Jede Änderung wird kurz eingeblendet und dem Host
+  // gemeldet (Fenstertitel).
+  var osd = document.getElementById('osd'), osdTimer = 0, speed = 1;
+  function showOsd(text) {
+    osd.textContent = text;
+    osd.classList.add('show');
+    clearTimeout(osdTimer);
+    osdTimer = setTimeout(function () { osd.classList.remove('show'); }, 900);
+  }
+  function setSpeed(r, announce) {
+    speed = Math.min(1.75, Math.max(0.25, Math.round(r * 4) / 4));
+    v.defaultPlaybackRate = speed;
+    v.playbackRate = speed;
+    if (announce) showOsd(String(speed).replace('.', __DECSEP__) + '\u00d7');
+    post('speed:' + speed);
+  }
+  window.wrokSpeedStep = function (dir) { setSpeed(dir === 0 ? 1 : speed + dir * 0.25, true); };
+  v.addEventListener('loadedmetadata', function () { setSpeed(speed, false); });
+  setSpeed(__SPEED__, false);
   v.src = __SRC__;
   // Haltepunkte (Sekunden, aufsteigend). Erreicht die Wiedergabe einen Punkt, wird pausiert.
   // Weiter geht es mit F11 bis zum nächsten Punkt.
@@ -105,6 +134,12 @@ namespace Wrok
     if (e.key === 'Escape') { e.preventDefault(); post('close'); return; }
     if (e.ctrlKey && !e.altKey && !e.shiftKey && (e.key === 'p' || e.key === 'P')) { e.preventDefault(); post('pin'); return; }
     if (e.key === 'F11') { e.preventDefault(); window.wrokToggle(); return; }
+    if (e.ctrlKey && !e.altKey) {
+      var k = e.keyCode;
+      if (e.key === '+' || k === 107 || k === 187) { e.preventDefault(); window.wrokSpeedStep(1); return; }
+      if (e.key === '-' || k === 109 || k === 189) { e.preventDefault(); window.wrokSpeedStep(-1); return; }
+      if (e.key === '0' || k === 48 || k === 96) { e.preventDefault(); window.wrokSpeedStep(0); return; }
+    }
     if (e.ctrlKey && !e.altKey && !e.shiftKey && e.keyCode >= 49 && e.keyCode <= 57) {
       e.preventDefault();
       post('videoSlot:' + (e.keyCode - 48));
@@ -194,6 +229,8 @@ namespace Wrok
         private string _target = string.Empty;    // URL oder lokaler Pfad, wie übergeben
         private string _mediaUrl = string.Empty;  // Adresse, die die Seite tatsächlich lädt
         private double[] _stops = Array.Empty<double>();  // Haltepunkte in Sekunden (nur Video)
+        private double _speed = 1.0;                      // Startgeschwindigkeit (nur Video)
+        private double _currentSpeed = 1.0;               // aktuelle Geschwindigkeit laut Seite
         private Size _imageSize = Size.Empty;
         private int _navCounter;
 
@@ -240,7 +277,8 @@ namespace Wrok
         {
             if (url == null) throw new ArgumentNullException(nameof(url));
             _kind   = MediaKind.Video;
-            _target = SplitStops(url, out _stops);
+            _target = SplitStops(url, out _stops, out _speed);
+            _currentSpeed = _speed;
             UpdateTitle();
             if (_coreReady) Navigate();
         }
@@ -251,6 +289,8 @@ namespace Wrok
             _kind      = MediaKind.Image;
             _target    = localPath ?? throw new ArgumentNullException(nameof(localPath));
             _stops     = Array.Empty<double>();
+            _speed     = 1.0;
+            _currentSpeed = 1.0;
             _imageSize = size;
             UpdateTitle();
             if (_coreReady) Navigate();
@@ -312,6 +352,17 @@ namespace Wrok
             {
                 if (int.TryParse(msg["videoSlot:".Length..], out int slotNo))
                     VideoSlotRequested?.Invoke(slotNo);
+                return;
+            }
+
+            if (msg.StartsWith("speed:", StringComparison.Ordinal))
+            {
+                if (double.TryParse(msg["speed:".Length..], NumberStyles.Float, CultureInfo.InvariantCulture, out double r) &&
+                    IsVideo && r != _currentSpeed)
+                {
+                    _currentSpeed = r;
+                    UpdateTitle();
+                }
                 return;
             }
 
@@ -390,8 +441,11 @@ namespace Wrok
         {
             string src      = JsonSerializer.Serialize(_mediaUrl);
             string stops    = JsonSerializer.Serialize(_stops);
+            string speed    = _speed.ToString(CultureInfo.InvariantCulture);
+            string decSep   = JsonSerializer.Serialize(CultureInfo.CurrentUICulture.NumberFormat.NumberDecimalSeparator);
             string template = IsImage ? ImagePageTemplate : VideoPageTemplate;
-            return template.Replace("__SRC__", src).Replace("__STOPS__", stops);
+            return template.Replace("__SRC__", src).Replace("__STOPS__", stops)
+                           .Replace("__SPEED__", speed).Replace("__DECSEP__", decSep);
         }
 
         /// <summary>
@@ -399,9 +453,19 @@ namespace Wrok
         /// "https://example.com/v.mp4 [5, 35, 1:41]". Ohne Klammerliste bleibt die Adresse
         /// unverändert. Zeiten in Sekunden oder als m:ss, sortiert und ohne Dubletten.
         /// </summary>
-        internal static string SplitStops(string input, out double[] stops)
+        internal static string SplitStops(string input, out double[] stops) =>
+            SplitStops(input, out stops, out _);
+
+        /// <summary>
+        /// Wie <see cref="SplitStops(string, out double[])"/>, liest zusätzlich eine
+        /// Geschwindigkeit aus der Liste: ein Eintrag mit „x" am Ende, z. B.
+        /// "[0.5x, 5, 1:41]". Sie wird auf 0,25er-Stufen zwischen 0,25 und 1,75
+        /// gerundet; ohne Angabe gilt 1. Ältere Versionen ignorieren den Eintrag.
+        /// </summary>
+        internal static string SplitStops(string input, out double[] stops, out double speed)
         {
             stops = Array.Empty<double>();
+            speed = 1.0;
             if (string.IsNullOrEmpty(input)) return input ?? string.Empty;
 
             var m = Regex.Match(input, @"^(.*\S)\s+\[([^\[\]]*)\]\s*$", RegexOptions.Singleline);
@@ -410,11 +474,21 @@ namespace Wrok
             var list = new List<double>();
             foreach (var raw in m.Groups[2].Value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
             {
+                if (raw.EndsWith('x') || raw.EndsWith('X'))
+                {
+                    if (double.TryParse(raw[..^1].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out double r) && r > 0)
+                        speed = SnapSpeed(r);
+                    continue;
+                }
                 if (TryParseStop(raw, out double t) && t >= 0) list.Add(t);
             }
             stops = list.Distinct().OrderBy(x => x).ToArray();
             return m.Groups[1].Value;
         }
+
+        /// <summary>Rundet auf 0,25er-Stufen und begrenzt auf 0,25 bis 1,75.</summary>
+        internal static double SnapSpeed(double rate) =>
+            Math.Clamp(Math.Round(rate * 4, MidpointRounding.AwayFromZero) / 4, 0.25, 1.75);
 
         private static bool TryParseStop(string raw, out double seconds)
         {
@@ -458,6 +532,24 @@ namespace Wrok
                     FocusAndRun("if (window.wrokToggle) { window.wrokToggle(); }");
                     break;
 
+                case Keys.Oemplus when e.Control && IsVideo:
+                case Keys.Add when e.Control && IsVideo:
+                    e.SuppressKeyPress = true;
+                    StepSpeed(1);
+                    break;
+
+                case Keys.OemMinus when e.Control && IsVideo:
+                case Keys.Subtract when e.Control && IsVideo:
+                    e.SuppressKeyPress = true;
+                    StepSpeed(-1);
+                    break;
+
+                case Keys.D0 when e.Control && IsVideo:
+                case Keys.NumPad0 when e.Control && IsVideo:
+                    e.SuppressKeyPress = true;
+                    StepSpeed(0);
+                    break;
+
                 case Keys.Oemplus when IsImage:
                 case Keys.Add when IsImage:
                     e.SuppressKeyPress = true;
@@ -494,7 +586,20 @@ namespace Wrok
             string baseTitle = IsImage && !_imageSize.IsEmpty
                 ? string.Format(Properties.Resources.ImageViewerTitle, _imageSize.Width, _imageSize.Height)
                 : Properties.Resources.VideoViewerTitle;
-            Text = baseTitle + (TopMost ? "   📌" : string.Empty);
+            string speed = IsVideo && _currentSpeed != 1.0
+                ? "   " + _currentSpeed.ToString("0.##", CultureInfo.CurrentUICulture) + "×"
+                : string.Empty;
+            Text = baseTitle + speed + (TopMost ? "   📌" : string.Empty);
+        }
+
+        /// <summary>
+        /// Ändert die Geschwindigkeit um eine 0,25er-Stufe nach oben (1) oder unten (-1);
+        /// 0 setzt auf 1× zurück. Der Fokus bleibt, wo er ist.
+        /// </summary>
+        public void StepSpeed(int direction)
+        {
+            if (!IsVideo) return;
+            RunScript("if (window.wrokSpeedStep) { window.wrokSpeedStep(" + Math.Sign(direction) + "); }");
         }
 
         /// <summary>Pausiert bzw. startet das Video, ohne den Fokus zu verschieben.</summary>

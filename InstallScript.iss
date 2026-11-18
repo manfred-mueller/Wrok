@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Wrok"
-#define MyAppVersion "1.7.1"
+#define MyAppVersion "1.8.0"
 #define MyAppExeName MyAppName + ".exe"
 #define MyAppPublisher "NASS e.K."
 #define MyAppURL "https://www.nass-ek.de"
@@ -94,6 +94,12 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; \
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; \
     Flags: nowait postinstall skipifsilent
+
+[UninstallRun]
+; Eine von Wrok gesetzte Sperre des Medienordners entfernen, damit er nach der
+; Deinstallation normal zugaenglich ist. Die Medien selbst bleiben erhalten.
+Filename: "{sys}\icacls.exe"; Parameters: """{localappdata}\Wrok\media"" /remove:d ""{username}"""; \
+    Flags: runhidden; RunOnceId: "UnlockMediaFolder"
 
 [Code]
 
