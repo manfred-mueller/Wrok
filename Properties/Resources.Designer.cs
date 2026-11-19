@@ -2015,5 +2015,23 @@ namespace Wrok.Properties {
             }
         }
 
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die MediaDeleteUnusedPrompt ähnelt.
+        /// </summary>
+        public static string MediaDeleteUnusedPrompt {
+            get {
+                return ResourceManager.GetString("MediaDeleteUnusedPrompt", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die MediaDeleteFailed ähnelt.
+        /// </summary>
+        public static string MediaDeleteFailed {
+            get {
+                return ResourceManager.GetString("MediaDeleteFailed", resourceCulture);
+            }
+        }
+
     }
 }

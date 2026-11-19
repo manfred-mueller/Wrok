@@ -251,8 +251,13 @@ namespace Wrok
                 if (checkedUrl == null) return;
                 url = checkedUrl;
 
+                string oldUrl = current.Url;
                 VideoSlotStore.Set(index, new VideoSlot(name.Trim(), url));
                 RefreshVideosMenu();
+
+                // Die bisherige Datei aufräumen, falls sie jetzt verwaist ist.
+                if (!string.Equals(oldUrl, url, StringComparison.Ordinal))
+                    OfferDeleteUnusedMedia(oldUrl);
             }
             catch (Exception ex)
             {

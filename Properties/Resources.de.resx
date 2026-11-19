@@ -867,4 +867,15 @@ Medien-Slots akzeptieren nur Dateien aus dem Medienordner. Jetzt eine Kopie dort
 
 {0}</value>
   </data>
+  <data name="MediaDeleteUnusedPrompt" xml:space="preserve">
+    <value>Die bisherige Datei wird von keinem Medien-Slot mehr verwendet:
+{0}
+
+Endgültig aus dem Medienordner löschen?</value>
+  </data>
+  <data name="MediaDeleteFailed" xml:space="preserve">
+    <value>Die Datei konnte nicht gelöscht werden (vielleicht ist sie gerade im Medienfenster geöffnet).
+
+{0}</value>
+  </data>
 </root>

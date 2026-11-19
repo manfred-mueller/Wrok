@@ -112,7 +112,7 @@ Ziehen mit der linken Maustaste verschiebt ein Bild.
 
 ### Medien-Menü
 
-Neun Slots nehmen jeweils einen Namen und eine Adresse auf. Die Adresse kann ein Link oder eine lokale Datei sein, Video oder Bild. Lokale Dateien müssen im geschützten Medienordner liegen (siehe *Medienschutz*); liegt eine Datei woanders, bietet Wrok an, sie dorthin zu kopieren.
+Neun Slots nehmen jeweils einen Namen und eine Adresse auf. Die Adresse kann ein Link oder eine lokale Datei sein, Video oder Bild. Lokale Dateien müssen im geschützten Medienordner liegen (siehe *Medienschutz*); liegt eine Datei woanders, bietet Wrok an, sie dorthin zu kopieren. Liegt dieselbe Datei dort schon, wird sie wiederverwendet. Verwendet nach dem Ändern oder Leeren eines Slots kein Slot mehr die bisherige Datei, bietet Wrok an, sie zu löschen.
 
 * **Abspielen:** Linksklick auf einen Slot im Menü *Medien* oder `Strg+1` bis `Strg+9`. Das gilt auch aus dem Video-Fenster heraus.
 * **Bearbeiten:** Rechtsklick auf einen Slot. Eine leere Adresse leert den Slot.
@@ -270,7 +270,7 @@ Drag with the left mouse button to pan an image.
 
 ### Media menu
 
-Nine slots each hold a name and an address. The address can be a link or a local file, video or image. Local files must be in the protected media folder (see *Media protection*); if a file is elsewhere, Wrok offers to copy it there.
+Nine slots each hold a name and an address. The address can be a link or a local file, video or image. Local files must be in the protected media folder (see *Media protection*); if a file is elsewhere, Wrok offers to copy it there. If the same file is already there, it is reused. When a slot is changed or cleared and no slot uses the previous file any more, Wrok offers to delete it.
 
 * **Play:** Left-click a slot in the *Media* menu or press `Ctrl+1` to `Ctrl+9`. This also works from the video window.
 * **Edit:** Right-click a slot. An empty address clears the slot.

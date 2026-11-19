@@ -865,4 +865,15 @@ Media slots only accept files from the media folder. Place a copy there now?</va
 
 {0}</value>
   </data>
+  <data name="MediaDeleteUnusedPrompt" xml:space="preserve">
+    <value>The previous file is no longer used by any media slot:
+{0}
+
+Delete it permanently from the media folder?</value>
+  </data>
+  <data name="MediaDeleteFailed" xml:space="preserve">
+    <value>The file could not be deleted (it may be open in the media window).
+
+{0}</value>
+  </data>
 </root>

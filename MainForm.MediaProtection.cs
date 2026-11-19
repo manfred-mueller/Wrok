@@ -49,7 +49,12 @@ namespace Wrok
             MediaProtection.SetLocked(false);
             _mediaLocked = false;
             try { return action(); }
-            finally { _mediaLocked = null; Invoke((System.Windows.Forms.MethodInvoker)UpdateMediaLock); }
+            finally
+            {
+                _mediaLocked = null;
+                if (InvokeRequired) Invoke((System.Windows.Forms.MethodInvoker)UpdateMediaLock);
+                else UpdateMediaLock();
+            }
         }
 
         /// <summary>Verschlüsselt beim Start die Browserdaten bzw. hebt das wieder auf.</summary>
@@ -237,7 +242,9 @@ namespace Wrok
         /// <summary>
         /// Prüft eine Slot-Adresse. Links bleiben unverändert erlaubt. Eine lokale
         /// Datei außerhalb des Medienordners wird nach Rückfrage hineinkopiert; die
-        /// Rückgabe zeigt dann auf die Kopie (Haltepunkte bleiben erhalten).
+        /// Rückgabe zeigt dann auf die Kopie (Haltepunkte bleiben erhalten). Liegt
+        /// dieselbe Datei (gleicher Inhalt) schon im Medienordner, wird sie verwendet
+        /// statt eine weitere Kopie anzulegen.
         /// Liefert null, wenn der Nutzer ablehnt oder das Kopieren scheitert.
         /// </summary>
         private string? EnsureSlotInMediaFolder(string url)
@@ -259,7 +266,8 @@ namespace Wrok
 
             try
             {
-                return MediaProtection.CopyIntoMediaDir(local) + suffix;
+                var existing = WithMediaUnlocked(() => MediaProtection.FindIdenticalFile(local));
+                return (existing ?? MediaProtection.CopyIntoMediaDir(local)) + suffix;
             }
             catch (Exception ex)
             {
@@ -268,6 +276,48 @@ namespace Wrok
                                 Properties.Resources.Error, MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return null;
             }
+        }
+
+        /// <summary>
+        /// Nach dem Ändern oder Leeren eines Slots: Zeigte er auf eine Datei im
+        /// Medienordner, die jetzt kein Slot mehr verwendet, wird angeboten, sie
+        /// endgültig zu löschen (nicht in den Papierkorb, damit sie nicht außerhalb
+        /// des geschützten Ordners wieder auftaucht).
+        /// </summary>
+        private void OfferDeleteUnusedMedia(string oldUrl)
+        {
+            var path = LocalMediaPathOf(oldUrl);
+            if (path == null || !MediaProtection.IsInMediaDir(path)) return;
+
+            var full = Path.GetFullPath(path);
+            bool stillUsed = VideoSlotStore.Get().Any(s =>
+                LocalMediaPathOf(s.Url) is string p &&
+                string.Equals(Path.GetFullPath(p), full, StringComparison.OrdinalIgnoreCase));
+            if (stillUsed) return;
+
+            if (MessageBox.Show(this, string.Format(Properties.Resources.MediaDeleteUnusedPrompt, full),
+                                Properties.Resources.MediaProtectionMenu, MessageBoxButtons.YesNo,
+                                MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+                return;
+
+            try
+            {
+                File.Delete(full);
+            }
+            catch (Exception ex)
+            {
+                Log(ex, "Unbenutzte Mediendatei loeschen fehlgeschlagen");
+                MessageBox.Show(this, string.Format(Properties.Resources.MediaDeleteFailed, ex.Message),
+                                Properties.Resources.Error, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        /// <summary>Lokaler, vorhandener Dateipfad einer Slot-Adresse oder null (Link, leer, fehlt).</summary>
+        private static string? LocalMediaPathOf(string? url)
+        {
+            if (string.IsNullOrWhiteSpace(url)) return null;
+            string bare = VideoViewerForm.SplitStops(url, out _);
+            return IsHttpUrl(bare) ? null : TryParseLocalPath(bare);
         }
     }
 }

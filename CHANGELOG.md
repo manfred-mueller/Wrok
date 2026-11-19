@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.8.1] - 2026-11-20
+
+### Änderungen
+- **Verwaiste Mediendateien aufräumen.** Wird ein Medien-Slot geändert oder geleert und verwendet kein anderer Slot mehr die bisherige Datei im Medienordner, bietet Wrok an, sie endgültig zu löschen.
+- **Keine doppelten Kopien mehr.** Liegt eine Datei mit identischem Inhalt schon im Medienordner, verwendet der Slot diese, statt eine weitere Kopie wie „clip (2).mp4" anzulegen.
+
 ## [1.8.0] - 2026-11-18
 
 ### Features

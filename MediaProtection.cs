@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Security.AccessControl;
+using System.Security.Cryptography;
 using System.Security.Principal;
 
 namespace Wrok
@@ -194,6 +195,37 @@ namespace Wrok
             var target = UniquePath(EnsureMediaDir(), Path.GetFileName(source));
             File.Copy(source, target, overwrite: false);
             return target;
+        }
+
+        /// <summary>
+        /// Sucht im Medienordner (ohne Unterordner) eine Datei mit identischem Inhalt.
+        /// Erst wird die Größe verglichen, nur bei Gleichheit der SHA-256-Hash.
+        /// Muss bei entsperrtem Ordner laufen, weil der Ordner aufgelistet wird.
+        /// </summary>
+        public static string? FindIdenticalFile(string source)
+        {
+            var src = new FileInfo(source);
+            byte[]? srcHash = null;
+
+            foreach (var f in new DirectoryInfo(EnsureMediaDir()).EnumerateFiles())
+            {
+                if (f.Length != src.Length) continue;
+                if (string.Equals(f.FullName, src.FullName, StringComparison.OrdinalIgnoreCase)) return f.FullName;
+
+                try
+                {
+                    srcHash ??= HashFile(src.FullName);
+                    if (HashFile(f.FullName).AsSpan().SequenceEqual(srcHash)) return f.FullName;
+                }
+                catch (Exception ex) { Log(ex, $"Vergleich mit '{f.FullName}' fehlgeschlagen"); }
+            }
+            return null;
+        }
+
+        private static byte[] HashFile(string path)
+        {
+            using var stream = File.OpenRead(path);
+            return SHA256.HashData(stream);
         }
 
         /// <summary>
